@@ -1,0 +1,75 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Sora:wght@400;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: #05070A;
+  --color-surface-1: #0B0F14;
+  --color-surface-2: #101720;
+  --color-surface-3: #15202B;
+  
+  --color-primary: #35D4FF;
+  --color-primary-hover: #22D3EE;
+  --color-secondary: #8B5CF6;
+  --color-secondary-hover: #A78BFA;
+  
+  --color-success: #2EE6A6;
+  --color-warning: #FFB84D;
+  --color-danger: #FF6B6B;
+  
+  --color-text-primary: #F8FAFC;
+  --color-text-secondary: #94A3B8;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6, .font-display {
+  font-family: var(--font-display);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-background);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-3);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-surface-1/70 backdrop-blur-2xl border border-surface-3 shadow-[0_8px_32px_rgba(0,0,0,0.4)];
+  }
+  .glass-card {
+    @apply bg-surface-2/60 backdrop-blur-xl border border-surface-3 shadow-lg;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+
