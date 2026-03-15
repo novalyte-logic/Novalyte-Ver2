@@ -7,12 +7,44 @@ import {
   AlertTriangle, ChevronRight, Filter, Plus, Sparkles,
   Activity, DollarSign, Calendar, MessageSquare, ShieldCheck
 } from 'lucide-react';
+import { collection, query, where, onSnapshot, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/src/firebase';
+import { useAuth } from '@/src/lib/auth/AuthContext';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 
+interface StaffingRequest {
+  id: string;
+  role: string;
+  type: string;
+  location: string;
+  status: 'open' | 'filled' | 'closed' | 'draft';
+  urgency: 'Low' | 'Medium' | 'Critical';
+  impact: string;
+  createdAt: any;
+  matches?: number;
+}
+
+interface Application {
+  id: string;
+  requestId: string;
+  practitionerName: string;
+  practitionerRole: string;
+  score: number;
+  experience: string;
+  matchReason: string;
+  status: 'pending' | 'accepted' | 'rejected' | 'screening' | 'interviewing' | 'offer';
+  location: string;
+  createdAt: any;
+}
+
 export function ClinicWorkforce() {
+  const { user } = useAuth();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<'demand' | 'requisitions' | 'pipeline'>('demand');
+  const [requisitions, setRequisitions] = useState<StaffingRequest[]>([]);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -21,6 +53,64 @@ export function ClinicWorkforce() {
       setActiveTab(tab as any);
     }
   }, [location]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const reqQuery = query(
+      collection(db, 'staffingRequests'),
+      where('clinicId', '==', user.uid),
+      orderBy('createdAt', 'desc')
+    );
+
+    const appQuery = query(
+      collection(db, 'applications'),
+      where('clinicId', '==', user.uid), // Assuming apps have clinicId for easier filtering
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribeReq = onSnapshot(reqQuery, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as StaffingRequest[];
+      setRequisitions(data);
+    });
+
+    const unsubscribeApp = onSnapshot(appQuery, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Application[];
+      setApplications(data);
+      setLoading(false);
+    });
+
+    return () => {
+      unsubscribeReq();
+      unsubscribeApp();
+    };
+  }, [user]);
+
+  const handleOpenRequisition = async () => {
+    if (!user) return;
+    try {
+      await addDoc(collection(db, 'staffingRequests'), {
+        clinicId: user.uid,
+        role: 'Nurse Practitioner (NP)',
+        type: 'Contract',
+        location: 'Remote',
+        status: 'open',
+        urgency: 'Medium',
+        impact: 'Future capacity planning',
+        createdAt: serverTimestamp()
+      });
+    } catch (error) {
+      console.error("Error opening requisition:", error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col animate-in fade-in duration-500">
@@ -37,7 +127,10 @@ export function ClinicWorkforce() {
               <Search className="w-4 h-4 mr-2" /> Browse Network
             </Button>
           </Link>
-          <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-black font-bold">
+          <Button 
+            onClick={handleOpenRequisition}
+            className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-black font-bold"
+          >
             <Plus className="w-4 h-4 mr-2" /> Open Requisition
           </Button>
         </div>
@@ -47,8 +140,8 @@ export function ClinicWorkforce() {
       <div className="flex-none flex gap-6 border-b border-surface-3 mb-6">
         {[
           { id: 'demand', label: 'Demand & Insights', icon: Activity },
-          { id: 'requisitions', label: 'Active Requisitions', count: 3, icon: Briefcase },
-          { id: 'pipeline', label: 'Candidate Pipeline', count: 12, icon: Users },
+          { id: 'requisitions', label: 'Active Requisitions', count: requisitions.length, icon: Briefcase },
+          { id: 'pipeline', label: 'Candidate Pipeline', count: applications.length, icon: Users },
         ].map(tab => (
           <button
             key={tab.id}
@@ -61,7 +154,7 @@ export function ClinicWorkforce() {
           >
             <tab.icon className="w-4 h-4" />
             {tab.label}
-            {tab.count && (
+            {tab.count !== undefined && tab.count > 0 && (
               <span className={`px-2 py-0.5 rounded-full text-[10px] ${
                 activeTab === tab.id ? 'bg-primary/20 text-primary' : 'bg-surface-2 text-text-secondary'
               }`}>
@@ -160,79 +253,91 @@ export function ClinicWorkforce() {
             {/* REQUISITIONS TAB */}
             {activeTab === 'requisitions' && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {[
-                  { 
-                    title: 'Registered Nurse (RN)', type: 'Full-time', location: 'Austin, TX', 
-                    status: 'Sourcing', urgency: 'Critical', impact: 'Blocking 15 consults/wk',
-                    matches: 5, daysOpen: 4, color: 'text-danger', bg: 'bg-danger/10', border: 'border-danger/20'
-                  },
-                  { 
-                    title: 'Medical Assistant', type: 'Part-time', location: 'Austin, TX', 
-                    status: 'Interviewing', urgency: 'Medium', impact: 'Front desk bottleneck',
-                    matches: 3, daysOpen: 12, color: 'text-warning', bg: 'bg-warning/10', border: 'border-warning/20'
-                  },
-                  { 
-                    title: 'Nurse Practitioner (NP)', type: 'Contract', location: 'Remote', 
-                    status: 'Draft', urgency: 'Low', impact: 'Future capacity planning',
-                    matches: 0, daysOpen: 0, color: 'text-text-secondary', bg: 'bg-surface-3', border: 'border-surface-3'
-                  },
-                ].map((req, i) => (
-                  <Card key={i} className="p-6 bg-[#0B0F14] border-surface-3 hover:border-surface-4 transition-colors flex flex-col h-full">
+                {requisitions.length > 0 ? requisitions.map((req, i) => (
+                  <Card key={req.id} className="p-6 bg-[#0B0F14] border-surface-3 hover:border-surface-4 transition-colors flex flex-col h-full">
                     <div className="flex justify-between items-start mb-4">
                       <div className="w-10 h-10 rounded-lg bg-surface-2 border border-surface-3 flex items-center justify-center text-primary">
                         <Briefcase className="w-5 h-5" />
                       </div>
                       <span className={`px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider font-bold border ${
-                        req.status === 'Sourcing' ? 'bg-primary/10 text-primary border-primary/20' :
-                        req.status === 'Interviewing' ? 'bg-success/10 text-success border-success/20' :
+                        req.status === 'open' ? 'bg-primary/10 text-primary border-primary/20' :
+                        req.status === 'filled' ? 'bg-success/10 text-success border-success/20' :
                         'bg-surface-3 text-text-secondary border-surface-3'
                       }`}>
                         {req.status}
                       </span>
                     </div>
                     
-                    <h3 className="text-lg font-bold text-white mb-2">{req.title}</h3>
+                    <h3 className="text-lg font-bold text-white mb-2">{req.role}</h3>
                     
                     <div className="flex flex-wrap items-center gap-3 text-sm text-text-secondary mb-4">
                       <span className="flex items-center gap-1.5"><Briefcase className="w-3.5 h-3.5" /> {req.type}</span>
                       <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {req.location}</span>
                     </div>
 
-                    <div className={`mb-6 p-3 rounded-lg border flex items-start gap-3 ${req.bg} ${req.border}`}>
-                      <AlertTriangle className={`w-5 h-5 shrink-0 ${req.color}`} />
+                    <div className={`mb-6 p-3 rounded-lg border flex items-start gap-3 ${
+                      req.urgency === 'Critical' ? 'bg-danger/10 border-danger/20' : 
+                      req.urgency === 'Medium' ? 'bg-warning/10 border-warning/20' : 
+                      'bg-surface-3 border-surface-3'
+                    }`}>
+                      <AlertTriangle className={`w-5 h-5 shrink-0 ${
+                        req.urgency === 'Critical' ? 'text-danger' : 
+                        req.urgency === 'Medium' ? 'text-warning' : 
+                        'text-text-secondary'
+                      }`} />
                       <div>
-                        <span className={`text-xs font-bold uppercase tracking-wider block mb-0.5 ${req.color}`}>{req.urgency} Urgency</span>
-                        <span className={`text-sm ${req.color} opacity-90`}>{req.impact}</span>
+                        <span className={`text-xs font-bold uppercase tracking-wider block mb-0.5 ${
+                          req.urgency === 'Critical' ? 'text-danger' : 
+                          req.urgency === 'Medium' ? 'text-warning' : 
+                          'text-text-secondary'
+                        }`}>{req.urgency} Urgency</span>
+                        <span className={`text-sm ${
+                          req.urgency === 'Critical' ? 'text-danger' : 
+                          req.urgency === 'Medium' ? 'text-warning' : 
+                          'text-text-secondary'
+                        } opacity-90`}>{req.impact}</span>
                       </div>
                     </div>
                     
                     <div className="mt-auto pt-4 border-t border-surface-3">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex -space-x-2">
-                          {Array.from({ length: Math.min(req.matches, 3) }).map((_, j) => (
+                          {Array.from({ length: Math.min(req.matches || 0, 3) }).map((_, j) => (
                             <div key={j} className="w-8 h-8 rounded-full bg-surface-3 border-2 border-[#0B0F14] flex items-center justify-center text-xs font-bold text-white">
                               {String.fromCharCode(65 + j)}
                             </div>
                           ))}
-                          {req.matches > 3 && (
+                          {(req.matches || 0) > 3 && (
                             <div className="w-8 h-8 rounded-full bg-surface-2 border-2 border-[#0B0F14] flex items-center justify-center text-xs font-bold text-text-secondary">
-                              +{req.matches - 3}
+                              +{(req.matches || 0) - 3}
                             </div>
                           )}
-                          {req.matches === 0 && (
+                          {(req.matches || 0) === 0 && (
                             <span className="text-sm text-text-secondary">No matches yet</span>
                           )}
                         </div>
-                        {req.daysOpen > 0 && (
-                          <span className="text-xs text-text-secondary font-mono">Open {req.daysOpen}d</span>
-                        )}
+                        <span className="text-xs text-text-secondary font-mono">
+                          Open {Math.floor((Date.now() - (req.createdAt?.toDate().getTime() || Date.now())) / (1000 * 60 * 60 * 24))}d
+                        </span>
                       </div>
                       <Button variant="outline" className="w-full border-surface-3 text-white hover:bg-surface-2">
                         Manage Requisition
                       </Button>
                     </div>
                   </Card>
-                ))}
+                )) : (
+                  <div className="lg:col-span-3 p-12 text-center border-2 border-dashed border-surface-3 rounded-xl bg-surface-1/30">
+                    <Briefcase className="w-12 h-12 text-surface-3 mx-auto mb-4" />
+                    <h3 className="text-lg font-bold text-white">No active requisitions</h3>
+                    <p className="text-text-secondary mt-2">Open a new requisition to start hiring clinical staff.</p>
+                    <Button 
+                      onClick={handleOpenRequisition}
+                      className="mt-6 bg-primary hover:bg-primary/90 text-black font-bold"
+                    >
+                      <Plus className="w-4 h-4 mr-2" /> Open Requisition
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -240,81 +345,64 @@ export function ClinicWorkforce() {
             {activeTab === 'pipeline' && (
               <div className="flex gap-6 h-full min-w-max pb-4 overflow-x-auto hide-scrollbar">
                 {[
-                  { 
-                    id: 'sourced', label: 'AI Sourced', color: 'bg-primary',
-                    candidates: [
-                      { name: 'Sarah Jenkins, RN', role: 'Registered Nurse', score: 95, exp: '8 yrs', matchReason: 'Matches high volume of IV Therapy patients.' },
-                      { name: 'Dr. Emily Chen', role: 'Nurse Practitioner', score: 88, exp: '5 yrs', matchReason: 'Strong background in longevity protocols.' }
-                    ]
-                  },
-                  { 
-                    id: 'screening', label: 'Screening', color: 'bg-warning',
-                    candidates: [
-                      { name: 'Marcus Johnson', role: 'Medical Assistant', score: 82, exp: '3 yrs', matchReason: 'Local to Austin, available immediately.' }
-                    ]
-                  },
-                  { 
-                    id: 'interviewing', label: 'Interviewing', color: 'bg-secondary',
-                    candidates: [
-                      { name: 'Jessica Alba, RN', role: 'Registered Nurse', score: 91, exp: '6 yrs', matchReason: 'Completed technical screen. Scheduled for clinical interview.' }
-                    ]
-                  },
-                  { 
-                    id: 'offer', label: 'Offer Extended', color: 'bg-success',
-                    candidates: []
-                  }
-                ].map(stage => (
-                  <div key={stage.id} className="w-80 flex-shrink-0 flex flex-col">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="font-bold text-white flex items-center gap-2">
-                        <span className={`w-2.5 h-2.5 rounded-full ${stage.color} shadow-[0_0_8px_currentColor]`} /> 
-                        {stage.label}
-                      </h3>
-                      <span className="text-xs font-mono font-bold text-text-secondary bg-surface-2 border border-surface-3 px-2 py-1 rounded-md">
-                        {stage.candidates.length}
-                      </span>
-                    </div>
-                    
-                    <div className="space-y-3 flex-grow overflow-y-auto hide-scrollbar pr-1">
-                      {stage.candidates.map((candidate, i) => (
-                        <Card key={i} className="p-4 bg-[#0B0F14] border-surface-3 hover:border-surface-4 cursor-pointer transition-colors group">
-                          <div className="flex justify-between items-start mb-2">
-                            <h4 className="font-bold text-white">{candidate.name}</h4>
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border bg-success/10 text-success border-success/20 flex items-center gap-1">
-                              <ShieldCheck className="w-3 h-3" /> {candidate.score}
-                            </span>
-                          </div>
-                          
-                          <div className="flex items-center gap-2 text-xs font-medium text-text-secondary mb-3">
-                            <span>{candidate.role}</span>
-                            <span>•</span>
-                            <span>{candidate.exp}</span>
-                          </div>
-                          
-                          <div className="mb-3 px-2 py-1.5 rounded bg-primary/5 border border-primary/10 flex items-start gap-1.5">
-                            <Sparkles className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
-                            <span className="text-[10px] font-bold text-primary uppercase tracking-wider leading-tight">
-                              {candidate.matchReason}
-                            </span>
-                          </div>
-
-                          <div className="flex justify-between items-center text-xs text-text-secondary pt-2 border-t border-surface-3">
-                            <span className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3" /> Austin, TX
-                            </span>
-                            <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:text-primary group-hover:translate-x-1 transition-all" />
-                          </div>
-                        </Card>
-                      ))}
+                  { id: 'screening', label: 'Screening', color: 'bg-warning' },
+                  { id: 'interviewing', label: 'Interviewing', color: 'bg-secondary' },
+                  { id: 'offer', label: 'Offer Extended', color: 'bg-success' }
+                ].map(stage => {
+                  const stageApps = applications.filter(app => app.status === stage.id);
+                  return (
+                    <div key={stage.id} className="w-80 flex-shrink-0 flex flex-col">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-bold text-white flex items-center gap-2">
+                          <span className={`w-2.5 h-2.5 rounded-full ${stage.color} shadow-[0_0_8px_currentColor]`} /> 
+                          {stage.label}
+                        </h3>
+                        <span className="text-xs font-mono font-bold text-text-secondary bg-surface-2 border border-surface-3 px-2 py-1 rounded-md">
+                          {stageApps.length}
+                        </span>
+                      </div>
                       
-                      {stage.candidates.length === 0 && (
-                        <div className="p-6 text-center border-2 border-dashed border-surface-3 rounded-xl bg-surface-1/30">
-                          <p className="text-sm text-text-secondary">No candidates in this stage</p>
-                        </div>
-                      )}
+                      <div className="space-y-3 flex-grow overflow-y-auto hide-scrollbar pr-1">
+                        {stageApps.map((app) => (
+                          <Card key={app.id} className="p-4 bg-[#0B0F14] border-surface-3 hover:border-surface-4 cursor-pointer transition-colors group">
+                            <div className="flex justify-between items-start mb-2">
+                              <h4 className="font-bold text-white">{app.practitionerName}</h4>
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border bg-success/10 text-success border-success/20 flex items-center gap-1">
+                                <ShieldCheck className="w-3 h-3" /> {app.score}
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 text-xs font-medium text-text-secondary mb-3">
+                              <span>{app.practitionerRole}</span>
+                              <span>•</span>
+                              <span>{app.experience}</span>
+                            </div>
+                            
+                            <div className="mb-3 px-2 py-1.5 rounded bg-primary/5 border border-primary/10 flex items-start gap-1.5">
+                              <Sparkles className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                              <span className="text-[10px] font-bold text-primary uppercase tracking-wider leading-tight">
+                                {app.matchReason}
+                              </span>
+                            </div>
+
+                            <div className="flex justify-between items-center text-xs text-text-secondary pt-2 border-t border-surface-3">
+                              <span className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3" /> {app.location}
+                              </span>
+                              <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                            </div>
+                          </Card>
+                        ))}
+                        
+                        {stageApps.length === 0 && (
+                          <div className="p-6 text-center border-2 border-dashed border-surface-3 rounded-xl bg-surface-1/30">
+                            <p className="text-sm text-text-secondary">No candidates in this stage</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 

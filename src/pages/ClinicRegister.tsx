@@ -12,12 +12,17 @@ import {
   Lock,
   ChevronRight,
   ChevronLeft,
-  FileText
+  FileText,
+  AlertCircle
 } from 'lucide-react';
+import { doc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { db } from '@/src/firebase';
+import { useAuth } from '@/src/lib/auth/AuthContext';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 
 const ONBOARDING_STEPS = [
+  { id: 'auth', title: 'Identity Setup', icon: Lock, description: 'Secure Account Creation' },
   { id: 'entity', title: 'Entity Verification', icon: Building2, description: 'NPI & Legal Validation' },
   { id: 'compliance', title: 'Compliance & Security', icon: ShieldCheck, description: 'HIPAA & BAA Setup' },
   { id: 'operations', title: 'Operations Setup', icon: Activity, description: 'EMR & Clinical Workflows' },
@@ -26,9 +31,11 @@ const ONBOARDING_STEPS = [
 
 export function ClinicRegister() {
   const navigate = useNavigate();
+  const { user, signInWithGoogle } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [isProvisioning, setIsProvisioning] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [error, setError] = useState('');
   
   const [formData, setFormData] = useState({
     // Entity
@@ -58,9 +65,19 @@ export function ClinicRegister() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+    setError('');
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    if (currentStep === 0 && !user) {
+      try {
+        await signInWithGoogle();
+      } catch (err) {
+        setError('Authentication failed. Please try again.');
+        return;
+      }
+    }
+
     if (currentStep < ONBOARDING_STEPS.length - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
@@ -75,22 +92,60 @@ export function ClinicRegister() {
   };
 
   const handleProvision = async () => {
+    if (!user) return;
     setIsProvisioning(true);
-    // Simulate enterprise provisioning sequence
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    setIsProvisioning(false);
-    setIsComplete(true);
+    setError('');
+
+    try {
+      // 1. Update user role to clinic
+      await updateDoc(doc(db, 'users', user.uid), {
+        role: 'clinic',
+        updatedAt: serverTimestamp()
+      });
+
+      // 2. Create clinic document
+      await setDoc(doc(db, 'clinics', user.uid), {
+        name: formData.legalName,
+        npiNumber: formData.npiNumber,
+        taxId: formData.taxId,
+        email: formData.adminEmail,
+        hipaaOfficer: formData.hipaaOfficer,
+        hipaaEmail: formData.hipaaEmail,
+        baaAccepted: formData.baaAccepted,
+        dataResidency: formData.dataResidency,
+        primaryEmr: formData.primaryEmr,
+        telehealth: formData.telehealth,
+        monthlyVolume: formData.monthlyVolume,
+        hl7Capable: formData.hl7Capable,
+        webhookUrl: formData.webhookUrl,
+        techContact: formData.techContact,
+        status: 'Verified',
+        outreachStatus: 'Active',
+        createdAt: serverTimestamp()
+      });
+
+      // Simulate enterprise provisioning sequence for UI feel
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      setIsComplete(true);
+    } catch (err) {
+      console.error("Error provisioning clinic:", err);
+      setError('Failed to provision clinic environment. Please contact support.');
+    } finally {
+      setIsProvisioning(false);
+    }
   };
 
   const isStepValid = () => {
     switch (currentStep) {
       case 0:
-        return formData.legalName && formData.npiNumber.length >= 10 && formData.adminEmail;
+        return true; // Auth step, handled by user presence
       case 1:
-        return formData.hipaaOfficer && formData.hipaaEmail && formData.baaAccepted;
+        return formData.legalName && formData.npiNumber.length >= 10 && formData.adminEmail;
       case 2:
-        return formData.primaryEmr && formData.monthlyVolume;
+        return formData.hipaaOfficer && formData.hipaaEmail && formData.baaAccepted;
       case 3:
+        return formData.primaryEmr && formData.monthlyVolume;
+      case 4:
         return formData.techContact;
       default:
         return false;
@@ -197,7 +252,7 @@ export function ClinicRegister() {
                   </div>
                 </div>
 
-                <Button size="lg" className="w-full text-lg h-14" onClick={() => navigate('/auth/clinic-login')}>
+                <Button size="lg" className="w-full text-lg h-14" onClick={() => navigate('/dashboard')}>
                   Access Control Center
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
@@ -259,8 +314,31 @@ export function ClinicRegister() {
                       transition={{ duration: 0.3 }}
                       className="space-y-6"
                     >
-                      {/* Step 1: Entity */}
+                      {/* Step 0: Auth */}
                       {currentStep === 0 && (
+                        <div className="text-center py-8">
+                          <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-6">
+                            <Lock className="w-8 h-8 text-primary" />
+                          </div>
+                          <h3 className="text-xl font-bold text-white mb-4">Secure Identity Verification</h3>
+                          <p className="text-text-secondary mb-8">
+                            To begin provisioning your clinic environment, please authenticate with your professional Google account.
+                          </p>
+                          {user ? (
+                            <div className="p-4 rounded-xl bg-success/10 border border-success/20 flex items-center justify-center gap-3">
+                              <CheckCircle2 className="w-5 h-5 text-success" />
+                              <span className="text-success font-bold">Authenticated as {user.email}</span>
+                            </div>
+                          ) : (
+                            <Button size="lg" className="w-full" onClick={signInWithGoogle}>
+                              Authenticate with Google
+                            </Button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Step 1: Entity */}
+                      {currentStep === 1 && (
                         <>
                           <div>
                             <label className="block text-sm font-medium text-text-secondary mb-2">Legal Clinic Name</label>
@@ -300,7 +378,7 @@ export function ClinicRegister() {
                       )}
 
                       {/* Step 2: Compliance */}
-                      {currentStep === 1 && (
+                      {currentStep === 2 && (
                         <>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
@@ -351,7 +429,7 @@ export function ClinicRegister() {
                       )}
 
                       {/* Step 3: Operations */}
-                      {currentStep === 2 && (
+                      {currentStep === 3 && (
                         <>
                           <div>
                             <label className="block text-sm font-medium text-text-secondary mb-2">Primary EMR System</label>
@@ -427,6 +505,13 @@ export function ClinicRegister() {
                           </div>
                         </>
                       )}
+
+                      {error && (
+                        <div className="p-4 rounded-lg bg-danger/10 border border-danger/20 text-danger text-sm flex items-center gap-3">
+                          <AlertCircle className="w-5 h-5 shrink-0" />
+                          {error}
+                        </div>
+                      )}
                     </motion.div>
                   </AnimatePresence>
                 </div>
@@ -443,7 +528,7 @@ export function ClinicRegister() {
                   
                   <Button 
                     onClick={handleNext} 
-                    disabled={!isStepValid()}
+                    disabled={(currentStep === 0 && !user) || (currentStep > 0 && !isStepValid())}
                     className="min-w-[140px]"
                   >
                     {currentStep === ONBOARDING_STEPS.length - 1 ? 'Deploy Infrastructure' : 'Next Step'}

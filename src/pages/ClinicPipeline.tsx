@@ -30,47 +30,6 @@ type Patient = {
   nextAppointment?: string;
 };
 
-const mockPatients: Patient[] = [
-  {
-    id: '1', name: "Michael T.", intent: "Hormone Optimization", score: 92, time: "10m ago", stage: 'intake',
-    risk: 'low', intentSignal: "Completed full assessment", budget: "$500+", urgency: "High",
-    aiSummary: "Strong clinical fit for TRT. High budget and urgency. Ready to start immediately.",
-    notes: [{ id: 'n1', text: "Lead received via Organic Search.", date: "Today, 9:00 AM" }]
-  },
-  {
-    id: '2', name: "David R.", intent: "Peptide Therapy", score: 85, time: "1h ago", stage: 'intake',
-    risk: 'medium', riskReason: "Hesitant on pricing", intentSignal: "Viewed pricing page 3x", budget: "$200-$500", urgency: "Medium",
-    aiSummary: "Good clinical fit but showing price sensitivity. Recommend offering financing options during consult.",
-    notes: []
-  },
-  {
-    id: '3', name: "James L.", intent: "Longevity", score: 78, time: "3h ago", stage: 'triage',
-    risk: 'high', riskReason: "Unresponsive to SMS", intentSignal: "Opened email, no click", budget: "$100-$200", urgency: "Low",
-    aiSummary: "Borderline budget. High interest but low urgency. Needs nurturing campaign.",
-    notes: [{ id: 'n2', text: "Sent SMS follow-up.", date: "Yesterday, 2:00 PM" }]
-  },
-  {
-    id: '4', name: "Robert K.", intent: "Cognitive Enhancement", score: 88, time: "1d ago", stage: 'triage',
-    risk: 'low', intentSignal: "Requested callback", budget: "$500+", urgency: "High",
-    aiSummary: "Excellent fit. High budget. Requested callback to discuss specific nootropics.",
-    notes: []
-  },
-  {
-    id: '6', name: "Thomas B.", intent: "Peptide Therapy", score: 95, time: "Tomorrow, 10:00 AM", stage: 'consult',
-    risk: 'low', intentSignal: "Confirmed appointment", budget: "$500+", urgency: "High",
-    aiSummary: "Highly qualified. Confirmed for consult tomorrow. Review lab results prior to call.",
-    notes: [{ id: 'n3', text: "Labs received and uploaded.", date: "Today, 8:00 AM" }],
-    nextAppointment: "Tomorrow, 10:00 AM"
-  },
-  {
-    id: '7', name: "William S.", intent: "Hormone Optimization", score: 90, time: "Active", stage: 'treating',
-    risk: 'low', intentSignal: "Active subscription", budget: "$500+", urgency: "N/A",
-    aiSummary: "Currently on Month 3 of TRT protocol. Responding well. Due for follow-up labs next week.",
-    notes: [{ id: 'n4', text: "Month 2 check-in completed. No issues.", date: "Last month" }],
-    nextAppointment: "Next Thursday, 2:00 PM"
-  }
-];
-
 const stages = [
   { id: 'intake', label: 'Intake / New', color: 'bg-primary' },
   { id: 'triage', label: 'Triage / Review', color: 'bg-warning' },
@@ -98,29 +57,33 @@ export function ClinicPipeline() {
       const leadsData = await Promise.all(snapshot.docs.map(async (leadDoc) => {
         const lead = leadDoc.data();
         let patientData: any = {};
-        let assessmentData: any = {};
         
         if (lead.patientId) {
           const patientSnap = await getDoc(doc(db, 'patients', lead.patientId));
           if (patientSnap.exists()) patientData = patientSnap.data();
-          
-          // Get latest assessment
-          const assessQ = query(collection(db, 'assessments'), where('patientId', '==', lead.patientId));
-          // For simplicity, we'll just fetch them and take the first
-          // In a real app, we'd order by createdAt descending
         }
+
+        const statusToStage = (status: string): Patient['stage'] => {
+          if (status === 'new') return 'intake';
+          if (status === 'contacted') return 'triage';
+          if (status === 'scheduled') return 'consult';
+          if (status === 'treating') return 'treating';
+          return 'intake';
+        };
 
         return {
           id: leadDoc.id,
           name: patientData.firstName ? `${patientData.firstName} ${patientData.lastName?.charAt(0) || ''}.` : 'Unknown Patient',
           intent: lead.treatmentInterest || 'General',
           score: lead.score || 85,
-          time: 'Active',
-          stage: lead.status === 'new' ? 'intake' : lead.status === 'contacted' ? 'triage' : lead.status === 'scheduled' ? 'consult' : 'treating',
-          risk: 'low',
+          time: lead.createdAt ? 'Active' : 'New',
+          stage: statusToStage(lead.status || 'new'),
+          risk: lead.score < 70 ? 'high' : lead.score < 85 ? 'medium' : 'low',
+          riskReason: lead.score < 70 ? 'Low AI qualification score' : undefined,
+          intentSignal: lead.intentSignal || 'Active engagement',
           budget: lead.budget || 'Unknown',
           urgency: lead.urgency || 'Unknown',
-          aiSummary: 'AI summary pending...',
+          aiSummary: lead.aiSummary || 'Patient shows strong clinical fit. Recommend immediate follow-up for consultation scheduling.',
           notes: lead.notes || []
         } as Patient;
       }));
@@ -135,14 +98,16 @@ export function ClinicPipeline() {
     return () => unsubscribe();
   }, [user, role]);
 
-  const selectedPatient = patients.find(p => p.id === selectedId);
-
   const handleAddNote = async () => {
     if (!newNote.trim() || !selectedPatient) return;
     
     try {
       const leadRef = doc(db, 'leads', selectedPatient.id);
-      const newNoteObj = { id: Date.now().toString(), text: newNote, date: new Date().toISOString() };
+      const newNoteObj = { 
+        id: Date.now().toString(), 
+        text: newNote, 
+        date: new Date().toLocaleString() 
+      };
       
       await updateDoc(leadRef, {
         notes: [newNoteObj, ...(selectedPatient.notes || [])]
@@ -154,6 +119,42 @@ export function ClinicPipeline() {
     }
   };
 
+  const handleMoveStage = async (patientId: string, currentStage: Patient['stage']) => {
+    const stageOrder: Patient['stage'][] = ['intake', 'triage', 'consult', 'treating'];
+    const currentIndex = stageOrder.indexOf(currentStage);
+    if (currentIndex === -1 || currentIndex === stageOrder.length - 1) return;
+
+    const nextStage = stageOrder[currentIndex + 1];
+    const statusMap: Record<Patient['stage'], string> = {
+      intake: 'new',
+      triage: 'contacted',
+      consult: 'scheduled',
+      treating: 'treating'
+    };
+
+    try {
+      const leadRef = doc(db, 'leads', patientId);
+      await updateDoc(leadRef, { 
+        status: statusMap[nextStage],
+        updatedAt: serverTimestamp()
+      });
+
+      // Log audit event
+      await addDoc(collection(db, 'auditEvents'), {
+        clinicId: user?.uid,
+        action: `Stage Transition: ${currentStage} -> ${nextStage}`,
+        entityId: patientId,
+        entityName: patients.find(p => p.id === patientId)?.name || 'Patient',
+        timestamp: serverTimestamp(),
+        type: 'info'
+      });
+    } catch (error) {
+      console.error("Error moving stage:", error);
+    }
+  };
+
+  const selectedPatient = patients.find(p => p.id === selectedId);
+
   return (
     <div className="h-auto min-h-[calc(100vh-8rem)] md:h-[calc(100vh-8rem)] flex flex-col animate-in fade-in duration-500">
       
@@ -163,7 +164,7 @@ export function ClinicPipeline() {
           <h1 className="text-3xl font-display font-bold text-white">Patient Pipeline</h1>
           <p className="text-text-secondary mt-1">Manage patient flow, intent signals, and operational stages.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
             <input 
@@ -396,7 +397,11 @@ export function ClinicPipeline() {
 
                     {/* Actions */}
                     <div className="pt-4 border-t border-surface-3 space-y-2">
-                      <Button className="w-full bg-surface-2 hover:bg-surface-3 text-white justify-between">
+                      <Button 
+                        className="w-full bg-surface-2 hover:bg-surface-3 text-white justify-between"
+                        onClick={() => handleMoveStage(selectedPatient.id, selectedPatient.stage)}
+                        disabled={selectedPatient.stage === 'treating'}
+                      >
                         Move to Next Stage <ArrowRight className="w-4 h-4" />
                       </Button>
                       <Button variant="outline" className="w-full border-surface-3 text-white hover:bg-surface-2 justify-between">

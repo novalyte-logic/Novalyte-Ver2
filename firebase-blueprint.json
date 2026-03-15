@@ -56,6 +56,17 @@
         "name": { "type": "string" },
         "specialties": { "type": "array", "items": { "type": "string" } },
         "status": { "type": "string", "enum": ["pending", "active", "rejected"] },
+        "address": { "type": "string" },
+        "city": { "type": "string" },
+        "state": { "type": "string" },
+        "zip": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "website": { "type": "string" },
+        "rating": { "type": "number" },
+        "reviewCount": { "type": "number" },
+        "pricingTier": { "type": "string", "enum": ["budget", "standard", "premium", "elite"] },
+        "acceptsInsurance": { "type": "boolean" },
         "createdAt": { "type": "timestamp" }
       },
       "required": ["uid", "name", "status", "createdAt"]
@@ -188,6 +199,66 @@
       },
       "required": ["userId", "message", "read", "createdAt"]
     },
+    "SupportTicket": {
+      "title": "SupportTicket",
+      "description": "Clinic support ticket.",
+      "type": "object",
+      "properties": {
+        "clinicId": { "type": "string" },
+        "subject": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "priority": { "type": "string", "enum": ["Low", "Medium", "High", "Urgent"] },
+        "status": { "type": "string", "enum": ["Open", "In Progress", "Resolved", "Closed"] },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["clinicId", "subject", "status", "createdAt"]
+    },
+    "IntelligenceInsight": {
+      "title": "IntelligenceInsight",
+      "description": "AI-generated clinic insights.",
+      "type": "object",
+      "properties": {
+        "clinicId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "type": { "type": "string", "enum": ["Growth", "Efficiency", "Clinical", "Financial"] },
+        "impact": { "type": "string", "enum": ["High", "Medium", "Low"] },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["clinicId", "title", "type", "createdAt"]
+    },
+    "MarketplaceService": {
+      "title": "MarketplaceService",
+      "description": "Service available in the marketplace.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "provider": { "type": "string" },
+        "category": { "type": "string" },
+        "price": { "type": "string" },
+        "description": { "type": "string" },
+        "rating": { "type": "number" },
+        "reviews": { "type": "number" },
+        "isNew": { "type": "boolean" },
+        "isPopular": { "type": "boolean" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["name", "provider", "category", "price", "createdAt"]
+    },
+    "MarketplaceOrder": {
+      "title": "MarketplaceOrder",
+      "description": "Order for a marketplace service.",
+      "type": "object",
+      "properties": {
+        "clinicId": { "type": "string" },
+        "serviceId": { "type": "string" },
+        "serviceName": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending", "Active", "Completed", "Cancelled"] },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["clinicId", "serviceId", "status", "createdAt"]
+    },
     "AuditEvent": {
       "title": "AuditEvent",
       "description": "System audit log.",
@@ -216,6 +287,10 @@
     "/campaigns/{campaignId}": { "schema": { "$ref": "Campaign" }, "description": "Outreach campaigns." },
     "/invoices/{invoiceId}": { "schema": { "$ref": "Invoice" }, "description": "Clinic invoices." },
     "/alerts/{alertId}": { "schema": { "$ref": "Alert" }, "description": "System alerts." },
-    "/auditEvents/{eventId}": { "schema": { "$ref": "AuditEvent" }, "description": "Audit events." }
+    "/auditEvents/{eventId}": { "schema": { "$ref": "AuditEvent" }, "description": "Audit events." },
+    "/supportTickets/{ticketId}": { "schema": { "$ref": "SupportTicket" }, "description": "Clinic support tickets." },
+    "/intelligenceInsights/{insightId}": { "schema": { "$ref": "IntelligenceInsight" }, "description": "AI clinic insights." },
+    "/marketplaceServices/{serviceId}": { "schema": { "$ref": "MarketplaceService" }, "description": "Marketplace services." },
+    "/marketplaceOrders/{orderId}": { "schema": { "$ref": "MarketplaceOrder" }, "description": "Marketplace orders." }
   }
 }

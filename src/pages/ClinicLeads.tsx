@@ -6,12 +6,14 @@ import {
   Clock, ArrowRight, TrendingUp, Users, DollarSign, 
   Target, ShieldCheck, Zap, BarChart3, ChevronDown, Activity
 } from 'lucide-react';
-import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/src/firebase';
 import { useAuth } from '@/src/lib/auth/AuthContext';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 import { useShell } from '../components/shell/ShellContext';
+
+import { AIService } from '../services/ai';
 
 export function ClinicLeads() {
   const { user, role } = useAuth();
@@ -20,6 +22,7 @@ export function ClinicLeads() {
   const [expandedLead, setExpandedLead] = useState<string | null>(null);
   const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [scoringLeadId, setScoringLeadId] = useState<string | null>(null);
 
   React.useEffect(() => {
     if (!user) return;
@@ -41,17 +44,19 @@ export function ClinicLeads() {
 
         return {
           id: leadDoc.id,
+          patientId: lead.patientId,
           name: patientData.firstName ? `${patientData.firstName} ${patientData.lastName?.charAt(0) || ''}.` : 'Unknown Patient',
           intent: lead.treatmentInterest || 'General',
-          score: lead.score || 85,
+          score: lead.score || 0,
           status: lead.status || 'new',
-          time: 'Active',
+          time: lead.createdAt ? 'Active' : 'New',
           email: patientData.email || 'N/A',
           phone: patientData.phone || 'N/A',
-          source: 'Organic Search',
+          source: lead.source || 'Organic Search',
           budget: lead.budget || 'Unknown',
           urgency: lead.urgency || 'Unknown',
-          aiReasoning: 'AI summary pending...'
+          aiReasoning: lead.aiReasoning || 'Awaiting AI analysis...',
+          patientRaw: patientData
         };
       }));
       
@@ -65,6 +70,59 @@ export function ClinicLeads() {
     return () => unsubscribe();
   }, [user, role]);
 
+  const handleRunScoring = async (leadId: string) => {
+    setScoringLeadId(leadId);
+    try {
+      const lead = leads.find(l => l.id === leadId);
+      if (!lead || !lead.patientRaw) return;
+
+      const insights = await AIService.generatePatientInsights(lead.patientRaw);
+      
+      const leadRef = doc(db, 'leads', leadId);
+      await updateDoc(leadRef, {
+        score: insights.score || insights.confidenceScore * 100 || 85,
+        aiReasoning: insights.summary,
+        updatedAt: serverTimestamp()
+      });
+
+      // Log audit event
+      await addDoc(collection(db, 'auditEvents'), {
+        clinicId: user?.uid,
+        action: `AI Scoring Completed`,
+        entityId: leadId,
+        entityName: lead.name,
+        timestamp: serverTimestamp(),
+        type: 'info'
+      });
+    } catch (error) {
+      console.error("Error running AI scoring:", error);
+    } finally {
+      setScoringLeadId(null);
+    }
+  };
+
+  const handleStatusUpdate = async (leadId: string, newStatus: string) => {
+    try {
+      const leadRef = doc(db, 'leads', leadId);
+      await updateDoc(leadRef, { 
+        status: newStatus,
+        updatedAt: serverTimestamp()
+      });
+
+      // Log audit event
+      await addDoc(collection(db, 'auditEvents'), {
+        clinicId: user?.uid,
+        action: `Lead ${newStatus}`,
+        entityId: leadId,
+        entityName: leads.find(l => l.id === leadId)?.name || 'Lead',
+        timestamp: serverTimestamp(),
+        type: newStatus === 'qualified' ? 'success' : 'warning'
+      });
+    } catch (error) {
+      console.error("Error updating lead status:", error);
+    }
+  };
+
   const filteredLeads = filter === 'all' ? leads : leads.filter(l => l.status === filter);
 
   return (
@@ -76,8 +134,8 @@ export function ClinicLeads() {
           <h1 className="text-3xl font-display font-bold text-white">Lead Engine</h1>
           <p className="text-text-secondary mt-1">Acquisition metrics, quality control, and intake queue.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-2 border border-surface-3">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-2 border border-surface-3 flex-grow sm:flex-grow-0 justify-center">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
@@ -98,7 +156,7 @@ export function ClinicLeads() {
       {/* Performance Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Lead Velocity', value: '12/day', trend: '+2 vs last week', icon: Activity, color: 'text-primary', bg: 'bg-primary/10' },
+          { label: 'Lead Velocity', value: `${leads.length}/mo`, trend: '+2 vs last week', icon: Activity, color: 'text-primary', bg: 'bg-primary/10' },
           { label: 'Avg AI Score', value: '84', trend: 'Top 10% network', icon: Target, color: 'text-secondary', bg: 'bg-secondary/10' },
           { label: 'Cost Per Lead', value: '$45', trend: '-$5 vs target', icon: DollarSign, color: 'text-success', bg: 'bg-success/10' },
           { label: 'Conversion Rate', value: '28%', trend: '+2.1% this mo', icon: TrendingUp, color: 'text-warning', bg: 'bg-warning/10' },
@@ -275,13 +333,36 @@ export function ClinicLeads() {
                           </div>
                           
                           <div className="shrink-0 flex flex-row md:flex-col gap-2 justify-end">
+                            <Button 
+                              className="bg-secondary hover:bg-secondary/90 text-white font-bold w-full md:w-auto" 
+                              onClick={(e) => { e.stopPropagation(); handleRunScoring(lead.id); }}
+                              disabled={scoringLeadId === lead.id}
+                            >
+                              {scoringLeadId === lead.id ? (
+                                <span className="flex items-center gap-2">
+                                  <Clock className="w-4 h-4 animate-spin" /> Scoring...
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-2">
+                                  <Zap className="w-4 h-4" /> Run AI Scoring
+                                </span>
+                              )}
+                            </Button>
                             <Button className="bg-primary hover:bg-primary/90 text-black font-bold w-full md:w-auto" onClick={(e) => { e.stopPropagation(); openEntity('patient', lead.id); }}>
                               Open Dossier
                             </Button>
-                            <Button variant="outline" className="border-success/30 text-success hover:bg-success/10 font-bold w-full md:w-auto">
+                            <Button 
+                              variant="outline" 
+                              className="border-success/30 text-success hover:bg-success/10 font-bold w-full md:w-auto"
+                              onClick={(e) => { e.stopPropagation(); handleStatusUpdate(lead.id, 'qualified'); }}
+                            >
                               <CheckCircle2 className="w-4 h-4 mr-2" /> Qualify
                             </Button>
-                            <Button variant="outline" className="border-danger/30 text-danger hover:bg-danger/10 font-bold w-full md:w-auto">
+                            <Button 
+                              variant="outline" 
+                              className="border-danger/30 text-danger hover:bg-danger/10 font-bold w-full md:w-auto"
+                              onClick={(e) => { e.stopPropagation(); handleStatusUpdate(lead.id, 'disqualified'); }}
+                            >
                               <XCircle className="w-4 h-4 mr-2" /> Disqualify
                             </Button>
                           </div>

@@ -1,14 +1,81 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { 
   CreditCard, Download, CheckCircle2, AlertTriangle, 
   ShieldCheck, Zap, ArrowUpRight, Clock, Receipt, Building2
 } from 'lucide-react';
+import { collection, query, where, onSnapshot, orderBy, doc, getDoc } from 'firebase/firestore';
+import { db } from '@/src/firebase';
+import { useAuth } from '@/src/lib/auth/AuthContext';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 
+interface Invoice {
+  id: string;
+  amount: number;
+  status: 'paid' | 'pending' | 'overdue';
+  dueDate: any;
+  createdAt: any;
+  description?: string;
+}
+
 export function ClinicBilling() {
+  const { user } = useAuth();
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [clinicData, setClinicData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchClinic = async () => {
+      const snap = await getDoc(doc(db, 'clinics', user.uid));
+      if (snap.exists()) setClinicData(snap.data());
+    };
+
+    const q = query(
+      collection(db, 'invoices'),
+      where('clinicId', '==', user.uid),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const invoiceData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Invoice[];
+      setInvoices(invoiceData);
+      setLoading(false);
+    });
+
+    fetchClinic();
+    return () => unsubscribe();
+  }, [user]);
+
+  const currentPlan = {
+    name: "Novalyte Clinic OS",
+    price: "$997",
+    period: "mo",
+    nextBilling: "April 1, 2026",
+    features: [
+      "Unlimited Patient Leads",
+      "Advanced AI Triage & Scoring",
+      "Full CRM & Pipeline Access",
+      "Marketplace Procurement",
+      "Workforce Exchange Access",
+      "Priority Technical Support"
+    ]
+  };
+
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col animate-in fade-in duration-500">
       
@@ -18,9 +85,9 @@ export function ClinicBilling() {
           <h1 className="text-3xl font-display font-bold text-white">Financial & Subscription</h1>
           <p className="text-text-secondary mt-1">Manage your Novalyte OS plan, billing methods, and invoice history.</p>
         </div>
-        <div className="flex gap-3">
-          <Link to="/contact">
-            <Button variant="outline" className="border-surface-3 text-white hover:bg-surface-2">
+        <div className="flex flex-wrap gap-3 w-full md:w-auto">
+          <Link to="/contact" className="w-full sm:w-auto">
+            <Button variant="outline" className="w-full sm:w-auto border-surface-3 text-white hover:bg-surface-2">
               Contact Billing Support
             </Button>
           </Link>
@@ -36,7 +103,7 @@ export function ClinicBilling() {
             <ShieldCheck className="w-5 h-5 text-success shrink-0 mt-0.5" />
             <div>
               <h3 className="text-sm font-bold text-success">Account in Good Standing</h3>
-              <p className="text-sm text-success/80 mt-1">Your next automated payment is scheduled for April 1, 2026. No action required.</p>
+              <p className="text-sm text-success/80 mt-1">Your next automated payment is scheduled for {currentPlan.nextBilling}. No action required.</p>
             </div>
           </div>
 
@@ -54,49 +121,37 @@ export function ClinicBilling() {
                     <span className="px-3 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20 uppercase tracking-wider">
                       Pro Tier Active
                     </span>
-                    <h2 className="text-2xl font-display font-bold text-white mt-4">Novalyte Clinic OS</h2>
+                    <h2 className="text-2xl font-display font-bold text-white mt-4">{currentPlan.name}</h2>
                   </div>
                   <div className="text-right">
-                    <p className="text-4xl font-display font-bold text-white">$997<span className="text-lg text-text-secondary font-normal">/mo</span></p>
+                    <p className="text-4xl font-display font-bold text-white">{currentPlan.price}<span className="text-lg text-text-secondary font-normal">/{currentPlan.period}</span></p>
                     <p className="text-sm text-text-secondary mt-1">Billed monthly</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                   <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm text-text-secondary">
-                      <CheckCircle2 className="w-4 h-4 text-primary" />
-                      <span className="text-white">Unlimited Patient Leads</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-text-secondary">
-                      <CheckCircle2 className="w-4 h-4 text-primary" />
-                      <span className="text-white">Advanced AI Triage & Scoring</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-text-secondary">
-                      <CheckCircle2 className="w-4 h-4 text-primary" />
-                      <span className="text-white">Full CRM & Pipeline Access</span>
-                    </div>
+                    {currentPlan.features.slice(0, 3).map((feature, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm text-text-secondary">
+                        <CheckCircle2 className="w-4 h-4 text-primary" />
+                        <span className="text-white">{feature}</span>
+                      </div>
+                    ))}
                   </div>
                   <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm text-text-secondary">
-                      <CheckCircle2 className="w-4 h-4 text-primary" />
-                      <span className="text-white">Marketplace Procurement</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-text-secondary">
-                      <CheckCircle2 className="w-4 h-4 text-primary" />
-                      <span className="text-white">Workforce Exchange Access</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-text-secondary">
-                      <CheckCircle2 className="w-4 h-4 text-primary" />
-                      <span className="text-white">Priority Technical Support</span>
-                    </div>
+                    {currentPlan.features.slice(3).map((feature, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm text-text-secondary">
+                        <CheckCircle2 className="w-4 h-4 text-primary" />
+                        <span className="text-white">{feature}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
 
               <div className="relative z-10 pt-6 border-t border-surface-3 flex items-center justify-between">
                 <p className="text-sm text-text-secondary flex items-center gap-2">
-                  <Clock className="w-4 h-4" /> Renews automatically on April 1, 2026
+                  <Clock className="w-4 h-4" /> Renews automatically on {currentPlan.nextBilling}
                 </p>
                 <div className="flex gap-3">
                   <Link to="/contact">
@@ -147,17 +202,17 @@ export function ClinicBilling() {
                   <div className="flex items-start gap-3">
                     <Building2 className="w-4 h-4 text-text-secondary mt-0.5 shrink-0" />
                     <div>
-                      <p className="text-sm font-medium text-white">Apex Men's Health</p>
+                      <p className="text-sm font-medium text-white">{clinicData?.name || "Apex Men's Health"}</p>
                       <p className="text-xs text-text-secondary mt-1">
-                        123 Medical Plaza, Suite 400<br/>
-                        Austin, TX 78701<br/>
+                        {clinicData?.address || "123 Medical Plaza, Suite 400"}<br/>
+                        {clinicData?.city || "Austin"}, {clinicData?.state || "TX"} {clinicData?.zip || "78701"}<br/>
                         United States
                       </p>
                     </div>
                   </div>
                   <div className="pt-4 border-t border-surface-3">
-                    <p className="text-xs text-text-secondary mb-1">Tax ID / EIN</p>
-                    <p className="text-sm font-mono text-white">XX-XXX4921</p>
+                    <p className="text-xs text-text-secondary mb-1">NPI Number</p>
+                    <p className="text-sm font-mono text-white">{clinicData?.npiNumber || "XX-XXX4921"}</p>
                   </div>
                 </div>
               </Card>
@@ -187,31 +242,42 @@ export function ClinicBilling() {
                   </tr>
                 </thead>
                 <tbody className="text-sm divide-y divide-surface-3">
-                  {[
-                    { id: 'INV-2026-003', date: 'Mar 1, 2026', desc: 'Novalyte OS - Pro Tier', amount: '$997.00', status: 'Paid' },
-                    { id: 'INV-2026-002', date: 'Feb 1, 2026', desc: 'Novalyte OS - Pro Tier', amount: '$997.00', status: 'Paid' },
-                    { id: 'INV-2026-001', date: 'Jan 1, 2026', desc: 'Novalyte OS - Pro Tier', amount: '$997.00', status: 'Paid' },
-                    { id: 'INV-2025-012', date: 'Dec 1, 2025', desc: 'Novalyte OS - Pro Tier', amount: '$997.00', status: 'Paid' },
-                  ].map((invoice, i) => (
-                    <tr key={i} className="hover:bg-surface-2/30 transition-colors group">
-                      <td className="px-6 py-4">
-                        <p className="font-mono text-white">{invoice.id}</p>
-                        <p className="text-xs text-text-secondary mt-0.5">{invoice.desc}</p>
-                      </td>
-                      <td className="px-6 py-4 text-text-secondary">{invoice.date}</td>
-                      <td className="px-6 py-4 font-medium text-white">{invoice.amount}</td>
-                      <td className="px-6 py-4">
-                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-success/10 text-success uppercase tracking-wider border border-success/20">
-                          {invoice.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button className="p-2 rounded-lg bg-surface-2 border border-surface-3 text-text-secondary hover:text-white hover:border-primary/50 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100">
-                          <Download className="w-4 h-4" />
-                        </button>
+                  {invoices.length > 0 ? (
+                    invoices.map((invoice, i) => (
+                      <tr key={i} className="hover:bg-surface-2/30 transition-colors group">
+                        <td className="px-6 py-4">
+                          <p className="font-mono text-white">{invoice.id}</p>
+                          <p className="text-xs text-text-secondary mt-0.5">{invoice.description || 'Novalyte OS - Pro Tier'}</p>
+                        </td>
+                        <td className="px-6 py-4 text-text-secondary">
+                          {invoice.createdAt?.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </td>
+                        <td className="px-6 py-4 font-medium text-white">${invoice.amount.toFixed(2)}</td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                            invoice.status === 'paid' 
+                              ? 'bg-success/10 text-success border-success/20' 
+                              : invoice.status === 'overdue'
+                              ? 'bg-error/10 text-error border-error/20'
+                              : 'bg-warning/10 text-warning border-warning/20'
+                          }`}>
+                            {invoice.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button className="p-2 rounded-lg bg-surface-2 border border-surface-3 text-text-secondary hover:text-white hover:border-primary/50 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100">
+                            <Download className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center text-text-secondary italic">
+                        No invoice history found.
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>

@@ -5,6 +5,8 @@ import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
 import { AIService } from '@/src/services/ai';
 import { Activity, ArrowRight, ChevronLeft, Shield, AlertTriangle, CheckCircle2, Bot, Brain, ActivitySquare, Stethoscope, Clock } from 'lucide-react';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/src/firebase';
 
 const SYMPTOMS = [
   'Chronic Fatigue',
@@ -64,6 +66,17 @@ export function SymptomChecker() {
         };
         const data = await AIService.generatePatientInsights(patientData as any);
         setAiResult(data);
+
+        // Persist symptom check to Firestore
+        await addDoc(collection(db, 'symptom_checks'), {
+          symptoms: selectedSymptoms,
+          duration,
+          severity,
+          aiInsights: data.recommendedProtocols || [],
+          matchScore: data.score || 85,
+          timestamp: serverTimestamp(),
+          status: 'completed'
+        });
       } catch (error) {
         console.error('AI Triage error:', error);
       }

@@ -134,11 +134,53 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    match /auditEvents/{eventId} {
+    match /symptom_checks/{checkId} {
       allow read: if isAdmin();
-      allow create: if isAuthenticated(); // Anyone can log an audit event
-      allow update: if false; // Immutable
-      allow delete: if false; // Immutable
+      allow create: if true; // Publicly creatable
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /ai_interactions/{interactionId} {
+      allow read: if isAdmin();
+      allow create: if true; // Publicly creatable
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /auditEvents/{eventId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.clinicId == request.auth.uid);
+      allow create: if isAuthenticated();
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    match /supportTickets/{ticketId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.clinicId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.clinicId == request.auth.uid;
+      allow update: if isAdmin() || (isAuthenticated() && resource.data.clinicId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    match /intelligenceInsights/{insightId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.clinicId == request.auth.uid);
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /marketplaceServices/{serviceId} {
+      allow read: if true;
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /marketplaceOrders/{orderId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.clinicId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.clinicId == request.auth.uid;
+      allow update: if isAdmin() || (isAuthenticated() && resource.data.clinicId == request.auth.uid);
+      allow delete: if isAdmin();
     }
   }
 }

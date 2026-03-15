@@ -84,7 +84,7 @@ export function Directory() {
   const [compareList, setCompareList] = useState<string[]>([]);
   const [isAiMatching, setIsAiMatching] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [clinics, setClinics] = useState<any[]>(MOCK_CLINICS);
+  const [clinics, setClinics] = useState<any[]>([]);
 
   React.useEffect(() => {
     const q = query(collection(db, 'clinics'));
@@ -100,14 +100,15 @@ export function Directory() {
           tags: data.tags || ['General'],
           symptoms: data.symptoms || [],
           waitlist: data.waitlist || 'Contact for availability',
-          price: data.price || '$$',
+          price: data.pricingTier || '$$',
           image: data.image || 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=800'
         };
       });
       
-      // Merge with mock clinics for demo purposes if firestore is empty
       if (clinicsData.length > 0) {
         setClinics(clinicsData);
+      } else {
+        setClinics(MOCK_CLINICS);
       }
     });
 
@@ -429,7 +430,7 @@ export function Directory() {
               
               <div className="flex items-center gap-3">
                 {compareList.map(id => {
-                  const clinic = MOCK_CLINICS.find(c => c.id === id);
+                  const clinic = clinics.find(c => c.id === id);
                   return clinic ? (
                     <div key={id} className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-[#05070A] border border-surface-3 rounded-lg text-sm">
                       <span className="text-white truncate max-w-[120px]">{clinic.name}</span>

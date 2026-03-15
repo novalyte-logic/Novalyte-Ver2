@@ -6,6 +6,9 @@ import {
   Users, DollarSign, Target, CalendarCheck, AlertTriangle,
   ArrowUpRight, ArrowDownRight, Zap, ChevronRight
 } from 'lucide-react';
+import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
+import { db } from '@/src/firebase';
+import { useAuth } from '@/src/lib/auth/AuthContext';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 import { AIService } from '@/src/services/ai';
@@ -14,7 +17,7 @@ import {
   BarChart, Bar, Legend, PieChart, Pie, Cell, LineChart, Line
 } from 'recharts';
 
-// --- Mock Data ---
+// --- Mock Data for Charts (Still useful for visualization) ---
 const showRateData = [
   { month: 'Oct', rate: 68, industryAvg: 65 },
   { month: 'Nov', rate: 72, industryAvg: 65 },
@@ -65,25 +68,40 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
+interface IntelligenceInsight {
+  id: string;
+  type: 'growth' | 'efficiency' | 'retention';
+  title: string;
+  description: string;
+  impact: string;
+  action: string;
+  createdAt: any;
+}
+
 export function ClinicIntelligence() {
+  const { user } = useAuth();
   const [timeframe, setTimeframe] = useState('30d');
-  const [insights, setInsights] = useState<any>(null);
+  const [insights, setInsights] = useState<IntelligenceInsight[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchInsights = async () => {
-      setLoading(true);
-      try {
-        const data = await AIService.generateClinicInsights({ name: 'Clinic' }, { showRate: '85%', cac: '$345' });
-        setInsights(data);
-      } catch (error) {
-        console.error('Error fetching insights:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchInsights();
-  }, [timeframe]);
+    if (!user) return;
+
+    const q = query(
+      collection(db, 'intelligenceInsights'),
+      where('clinicId', '==', user.uid),
+      orderBy('createdAt', 'desc'),
+      limit(5)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as IntelligenceInsight[];
+      setInsights(data);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
 
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col animate-in fade-in duration-500">
@@ -125,12 +143,12 @@ export function ClinicIntelligence() {
                 <h2 className="text-sm font-bold text-white uppercase tracking-wider">Executive Summary</h2>
               </div>
               <p className="text-2xl font-display font-bold text-white leading-tight mb-6">
-                {loading ? 'Analyzing clinic performance...' : (insights?.insights?.[0] || 'Your show rate is up 12% this month, driven by automated SMS triage. However, Paid Social leads are converting 15% lower than average. Consider shifting $2,500 of ad spend to the Novalyte Directory.')}
+                {loading ? 'Analyzing clinic performance...' : (insights[0]?.description || 'Your show rate is up 12% this month, driven by automated SMS triage. However, Paid Social leads are converting 15% lower than average. Consider shifting $2,500 of ad spend to the Novalyte Directory.')}
               </p>
               <div className="flex flex-wrap gap-4">
                 <Link to="/dashboard/leads">
                   <Button className="bg-secondary hover:bg-secondary/90 text-white font-bold">
-                    {loading ? 'Loading...' : (insights?.nextBestAction || 'Review Ad Spend Allocation')}
+                    {loading ? 'Loading...' : (insights[0]?.action || 'Review Ad Spend Allocation')}
                   </Button>
                 </Link>
                 <Link to="/dashboard/settings">
@@ -276,35 +294,60 @@ export function ClinicIntelligence() {
           <div className="mt-8">
             <h3 className="text-xl font-display font-bold text-white mb-4">Actionable Insights</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card className="p-5 bg-surface-1 border-surface-3 hover:border-surface-4 transition-colors cursor-pointer group">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center text-warning shrink-0">
-                    <AlertTriangle className="w-5 h-5" />
+              {insights.length > 0 ? insights.map((insight) => (
+                <Card key={insight.id} className="p-5 bg-surface-1 border-surface-3 hover:border-surface-4 transition-colors cursor-pointer group">
+                  <div className="flex items-start gap-4">
+                    <div className={`w-10 h-10 rounded-lg ${
+                      insight.type === 'growth' ? 'bg-success/10 text-success' : 
+                      insight.type === 'efficiency' ? 'bg-warning/10 text-warning' : 
+                      'bg-secondary/10 text-secondary'
+                    } flex items-center justify-center shrink-0`}>
+                      {insight.type === 'growth' ? <TrendingUp className="w-5 h-5" /> : 
+                       insight.type === 'efficiency' ? <AlertTriangle className="w-5 h-5" /> : 
+                       <Users className="w-5 h-5" />}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-white mb-1 group-hover:text-primary transition-colors">{insight.title}</h4>
+                      <p className="text-sm text-text-secondary mb-3">{insight.description}</p>
+                      <span className="text-xs font-bold text-primary flex items-center gap-1">
+                        {insight.action} <ChevronRight className="w-3 h-3" />
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-bold text-white mb-1 group-hover:text-primary transition-colors">High CAC on Paid Social</h4>
-                    <p className="text-sm text-text-secondary mb-3">Your Customer Acquisition Cost for Facebook/IG leads has spiked 18% in the last 14 days. Conversion from these sources is dropping.</p>
-                    <span className="text-xs font-bold text-primary flex items-center gap-1">
-                      Review Campaign Targeting <ChevronRight className="w-3 h-3" />
-                    </span>
-                  </div>
-                </div>
-              </Card>
+                </Card>
+              )) : (
+                <>
+                  <Card className="p-5 bg-surface-1 border-surface-3 hover:border-surface-4 transition-colors cursor-pointer group">
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center text-warning shrink-0">
+                        <AlertTriangle className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-white mb-1 group-hover:text-primary transition-colors">High CAC on Paid Social</h4>
+                        <p className="text-sm text-text-secondary mb-3">Your Customer Acquisition Cost for Facebook/IG leads has spiked 18% in the last 14 days. Conversion from these sources is dropping.</p>
+                        <span className="text-xs font-bold text-primary flex items-center gap-1">
+                          Review Campaign Targeting <ChevronRight className="w-3 h-3" />
+                        </span>
+                      </div>
+                    </div>
+                  </Card>
 
-              <Card className="p-5 bg-surface-1 border-surface-3 hover:border-surface-4 transition-colors cursor-pointer group">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center text-success shrink-0">
-                    <Zap className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-white mb-1 group-hover:text-primary transition-colors">Peptide Upsell Opportunity</h4>
-                    <p className="text-sm text-text-secondary mb-3">22% of your active TRT patients have expressed interest in weight management. A targeted email campaign could yield high ROI.</p>
-                    <span className="text-xs font-bold text-primary flex items-center gap-1">
-                      Draft Outreach Campaign <ChevronRight className="w-3 h-3" />
-                    </span>
-                  </div>
-                </div>
-              </Card>
+                  <Card className="p-5 bg-surface-1 border-surface-3 hover:border-surface-4 transition-colors cursor-pointer group">
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center text-success shrink-0">
+                        <Zap className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-white mb-1 group-hover:text-primary transition-colors">Peptide Upsell Opportunity</h4>
+                        <p className="text-sm text-text-secondary mb-3">22% of your active TRT patients have expressed interest in weight management. A targeted email campaign could yield high ROI.</p>
+                        <span className="text-xs font-bold text-primary flex items-center gap-1">
+                          Draft Outreach Campaign <ChevronRight className="w-3 h-3" />
+                        </span>
+                      </div>
+                    </div>
+                  </Card>
+                </>
+              )}
             </div>
           </div>
 

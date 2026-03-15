@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, where, limit } from 'firebase/firestore';
 import { db } from '@/src/firebase';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
-import { Shield, Activity, ArrowRight, CheckCircle2, ChevronLeft, Brain, Zap, AlertCircle, Calendar, Clock, Lock } from 'lucide-react';
+import { Shield, Activity, ArrowRight, CheckCircle2, ChevronLeft, Brain, Zap, AlertCircle, Calendar, Clock, Lock, MapPin, Star } from 'lucide-react';
 
 type AssessmentData = {
   goal: string;
@@ -51,6 +51,9 @@ export function PatientAssessment() {
   const [result, setResult] = useState<'qualified' | 'disqualified' | null>(null);
   const [showBooking, setShowBooking] = useState(false);
   const [bookingStep, setBookingStep] = useState(1);
+  const [matchedClinic, setMatchedClinic] = useState<any>(null);
+  const [patientId, setPatientId] = useState<string | null>(null);
+  const [assessmentId, setAssessmentId] = useState<string | null>(null);
 
   const totalSteps = 7;
 
@@ -100,9 +103,10 @@ export function PatientAssessment() {
         zip: data.zip,
         createdAt: serverTimestamp()
       });
+      setPatientId(patientRef.id);
 
       // Save assessment
-      await addDoc(collection(db, 'assessments'), {
+      const assessmentRef = await addDoc(collection(db, 'assessments'), {
         patientId: patientRef.id,
         treatmentInterest: data.goal,
         symptoms: data.symptoms,
@@ -113,12 +117,52 @@ export function PatientAssessment() {
         status: status,
         createdAt: serverTimestamp()
       });
+      setAssessmentId(assessmentRef.id);
 
-      // Save lead if qualified
+      // Real Clinic Matching Logic
       if (!isDisqualified) {
+        const clinicsRef = collection(db, 'clinics');
+        // Simple matching: find active clinics that have the goal in their specialties
+        const q = query(
+          clinicsRef, 
+          where('status', '==', 'active'),
+          where('specialties', 'array-contains', data.goal),
+          limit(5)
+        );
+        
+        const querySnapshot = await getDocs(q);
+        const matchedClinics: any[] = [];
+        querySnapshot.forEach((doc) => {
+          matchedClinics.push({ id: doc.id, ...doc.data() });
+        });
+
+        // If no specialty match, just get any active clinics
+        if (matchedClinics.length === 0) {
+          const fallbackQ = query(clinicsRef, where('status', '==', 'active'), limit(3));
+          const fallbackSnapshot = await getDocs(fallbackQ);
+          fallbackSnapshot.forEach((doc) => {
+            matchedClinics.push({ id: doc.id, ...doc.data() });
+          });
+        }
+
+        // Pick the best match (for now, just the first one)
+        const bestMatch = matchedClinics[0] || {
+          id: 'fallback-clinic',
+          name: "Apex Longevity & Performance",
+          specialties: [data.goal],
+          city: "Austin",
+          state: "TX",
+          rating: 4.9,
+          pricingTier: "elite"
+        };
+        
+        setMatchedClinic(bestMatch);
+
+        // Save lead
         await addDoc(collection(db, 'leads'), {
           patientId: patientRef.id,
-          clinicId: 'unassigned', // To be assigned later
+          clinicId: bestMatch.id,
+          assessmentId: assessmentRef.id,
           status: 'new',
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
@@ -129,7 +173,6 @@ export function PatientAssessment() {
       setStep(totalSteps + 1);
     } catch (error) {
       console.error("Error saving assessment:", error);
-      // Fallback or show error
       setResult('disqualified');
       setStep(totalSteps + 1);
     } finally {
@@ -141,11 +184,26 @@ export function PatientAssessment() {
     setShowBooking(true);
   };
 
-  const confirmBooking = () => {
-    setBookingStep(2);
-    setTimeout(() => {
-      navigate('/mens-trivia', { state: { fromBooking: true } });
-    }, 2500);
+  const confirmBooking = async () => {
+    if (!patientId || !matchedClinic) return;
+
+    try {
+      await addDoc(collection(db, 'bookings'), {
+        patientId,
+        clinicId: matchedClinic.id,
+        assessmentId,
+        date: new Date().toISOString(), // In a real app, this would be the selected date
+        status: 'confirmed',
+        createdAt: serverTimestamp()
+      });
+
+      setBookingStep(2);
+      setTimeout(() => {
+        navigate('/mens-trivia', { state: { fromBooking: true } });
+      }, 2500);
+    } catch (error) {
+      console.error("Error saving booking:", error);
+    }
   };
 
   return (
@@ -476,10 +534,14 @@ export function PatientAssessment() {
                     <div className="flex justify-between items-start mb-6">
                       <div>
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="px-3 py-1 rounded-full bg-success/10 text-success text-xs font-bold uppercase tracking-wider border border-success/20">98% Clinical Match</span>
-                          <span className="text-sm text-text-secondary">2.4 miles away</span>
+                          <span className="px-3 py-1 rounded-full bg-success/10 text-success text-xs font-bold uppercase tracking-wider border border-success/20">
+                            {matchedClinic?.rating ? `${Math.round(matchedClinic.rating * 20)}% Clinical Match` : '98% Clinical Match'}
+                          </span>
+                          <span className="text-sm text-text-secondary">
+                            {matchedClinic?.city ? `${matchedClinic.city}, ${matchedClinic.state}` : '2.4 miles away'}
+                          </span>
                         </div>
-                        <h3 className="text-2xl font-bold text-white">Apex Longevity & Performance</h3>
+                        <h3 className="text-2xl font-bold text-white">{matchedClinic?.name || 'Apex Longevity & Performance'}</h3>
                         <p className="text-text-secondary mt-1">Specializes in {data.goal}</p>
                       </div>
                       <div className="w-16 h-16 rounded-xl bg-surface-2 border border-surface-3 flex items-center justify-center">
@@ -493,8 +555,8 @@ export function PatientAssessment() {
                         <p className="font-medium text-white text-lg">This Week</p>
                       </div>
                       <div className="p-4 rounded-lg bg-surface-2/50 border border-surface-3">
-                        <p className="text-xs text-text-secondary uppercase tracking-wider mb-1">Consultation</p>
-                        <p className="font-medium text-white text-lg">Telehealth or In-Person</p>
+                        <p className="text-xs text-text-secondary uppercase tracking-wider mb-1">Pricing Tier</p>
+                        <p className="font-medium text-white text-lg capitalize">{matchedClinic?.pricingTier || 'Elite'}</p>
                       </div>
                     </div>
 
@@ -556,7 +618,7 @@ export function PatientAssessment() {
                 {bookingStep === 1 ? (
                   <>
                     <h2 className="text-3xl font-display font-bold text-white mb-4">Select a Time</h2>
-                    <p className="text-text-secondary mb-8">Choose a time for your initial consultation with Apex Longevity.</p>
+                    <p className="text-text-secondary mb-8">Choose a time for your initial consultation with {matchedClinic?.name || 'Apex Longevity'}.</p>
                     
                     <Card className="p-6 bg-surface-1/80 border-surface-3 text-left mb-8">
                       <div className="grid grid-cols-3 gap-4 mb-6">

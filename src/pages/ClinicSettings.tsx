@@ -5,28 +5,33 @@ import {
   Building2, MapPin, Phone, Mail, CheckCircle2, AlertCircle,
   Plus, X, Users, Activity, Lock, CreditCard
 } from 'lucide-react';
+import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/src/firebase';
+import { useAuth } from '@/src/lib/auth/AuthContext';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 
 type TabId = 'profile' | 'specialties' | 'directory' | 'notifications' | 'integrations' | 'permissions';
 
 export function ClinicSettings() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>('profile');
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Form State
   const [formData, setFormData] = useState({
-    clinicName: "Apex Men's Health",
-    npiNumber: "1928374650",
-    email: "admin@apexmenshealth.com",
-    phone: "(512) 555-0199",
-    address: "123 Medical Plaza, Suite 400",
-    city: "Austin",
-    state: "TX",
-    zip: "78701",
-    specialties: ['Hormone Optimization', 'Longevity', 'Peptide Therapy', 'Weight Management'],
+    clinicName: "",
+    npiNumber: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "",
+    zip: "",
+    specialties: [] as string[],
     isPublic: true,
     acceptsNewPatients: true,
     notifyNewLeads: true,
@@ -36,7 +41,40 @@ export function ClinicSettings() {
 
   const [newSpecialty, setNewSpecialty] = useState('');
 
-  // Simulate unsaved changes detection
+  useEffect(() => {
+    const fetchClinicData = async () => {
+      if (!user) return;
+      try {
+        const clinicSnap = await getDoc(doc(db, 'clinics', user.uid));
+        if (clinicSnap.exists()) {
+          const data = clinicSnap.data();
+          setFormData({
+            clinicName: data.name || "",
+            npiNumber: data.npiNumber || "",
+            email: data.email || "",
+            phone: data.phone || "",
+            address: data.address || "",
+            city: data.city || "",
+            state: data.state || "",
+            zip: data.zip || "",
+            specialties: data.specialties || [],
+            isPublic: data.isPublic ?? true,
+            acceptsNewPatients: data.acceptsNewPatients ?? true,
+            notifyNewLeads: data.notifyNewLeads ?? true,
+            notifyMessages: data.notifyMessages ?? true,
+            notifySystem: data.notifySystem ?? false
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching clinic data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchClinicData();
+  }, [user]);
+
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setHasUnsavedChanges(true);
@@ -57,14 +95,35 @@ export function ClinicSettings() {
   };
 
   const handleSave = async () => {
+    if (!user) return;
     setIsSaving(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsSaving(false);
-    setHasUnsavedChanges(false);
-    setShowSuccess(true);
-    
-    setTimeout(() => setShowSuccess(false), 3000);
+    try {
+      await updateDoc(doc(db, 'clinics', user.uid), {
+        name: formData.clinicName,
+        npiNumber: formData.npiNumber,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        zip: formData.zip,
+        specialties: formData.specialties,
+        isPublic: formData.isPublic,
+        acceptsNewPatients: formData.acceptsNewPatients,
+        notifyNewLeads: formData.notifyNewLeads,
+        notifyMessages: formData.notifyMessages,
+        notifySystem: formData.notifySystem,
+        updatedAt: serverTimestamp()
+      });
+      
+      setHasUnsavedChanges(false);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (error) {
+      console.error("Error saving clinic data:", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const tabs: { id: TabId; label: string; icon: any }[] = [
@@ -75,6 +134,14 @@ export function ClinicSettings() {
     { id: 'integrations', label: 'Integrations', icon: Database },
     { id: 'permissions', label: 'User Permissions', icon: Users },
   ];
+
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col animate-in fade-in duration-500">
@@ -104,8 +171,7 @@ export function ClinicSettings() {
             className="border-surface-3 text-white hover:bg-surface-2 flex-grow sm:flex-grow-0"
             disabled={!hasUnsavedChanges || isSaving}
             onClick={() => {
-              // Reset logic would go here
-              setHasUnsavedChanges(false);
+              window.location.reload();
             }}
           >
             Discard
@@ -477,8 +543,8 @@ export function ClinicSettings() {
                       <tbody className="text-sm divide-y divide-surface-3 bg-[#0B0F14]">
                         <tr>
                           <td className="px-5 py-4">
-                            <p className="font-bold text-white">Dr. Sarah Jenkins</p>
-                            <p className="text-xs text-text-secondary mt-0.5">sarah@apexmenshealth.com</p>
+                            <p className="font-bold text-white">{user?.displayName || 'Dr. Sarah Jenkins'}</p>
+                            <p className="text-xs text-text-secondary mt-0.5">{user?.email}</p>
                           </td>
                           <td className="px-5 py-4">
                             <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-primary/10 text-primary uppercase tracking-wider border border-primary/20">
@@ -487,20 +553,6 @@ export function ClinicSettings() {
                           </td>
                           <td className="px-5 py-4 text-right">
                             <Lock className="w-4 h-4 text-text-secondary inline-block" />
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="px-5 py-4">
-                            <p className="font-bold text-white">Michael Chang</p>
-                            <p className="text-xs text-text-secondary mt-0.5">michael@apexmenshealth.com</p>
-                          </td>
-                          <td className="px-5 py-4">
-                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-surface-3 text-white uppercase tracking-wider border border-surface-4">
-                              Admin
-                            </span>
-                          </td>
-                          <td className="px-5 py-4 text-right">
-                            <button className="text-sm font-bold text-primary hover:text-primary/80 transition-colors">Edit</button>
                           </td>
                         </tr>
                       </tbody>

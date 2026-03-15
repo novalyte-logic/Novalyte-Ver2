@@ -5,6 +5,8 @@ import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
 import { Link, useNavigate } from 'react-router-dom';
 import { AIService } from '@/src/services/ai';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/src/firebase';
 
 interface Action {
   label: string;
@@ -87,6 +89,14 @@ export function AskAI() {
       const chatHistory = messages.map(m => ({ role: m.role, content: m.content }));
       const response = await AIService.chat(textToSend, chatHistory);
       
+      // Persist interaction to Firestore
+      await addDoc(collection(db, 'ai_interactions'), {
+        userQuery: textToSend,
+        aiResponse: response.response,
+        timestamp: serverTimestamp(),
+        type: 'ask_ai'
+      });
+
       let actions: Action[] = [];
       if (response.suggestedActions) {
         actions = response.suggestedActions.map((a: any) => {

@@ -70,7 +70,10 @@ const CLINIC_DATA = {
   ],
   features: ["Telehealth Available", "In-house Labs", "Concierge Service", "Novalyte Certified", "Direct Doctor Messaging", "Quarterly Blood Panels"],
   hours: "Mon-Fri: 8am - 6pm",
-  address: "1200 Brickell Ave, Suite 400, Miami, FL 33131"
+  address: "1200 Brickell Ave, Suite 400, Miami, FL 33131",
+  phone: "(305) 555-0123",
+  website: "apexlongevity.com",
+  price: "$$$"
 };
 
 const SIMILAR_CLINICS = [
@@ -98,9 +101,14 @@ export function ClinicProfile() {
             name: data.name || CLINIC_DATA.name,
             location: data.city && data.state ? `${data.city}, ${data.state}` : CLINIC_DATA.location,
             rating: data.rating || CLINIC_DATA.rating,
+            reviews: data.reviewCount || CLINIC_DATA.reviews,
             description: data.description || CLINIC_DATA.description,
             specialties: data.tags || CLINIC_DATA.specialties,
             heroImage: data.image || CLINIC_DATA.heroImage,
+            address: data.address || CLINIC_DATA.address,
+            phone: data.phone || CLINIC_DATA.phone,
+            website: data.website || CLINIC_DATA.website,
+            pricingTier: data.pricingTier || CLINIC_DATA.price,
           });
         }
       } catch (error) {

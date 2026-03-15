@@ -1,18 +1,78 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { 
   Search, LifeBuoy, BookOpen, MessageCircle, FileText, 
   ExternalLink, PlayCircle, Activity, CheckCircle2, 
   ChevronDown, ChevronUp, Ticket, Phone, Mail, ArrowRight,
-  AlertCircle
+  AlertCircle, X, Send
 } from 'lucide-react';
+import { collection, query, where, onSnapshot, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/src/firebase';
+import { useAuth } from '@/src/lib/auth/AuthContext';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 
+interface SupportTicket {
+  id: string;
+  subject: string;
+  status: 'Open' | 'In Progress' | 'Resolved';
+  priority: 'Low' | 'Medium' | 'High';
+  createdAt: any;
+  updatedAt: any;
+}
+
 export function ClinicHelp() {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showNewTicketModal, setShowNewTicketModal] = useState(false);
+  const [newTicket, setNewTicket] = useState({ subject: '', description: '', priority: 'Medium' });
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const q = query(
+      collection(db, 'supportTickets'),
+      where('clinicId', '==', user.uid),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as SupportTicket[];
+      setTickets(data);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const handleSubmitTicket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !newTicket.subject || !newTicket.description) return;
+
+    setSubmitting(true);
+    try {
+      await addDoc(collection(db, 'supportTickets'), {
+        clinicId: user.uid,
+        subject: newTicket.subject,
+        description: newTicket.description,
+        priority: newTicket.priority,
+        status: 'Open',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      setNewTicket({ subject: '', description: '', priority: 'Medium' });
+      setShowNewTicketModal(false);
+    } catch (error) {
+      console.error('Error submitting ticket:', error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const faqs = [
     { 
@@ -35,11 +95,6 @@ export function ClinicHelp() {
       q: "Where can I view my billing history and invoices?", 
       a: "Your subscription details, payment methods, and past invoices are located in the Billing tab within your dashboard." 
     }
-  ];
-
-  const tickets = [
-    { id: 'TIC-8921', subject: 'EMR Sync Delay', status: 'Resolved', date: 'Oct 12, 2026' },
-    { id: 'TIC-8944', subject: 'Billing Update Inquiry', status: 'In Progress', date: 'Oct 14, 2026' },
   ];
 
   return (
@@ -185,17 +240,17 @@ export function ClinicHelp() {
               </h2>
               
               <div className="space-y-3">
-                <Link to="/contact">
-                  <Button className="w-full bg-primary hover:bg-primary/90 text-black font-bold flex items-center justify-center gap-2 py-3">
-                    <MessageCircle className="w-4 h-4" /> Live Chat Support
-                  </Button>
-                </Link>
+                <Button className="w-full bg-primary hover:bg-primary/90 text-black font-bold flex items-center justify-center gap-2 py-3">
+                  <MessageCircle className="w-4 h-4" /> Live Chat Support
+                </Button>
                 
-                <Link to="/contact">
-                  <Button variant="outline" className="w-full border-surface-3 text-white hover:bg-surface-2 flex items-center justify-center gap-2 py-3">
-                    <Ticket className="w-4 h-4" /> Submit a Ticket
-                  </Button>
-                </Link>
+                <Button 
+                  onClick={() => setShowNewTicketModal(true)}
+                  variant="outline" 
+                  className="w-full border-surface-3 text-white hover:bg-surface-2 flex items-center justify-center gap-2 py-3"
+                >
+                  <Ticket className="w-4 h-4" /> Submit a Ticket
+                </Button>
 
                 <div className="pt-4 mt-4 border-t border-surface-3">
                   <p className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-3">Enterprise Support</p>
@@ -230,22 +285,32 @@ export function ClinicHelp() {
                 <button className="text-xs font-bold text-primary hover:text-primary/80 transition-colors">View All</button>
               </div>
               <div className="space-y-3">
-                {tickets.map((ticket, i) => (
-                  <div key={i} className="p-3 border border-surface-3 rounded-lg bg-[#0B0F14] hover:border-surface-4 transition-colors cursor-pointer">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-mono text-text-secondary">{ticket.id}</span>
-                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
-                        ticket.status === 'Resolved' 
-                          ? 'bg-success/10 text-success border-success/20' 
-                          : 'bg-warning/10 text-warning border-warning/20'
-                      }`}>
-                        {ticket.status}
-                      </span>
+                {loading ? (
+                  <p className="text-xs text-text-secondary">Loading tickets...</p>
+                ) : tickets.length > 0 ? (
+                  tickets.map((ticket) => (
+                    <div key={ticket.id} className="p-3 border border-surface-3 rounded-lg bg-[#0B0F14] hover:border-surface-4 transition-colors cursor-pointer">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-mono text-text-secondary">{ticket.id.slice(0, 8).toUpperCase()}</span>
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                          ticket.status === 'Resolved' 
+                            ? 'bg-success/10 text-success border-success/20' 
+                            : ticket.status === 'In Progress'
+                            ? 'bg-warning/10 text-warning border-warning/20'
+                            : 'bg-primary/10 text-primary border-primary/20'
+                        }`}>
+                          {ticket.status}
+                        </span>
+                      </div>
+                      <p className="text-sm font-bold text-white truncate">{ticket.subject}</p>
+                      <p className="text-xs text-text-secondary mt-1">
+                        Updated {ticket.updatedAt?.toDate().toLocaleDateString() || 'Recently'}
+                      </p>
                     </div>
-                    <p className="text-sm font-bold text-white truncate">{ticket.subject}</p>
-                    <p className="text-xs text-text-secondary mt-1">Updated {ticket.date}</p>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-xs text-text-secondary">No recent tickets.</p>
+                )}
               </div>
             </Card>
 
@@ -285,6 +350,95 @@ export function ClinicHelp() {
           </div>
         </div>
       </div>
+
+      {/* New Ticket Modal */}
+      <AnimatePresence>
+        {showNewTicketModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-lg bg-surface-1 border border-surface-3 rounded-2xl shadow-2xl overflow-hidden"
+            >
+              <div className="p-6 border-b border-surface-3 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                    <Ticket className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Submit Support Ticket</h2>
+                    <p className="text-xs text-text-secondary">Our team typically responds within 4 hours.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowNewTicketModal(false)}
+                  className="p-2 hover:bg-surface-2 rounded-full text-text-secondary transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmitTicket} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Subject</label>
+                  <input 
+                    type="text"
+                    required
+                    value={newTicket.subject}
+                    onChange={(e) => setNewTicket({ ...newTicket, subject: e.target.value })}
+                    placeholder="e.g., EMR Sync Delay"
+                    className="w-full bg-[#0B0F14] border border-surface-3 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary/50 transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Priority</label>
+                  <select 
+                    value={newTicket.priority}
+                    onChange={(e) => setNewTicket({ ...newTicket, priority: e.target.value as any })}
+                    className="w-full bg-[#0B0F14] border border-surface-3 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary/50 transition-colors"
+                  >
+                    <option value="Low">Low - General Question</option>
+                    <option value="Medium">Medium - Feature Issue</option>
+                    <option value="High">High - System Blocker</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Description</label>
+                  <textarea 
+                    required
+                    rows={4}
+                    value={newTicket.description}
+                    onChange={(e) => setNewTicket({ ...newTicket, description: e.target.value })}
+                    placeholder="Please describe the issue in detail..."
+                    className="w-full bg-[#0B0F14] border border-surface-3 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary/50 transition-colors resize-none"
+                  />
+                </div>
+
+                <div className="pt-4 flex gap-3">
+                  <Button 
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowNewTicketModal(false)}
+                    className="flex-1 border-surface-3 text-white hover:bg-surface-2"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit"
+                    disabled={submitting}
+                    className="flex-1 bg-primary hover:bg-primary/90 text-black font-bold flex items-center justify-center gap-2"
+                  >
+                    {submitting ? 'Submitting...' : <><Send className="w-4 h-4" /> Send Ticket</>}
+                  </Button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

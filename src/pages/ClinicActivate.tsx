@@ -1,16 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { 
   CheckCircle2, Circle, ArrowRight, ShieldCheck, 
   FileText, Users, CreditCard, Activity, 
   AlertCircle, ChevronRight, Lock
 } from 'lucide-react';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/src/firebase';
+import { useAuth } from '@/src/lib/auth/AuthContext';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 import { Link } from 'react-router-dom';
 
 export function ClinicActivate() {
-  const [progress] = useState(40);
+  const { user } = useAuth();
+  const [clinicData, setClinicData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const unsubscribe = onSnapshot(doc(db, 'clinics', user.uid), (doc) => {
+      if (doc.exists()) {
+        setClinicData(doc.data());
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const getProgress = () => {
+    if (!clinicData) return 0;
+    let completed = 0;
+    if (clinicData.status === 'Verified') completed += 25;
+    if (clinicData.icpDefined) completed += 25;
+    if (clinicData.billingSetup) completed += 25;
+    if (clinicData.medicalDirectorVerified) completed += 25;
+    return completed;
+  };
+
+  const progress = getProgress();
 
   const steps = [
     {
@@ -18,8 +48,8 @@ export function ClinicActivate() {
       title: 'Complete Clinic Profile',
       description: 'Add your clinic details, specialties, and public directory information.',
       icon: FileText,
-      status: 'completed',
-      action: 'Edit Profile',
+      status: clinicData?.status === 'Verified' ? 'completed' : 'current',
+      action: clinicData?.status === 'Verified' ? 'Edit Profile' : 'Complete Profile',
       link: '/dashboard/settings'
     },
     {
@@ -27,7 +57,7 @@ export function ClinicActivate() {
       title: 'Define Ideal Patient Profile (ICP)',
       description: 'Tell our AI what kind of patients you want so we can route the right leads to you.',
       icon: Users,
-      status: 'current',
+      status: clinicData?.icpDefined ? 'completed' : (clinicData?.status === 'Verified' ? 'current' : 'pending'),
       action: 'Define ICP',
       link: '/clinics/icp'
     },
@@ -36,7 +66,7 @@ export function ClinicActivate() {
       title: 'Set Up Billing & Lead Budget',
       description: 'Add a payment method and set your monthly lead acquisition budget.',
       icon: CreditCard,
-      status: 'pending',
+      status: clinicData?.billingSetup ? 'completed' : (clinicData?.icpDefined ? 'current' : 'pending'),
       action: 'Setup Billing',
       link: '/dashboard/billing'
     },
@@ -45,11 +75,19 @@ export function ClinicActivate() {
       title: 'Medical Director Verification',
       description: 'Verify your medical director\'s NPI and state licenses for compliance.',
       icon: ShieldCheck,
-      status: 'pending',
+      status: clinicData?.medicalDirectorVerified ? 'completed' : (clinicData?.billingSetup ? 'current' : 'pending'),
       action: 'Verify Now',
       link: '/dashboard/settings'
     }
   ];
+
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
@@ -62,8 +100,11 @@ export function ClinicActivate() {
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm font-bold text-text-secondary">Status:</span>
-          <span className="px-3 py-1 rounded-full bg-warning/10 text-warning text-xs font-bold uppercase tracking-wider border border-warning/20 flex items-center gap-1.5">
-            <AlertCircle className="w-3.5 h-3.5" /> Pending Activation
+          <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border flex items-center gap-1.5 ${
+            progress === 100 ? 'bg-success/10 text-success border-success/20' : 'bg-warning/10 text-warning border-warning/20'
+          }`}>
+            {progress === 100 ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+            {progress === 100 ? 'Active' : 'Pending Activation'}
           </span>
         </div>
       </div>
@@ -77,7 +118,9 @@ export function ClinicActivate() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold text-white mb-1">Activation Progress</h2>
-              <p className="text-text-secondary text-sm">You are 2 steps away from receiving your first patient lead.</p>
+              <p className="text-text-secondary text-sm">
+                {progress === 100 ? 'Your clinic is fully activated and receiving leads.' : `You are ${steps.filter(s => s.status !== 'completed').length} steps away from receiving your first patient lead.`}
+              </p>
             </div>
             <span className="text-4xl font-display font-bold text-primary">{progress}%</span>
           </div>
@@ -94,22 +137,22 @@ export function ClinicActivate() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-xl border border-surface-3 bg-surface-2 flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
+            <div className={`p-4 rounded-xl border flex items-start gap-3 ${progress >= 25 ? 'border-success/30 bg-success/5' : 'border-surface-3 bg-surface-2'}`}>
+              <CheckCircle2 className={`w-5 h-5 shrink-0 ${progress >= 25 ? 'text-success' : 'text-text-secondary'}`} />
               <div>
                 <p className="text-sm font-bold text-white">Account Created</p>
                 <p className="text-xs text-text-secondary mt-0.5">Basic info verified.</p>
               </div>
             </div>
-            <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 flex items-start gap-3 shadow-[0_0_15px_rgba(53,212,255,0.1)]">
-              <Activity className="w-5 h-5 text-primary shrink-0" />
+            <div className={`p-4 rounded-xl border flex items-start gap-3 ${progress >= 50 ? 'border-primary/30 bg-primary/5 shadow-[0_0_15px_rgba(53,212,255,0.1)]' : 'border-surface-3 bg-surface-2/50 opacity-60'}`}>
+              <Activity className={`w-5 h-5 shrink-0 ${progress >= 50 ? 'text-primary' : 'text-text-secondary'}`} />
               <div>
                 <p className="text-sm font-bold text-white">Lead Engine Setup</p>
                 <p className="text-xs text-text-secondary mt-0.5">Define your ICP to start.</p>
               </div>
             </div>
-            <div className="p-4 rounded-xl border border-surface-3 bg-surface-2/50 flex items-start gap-3 opacity-60">
-              <Lock className="w-5 h-5 text-text-secondary shrink-0" />
+            <div className={`p-4 rounded-xl border flex items-start gap-3 ${progress === 100 ? 'border-success/30 bg-success/5' : 'border-surface-3 bg-surface-2/50 opacity-60'}`}>
+              {progress === 100 ? <CheckCircle2 className="w-5 h-5 text-success shrink-0" /> : <Lock className="w-5 h-5 text-text-secondary shrink-0" />}
               <div>
                 <p className="text-sm font-bold text-white">Go Live</p>
                 <p className="text-xs text-text-secondary mt-0.5">Requires billing & verification.</p>
@@ -192,9 +235,11 @@ export function ClinicActivate() {
             <p className="text-sm text-text-secondary mt-1">Our onboarding team and AI copilot are ready to assist.</p>
           </div>
         </div>
-        <Button variant="outline" className="w-full sm:w-auto border-secondary/30 text-secondary hover:bg-secondary/10 whitespace-nowrap">
-          Chat with Support
-        </Button>
+        <Link to="/dashboard/help">
+          <Button variant="outline" className="w-full sm:w-auto border-secondary/30 text-secondary hover:bg-secondary/10 whitespace-nowrap">
+            Chat with Support
+          </Button>
+        </Link>
       </Card>
 
     </div>

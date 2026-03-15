@@ -5,17 +5,142 @@ import {
   AlertCircle, Clock, CheckCircle2, Terminal, Sparkles, 
   DollarSign, Phone, ChevronRight, BarChart3, ShieldCheck
 } from 'lucide-react';
+import { collection, query, where, onSnapshot, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { db } from '@/src/firebase';
+import { useAuth } from '@/src/lib/auth/AuthContext';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 import { Link } from 'react-router-dom';
 
 export function ClinicOverview() {
+  const { user, role } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [metrics, setMetrics] = useState({
+    activePipeline: 0,
+    consultsToday: 0,
+    showRate: '84%',
+    estRevenue: '$0'
+  });
+  const [priorityLeads, setPriorityLeads] = useState<any[]>([]);
+  const [schedule, setSchedule] = useState<any[]>([]);
+  const [liveActivity, setLiveActivity] = useState<any[]>([]);
+  const [funnelData, setFunnelData] = useState([
+    { stage: 'Intake', count: 0, color: 'border-surface-3 text-text-secondary' },
+    { stage: 'Triage', count: 0, color: 'border-warning/50 text-warning' },
+    { stage: 'Consult', count: 0, color: 'border-primary/50 text-primary' },
+    { stage: 'Treating', count: 0, color: 'border-success/50 text-success' },
+  ]);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!user || role !== 'clinic') return;
+
+    // 1. Leads & Pipeline Metrics
+    const leadsQuery = query(collection(db, 'leads'), where('clinicId', '==', user.uid));
+    const unsubscribeLeads = onSnapshot(leadsQuery, (snapshot) => {
+      const leads = snapshot.docs.map(doc => doc.data());
+      
+      const active = leads.filter(l => l.status !== 'disqualified' && l.status !== 'treating').length;
+      const intake = leads.filter(l => l.status === 'new').length;
+      const triage = leads.filter(l => l.status === 'contacted').length;
+      const consult = leads.filter(l => l.status === 'scheduled').length;
+      const treating = leads.filter(l => l.status === 'treating').length;
+
+      setMetrics(prev => ({
+        ...prev,
+        activePipeline: active,
+        estRevenue: `$${(active * 1200 / 1000).toFixed(1)}k` // Mock calculation: $1200 per active lead
+      }));
+
+      setFunnelData([
+        { stage: 'Intake', count: intake, color: 'border-surface-3 text-text-secondary' },
+        { stage: 'Triage', count: triage, color: 'border-warning/50 text-warning' },
+        { stage: 'Consult', count: consult, color: 'border-primary/50 text-primary' },
+        { stage: 'Treating', count: treating, color: 'border-success/50 text-success' },
+      ]);
+
+      // Priority Leads (High Score + High Budget)
+      const priority = leads
+        .filter(l => (l.score || 0) >= 85 && l.status === 'new')
+        .slice(0, 3);
+      setPriorityLeads(priority);
+    });
+
+    // 2. Bookings (Consults Today)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const bookingsQuery = query(
+      collection(db, 'bookings'),
+      where('clinicId', '==', user.uid),
+      where('startTime', '>=', Timestamp.fromDate(today)),
+      where('startTime', '<', Timestamp.fromDate(tomorrow)),
+      orderBy('startTime', 'asc')
+    );
+
+    const unsubscribeBookings = onSnapshot(bookingsQuery, (snapshot) => {
+      const bookings = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setMetrics(prev => ({ ...prev, consultsToday: bookings.length }));
+      setSchedule(bookings);
+    });
+
+    // 3. Live Activity (Audit Events)
+    const auditQuery = query(
+      collection(db, 'auditEvents'),
+      where('clinicId', '==', user.uid),
+      orderBy('timestamp', 'desc'),
+      limit(10)
+    );
+
+    const unsubscribeAudit = onSnapshot(auditQuery, (snapshot) => {
+      const events = snapshot.docs.map(doc => {
+        const data = doc.data();
+        const diff = Math.floor((new Date().getTime() - data.timestamp?.toDate().getTime()) / 60000);
+        let timeStr = 'Just now';
+        if (diff > 0 && diff < 60) timeStr = `${diff}m ago`;
+        else if (diff >= 60) timeStr = `${Math.floor(diff / 60)}h ago`;
+
+        return {
+          time: timeStr,
+          event: data.action || 'System Event',
+          entity: data.entityName || 'Unknown',
+          type: data.type || 'info'
+        };
+      });
+      setLiveActivity(events);
+    });
+
+    // 4. Intelligence Insights (Copilot)
+    const insightsQuery = query(
+      collection(db, 'intelligenceInsights'),
+      where('clinicId', '==', user.uid),
+      orderBy('createdAt', 'desc'),
+      limit(2)
+    );
+
+    const unsubscribeInsights = onSnapshot(insightsQuery, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setCopilotInsights(data);
+    });
+
+    return () => {
+      unsubscribeLeads();
+      unsubscribeBookings();
+      unsubscribeAudit();
+      unsubscribeInsights();
+    };
+  }, [user, role]);
+
+  const [copilotInsights, setCopilotInsights] = useState<any[]>([]);
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('en-US', { 
@@ -55,7 +180,7 @@ export function ClinicOverview() {
               <Calendar className="w-4 h-4 mr-2" /> View Schedule
             </Button>
           </Link>
-          <Link to="/dashboard/pipeline" className="w-full sm:w-auto">
+          <Link to="/dashboard/leads" className="w-full sm:w-auto">
             <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-black font-bold">
               <Users className="w-4 h-4 mr-2" /> New Patient
             </Button>
@@ -64,35 +189,39 @@ export function ClinicOverview() {
       </div>
 
       {/* Priority Alert Banner */}
-      <motion.div 
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="p-4 rounded-xl bg-warning/10 border border-warning/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-warning/20 flex items-center justify-center shrink-0">
-            <AlertCircle className="w-5 h-5 text-warning" />
+      {priorityLeads.length > 0 && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="p-4 rounded-xl bg-warning/10 border border-warning/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-warning/20 flex items-center justify-center shrink-0">
+              <AlertCircle className="w-5 h-5 text-warning" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white">Action Required: High-Value Leads Waiting</h3>
+              <p className="text-xs text-warning/80 mt-0.5">
+                {priorityLeads.length} patients with high AI scores requested consults recently.
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-sm font-bold text-white">Action Required: High-Value Leads Waiting</h3>
-            <p className="text-xs text-warning/80 mt-0.5">3 patients with $500+ budget requested TRT consults in the last hour.</p>
-          </div>
-        </div>
-        <Link to="/dashboard/leads">
-          <Button size="sm" className="w-full sm:w-auto bg-warning hover:bg-warning/90 text-black font-bold whitespace-nowrap">
-            Review Leads <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
-        </Link>
-      </motion.div>
+          <Link to="/dashboard/leads">
+            <Button size="sm" className="w-full sm:w-auto bg-warning hover:bg-warning/90 text-black font-bold whitespace-nowrap">
+              Review Leads <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </Link>
+        </motion.div>
+      )}
 
       {/* Top Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Active Pipeline", value: "42", change: "+8 this week", icon: Activity, color: "text-primary", bg: "bg-primary/10" },
-          { label: "Consults Today", value: "12", change: "4 pending confirmation", icon: Calendar, color: "text-secondary", bg: "bg-secondary/10" },
-          { label: "Show Rate (30d)", value: "84%", change: "+2.4% vs last mo", icon: TrendingUp, color: "text-success", bg: "bg-success/10" },
-          { label: "Est. Revenue", value: "$48.5k", change: "Based on active pipeline", icon: DollarSign, color: "text-white", bg: "bg-surface-3" },
+          { label: "Active Pipeline", value: metrics.activePipeline, change: "+8 this week", icon: Activity, color: "text-primary", bg: "bg-primary/10" },
+          { label: "Consults Today", value: metrics.consultsToday, change: "Real-time sync", icon: Calendar, color: "text-secondary", bg: "bg-secondary/10" },
+          { label: "Show Rate (30d)", value: metrics.showRate, change: "+2.4% vs last mo", icon: TrendingUp, color: "text-success", bg: "bg-success/10" },
+          { label: "Est. Revenue", value: metrics.estRevenue, change: "Based on active pipeline", icon: DollarSign, color: "text-white", bg: "bg-surface-3" },
         ].map((metric, i) => (
           <motion.div
             key={i}
@@ -132,12 +261,7 @@ export function ClinicOverview() {
             </div>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { stage: 'Intake', count: 14, color: 'border-surface-3 text-text-secondary' },
-                { stage: 'Triage', count: 8, color: 'border-warning/50 text-warning' },
-                { stage: 'Consult', count: 12, color: 'border-primary/50 text-primary' },
-                { stage: 'Treating', count: 156, color: 'border-success/50 text-success' },
-              ].map((step, i) => (
+              {funnelData.map((step, i) => (
                 <div key={i} className="relative">
                   <div className={`p-4 rounded-xl border-2 bg-surface-1/50 ${step.color} flex flex-col items-center justify-center text-center h-full`}>
                     <span className="text-3xl font-display font-bold mb-1">{step.count}</span>
@@ -165,44 +289,40 @@ export function ClinicOverview() {
             </div>
             
             <div className="space-y-3">
-              {[
-                { time: "09:00 AM", title: "Initial Consult: Michael T.", type: "consult", status: "completed", detail: "TRT Assessment" },
-                { time: "10:30 AM", title: "Review Lab Results: David R.", type: "task", status: "pending", detail: "Testosterone: 320 ng/dL" },
-                { time: "11:15 AM", title: "Follow-up: James L.", type: "consult", status: "pending", detail: "Month 3 Check-in" },
-                { time: "01:00 PM", title: "Approve Staffing Requisition", type: "admin", status: "pending", detail: "RN - IV Therapy" },
-                { time: "02:30 PM", title: "Initial Consult: Robert K.", type: "consult", status: "pending", detail: "Weight Management" },
-              ].map((item, i) => (
+              {schedule.length > 0 ? schedule.map((item, i) => (
                 <div key={i} className={`flex items-start gap-4 p-4 rounded-xl border transition-colors ${
                   item.status === 'completed' 
                     ? 'bg-surface-1/50 border-surface-2 opacity-60' 
                     : 'bg-surface-2 border-surface-3 hover:border-surface-4'
                 }`}>
                   <div className="w-16 shrink-0 pt-0.5">
-                    <span className="text-xs font-mono font-bold text-text-secondary">{item.time}</span>
+                    <span className="text-xs font-mono font-bold text-text-secondary">
+                      {item.startTime?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
                   </div>
                   
                   <div className="flex-grow">
                     <h4 className={`text-sm font-bold ${item.status === 'completed' ? 'text-text-secondary line-through' : 'text-white'}`}>
-                      {item.title}
+                      {item.title || 'Consultation'}
                     </h4>
-                    <p className="text-xs text-text-secondary mt-1">{item.detail}</p>
+                    <p className="text-xs text-text-secondary mt-1">{item.patientName || 'Patient'}</p>
                   </div>
                   
                   <div className="shrink-0">
                     {item.status === 'completed' ? (
                       <CheckCircle2 className="w-5 h-5 text-success" />
-                    ) : item.type === 'consult' ? (
+                    ) : (
                       <Button size="sm" className="bg-primary/10 text-primary hover:bg-primary/20 font-bold px-3 py-1 h-auto text-xs">
                         Join
-                      </Button>
-                    ) : (
-                      <Button size="sm" variant="outline" className="border-surface-3 text-white hover:bg-surface-3 font-bold px-3 py-1 h-auto text-xs">
-                        Start
                       </Button>
                     )}
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="p-8 text-center border border-dashed border-surface-3 rounded-xl">
+                  <p className="text-text-secondary text-sm">No consults scheduled for today.</p>
+                </div>
+              )}
             </div>
           </Card>
 
@@ -223,21 +343,33 @@ export function ClinicOverview() {
               </div>
               
               <div className="space-y-4">
-                <div className="p-3 rounded-lg bg-[#0B0F14]/80 border border-secondary/10 backdrop-blur-sm">
-                  <p className="text-sm text-white font-medium mb-1">High Drop-off Detected</p>
-                  <p className="text-xs text-text-secondary leading-relaxed">
-                    24% of leads are stalling at the "Lab Work Required" stage. Consider offering an at-home testing kit via the marketplace to reduce friction.
-                  </p>
-                  <button className="text-xs font-bold text-secondary mt-2 hover:underline">View Marketplace Solutions</button>
-                </div>
-                
-                <div className="p-3 rounded-lg bg-[#0B0F14]/80 border border-secondary/10 backdrop-blur-sm">
-                  <p className="text-sm text-white font-medium mb-1">Capacity Warning</p>
-                  <p className="text-xs text-text-secondary leading-relaxed">
-                    Consult volume is projected to exceed provider capacity by next Thursday. Consider opening a temporary staffing requisition.
-                  </p>
-                  <button className="text-xs font-bold text-secondary mt-2 hover:underline">Draft Requisition</button>
-                </div>
+                {copilotInsights.length > 0 ? copilotInsights.map((insight, i) => (
+                  <div key={i} className="p-3 rounded-lg bg-[#0B0F14]/80 border border-secondary/10 backdrop-blur-sm">
+                    <p className="text-sm text-white font-medium mb-1">{insight.title}</p>
+                    <p className="text-xs text-text-secondary leading-relaxed">
+                      {insight.description}
+                    </p>
+                    <button className="text-xs font-bold text-secondary mt-2 hover:underline">{insight.action}</button>
+                  </div>
+                )) : (
+                  <>
+                    <div className="p-3 rounded-lg bg-[#0B0F14]/80 border border-secondary/10 backdrop-blur-sm">
+                      <p className="text-sm text-white font-medium mb-1">High Drop-off Detected</p>
+                      <p className="text-xs text-text-secondary leading-relaxed">
+                        24% of leads are stalling at the "Lab Work Required" stage. Consider offering an at-home testing kit via the marketplace to reduce friction.
+                      </p>
+                      <button className="text-xs font-bold text-secondary mt-2 hover:underline">View Marketplace Solutions</button>
+                    </div>
+                    
+                    <div className="p-3 rounded-lg bg-[#0B0F14]/80 border border-secondary/10 backdrop-blur-sm">
+                      <p className="text-sm text-white font-medium mb-1">Capacity Warning</p>
+                      <p className="text-xs text-text-secondary leading-relaxed">
+                        Consult volume is projected to exceed provider capacity by next Thursday. Consider opening a temporary staffing requisition.
+                      </p>
+                      <button className="text-xs font-bold text-secondary mt-2 hover:underline">Draft Requisition</button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </Card>
@@ -259,16 +391,7 @@ export function ClinicOverview() {
             </div>
             
             <div className="flex-grow overflow-y-auto p-4 space-y-4 font-mono text-xs">
-              {[
-                { time: 'Just now', event: 'Patient Assessment Completed', entity: 'Lead #8942', type: 'info' },
-                { time: '2m ago', event: 'AI Triage Score Generated: 92/100', entity: 'Lead #8942', type: 'success' },
-                { time: '15m ago', event: 'Consult Scheduled', entity: 'Patient: John M.', type: 'info' },
-                { time: '42m ago', event: 'Lab Results Received', entity: 'Patient: David R.', type: 'info' },
-                { time: '1h ago', event: 'Staffing Match Found (95%)', entity: 'Req: RN - TRT', type: 'success' },
-                { time: '2h ago', event: 'Invoice Paid', entity: 'Patient: Robert K.', type: 'success' },
-                { time: '3h ago', event: 'Missed Appointment', entity: 'Patient: Alex S.', type: 'warning' },
-                { time: '4h ago', event: 'New Lead Acquired', entity: 'Source: Organic Search', type: 'info' },
-              ].map((log, i) => (
+              {liveActivity.length > 0 ? liveActivity.map((log, i) => (
                 <div key={i} className="flex gap-3 items-start">
                   <span className="text-text-secondary/50 shrink-0 w-12">{log.time}</span>
                   <div>
@@ -282,7 +405,11 @@ export function ClinicOverview() {
                     <span className="text-text-secondary ml-2">[{log.entity}]</span>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="p-8 text-center text-text-secondary/50">
+                  No recent activity.
+                </div>
+              )}
             </div>
           </Card>
 
