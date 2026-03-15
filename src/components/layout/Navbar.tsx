@@ -16,6 +16,7 @@ export function Navbar() {
     { name: 'Practitioners', path: '/practitioners' },
     { name: 'Directory', path: '/directory' },
     { name: 'Workforce', path: '/workforce' },
+    { name: 'Network', path: '/network' },
     { name: 'Blog', path: '/blog' },
     { name: 'Visuals', path: '/visual-intelligence' },
   ];
