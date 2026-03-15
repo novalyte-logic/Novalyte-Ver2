@@ -1,16 +1,21 @@
+import 'dotenv/config';
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import aiRouter from "./server/routes/ai";
+import adminRouter from "./server/routes/admin";
+import workforceRouter from "./server/routes/workforce";
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT || 3000);
 
   app.use(express.json());
 
   // API routes
   app.use("/api/ai", aiRouter);
+  app.use("/api/admin", adminRouter);
+  app.use("/api/workforce", workforceRouter);
   
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });

@@ -31,6 +31,7 @@ export function CommandPalette() {
     { type: 'Clinic', title: 'Apex Longevity', subtitle: 'Miami, FL', icon: Activity, action: () => openEntity('clinic', '1') },
     { type: 'Navigation', title: 'Go to CRM', subtitle: 'Admin Dashboard', icon: ArrowRight, action: () => navigate('/admin/crm') },
     { type: 'Navigation', title: 'Go to Pipeline', subtitle: 'Clinic Dashboard', icon: ArrowRight, action: () => navigate('/dashboard') },
+    { type: 'Navigation', title: 'Open Command Center', subtitle: 'Admin Dashboard', icon: ArrowRight, action: () => navigate('/admin/command-center') },
     { type: 'Action', title: 'Create New Campaign', subtitle: 'Outreacher', icon: FileText, action: () => navigate('/admin/outreacher') },
   ].filter(r => r.title.toLowerCase().includes(query.toLowerCase()) || r.subtitle.toLowerCase().includes(query.toLowerCase()));
 

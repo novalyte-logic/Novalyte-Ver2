@@ -18,6 +18,9 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "firebase/firestore": [
+        "./src/lib/supabase/firestore.ts"
       ]
     },
     "allowImportingTsExtensions": true,

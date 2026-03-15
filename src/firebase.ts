@@ -1,9 +1,8 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import firebaseConfig from '../firebase-applet-config.json';
+import { auth, supabase } from './lib/supabase/client';
+import { db } from './lib/supabase/firestore';
 
-// Initialize Firebase SDK
-export const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
-export const auth = getAuth(app);
+export const app = {
+  name: 'supabase',
+};
+
+export { auth, db, supabase };

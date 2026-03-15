@@ -1,278 +1,529 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Send, Users, Activity, Play, Pause, Plus, Mail, MessageSquare, 
-  ArrowUpRight, Clock, Target, CheckCircle2, AlertTriangle, Search, 
-  Filter, MoreHorizontal, ChevronRight, Inbox, ShieldCheck, Zap,
-  BarChart3, RefreshCw, Edit3, XCircle, CheckSquare, Square
+import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import {
+  BarChart3,
+  Inbox,
+  Loader2,
+  Mail,
+  MessageSquare,
+  Pause,
+  Play,
+  Plus,
+  RefreshCw,
+  Send,
+  ShieldCheck,
+  Target,
+  Zap,
 } from 'lucide-react';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
+import { AdminService } from '@/src/services/admin';
+import type { OutreachChannel, OutreachResponse } from '@/src/lib/admin/types';
+
+type Tab = 'campaigns' | 'queue' | 'accounts';
+
+const TABS: Array<{ id: Tab; label: string; icon: React.ComponentType<any> }> = [
+  { id: 'campaigns', label: 'Active Campaigns', icon: BarChart3 },
+  { id: 'queue', label: 'Dispatch Queue', icon: Send },
+  { id: 'accounts', label: 'Sender Accounts', icon: Inbox },
+];
 
 export function Outreacher() {
-  const [activeTab, setActiveTab] = useState<'campaigns' | 'queue' | 'accounts'>('campaigns');
-  const [selectedQueueItems, setSelectedQueueItems] = useState<string[]>([]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [data, setData] = useState<OutreachResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
+  const [showCampaignForm, setShowCampaignForm] = useState(false);
+  const [showAccountForm, setShowAccountForm] = useState(false);
+  const [campaignName, setCampaignName] = useState('');
+  const [campaignAudience, setCampaignAudience] = useState('');
+  const [campaignChannel, setCampaignChannel] = useState<OutreachChannel>('Email');
+  const [campaignObjective, setCampaignObjective] = useState('');
+  const [senderEmail, setSenderEmail] = useState('');
+  const [senderProvider, setSenderProvider] = useState('Google Workspace');
+  const [queueBusyId, setQueueBusyId] = useState<string | null>(null);
+  const [campaignBusyId, setCampaignBusyId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+
+  const tab = (searchParams.get('tab') as Tab) || 'campaigns';
+  const campaignFilterId = searchParams.get('campaignId') || '';
+
+  const loadData = async (silent = false) => {
+    if (silent) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    setError('');
+    try {
+      const response = await AdminService.getOutreach();
+      setData(response);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Failed to load outreacher.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadData();
+    const interval = window.setInterval(() => {
+      void loadData(true);
+    }, 30000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const setTab = (nextTab: Tab) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', nextTab);
+    setSearchParams(next);
+  };
+
+  const filteredQueue = useMemo(() => {
+    if (!data) {
+      return [];
+    }
+    if (!campaignFilterId) {
+      return data.queue;
+    }
+    return data.queue.filter((item) => item.campaignId === campaignFilterId);
+  }, [campaignFilterId, data]);
+
+  const handleCreateCampaign = async () => {
+    if (!campaignName.trim() || !campaignAudience.trim()) {
+      setError('Campaign name and audience are required.');
+      return;
+    }
+    setCreating(true);
+    setError('');
+    try {
+      const response = await AdminService.createCampaign({
+        name: campaignName.trim(),
+        audience: campaignAudience.trim(),
+        channel: campaignChannel,
+        objective: campaignObjective.trim() || undefined,
+      });
+      setCampaignName('');
+      setCampaignAudience('');
+      setCampaignObjective('');
+      setCampaignChannel('Email');
+      setShowCampaignForm(false);
+      setSearchParams(new URLSearchParams({ tab: 'campaigns', campaignId: response.campaign.id }));
+      await loadData(true);
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : 'Failed to create campaign.');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleCreateAccount = async () => {
+    if (!senderEmail.trim()) {
+      setError('Sender email is required.');
+      return;
+    }
+    setCreating(true);
+    setError('');
+    try {
+      await AdminService.createSenderAccount({
+        email: senderEmail.trim(),
+        provider: senderProvider.trim(),
+      });
+      setSenderEmail('');
+      setSenderProvider('Google Workspace');
+      setShowAccountForm(false);
+      await loadData(true);
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : 'Failed to create sender account.');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleCampaignToggle = async (id: string, status: OutreachResponse['campaigns'][number]['status']) => {
+    setCampaignBusyId(id);
+    setError('');
+    try {
+      await AdminService.updateCampaign(id, {
+        status: status === 'Active' ? 'Paused' : status === 'Paused' ? 'Active' : 'Active',
+      });
+      await loadData(true);
+    } catch (toggleError) {
+      setError(toggleError instanceof Error ? toggleError.message : 'Failed to update campaign.');
+    } finally {
+      setCampaignBusyId(null);
+    }
+  };
+
+  const handlePersonalize = async (id: string) => {
+    setQueueBusyId(id);
+    setError('');
+    try {
+      await AdminService.personalizeQueueItem(id);
+      await loadData(true);
+    } catch (queueError) {
+      setError(queueError instanceof Error ? queueError.message : 'Failed to personalize queue item.');
+    } finally {
+      setQueueBusyId(null);
+    }
+  };
+
+  const handleSend = async (id: string) => {
+    setQueueBusyId(id);
+    setError('');
+    try {
+      await AdminService.sendQueueItem(id);
+      await loadData(true);
+    } catch (queueError) {
+      setError(queueError instanceof Error ? queueError.message : 'Failed to send queue item.');
+    } finally {
+      setQueueBusyId(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error && !data) {
+    return (
+      <Card className="border-danger/20 bg-danger/10 p-6 text-danger">
+        <p className="font-semibold text-white">Outreacher unavailable</p>
+        <p className="mt-2 text-sm">{error}</p>
+        <Button onClick={() => void loadData()} className="mt-4 font-semibold">
+          Retry
+        </Button>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-12 font-sans">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-surface-1/50 p-6 rounded-2xl border border-surface-3 backdrop-blur-xl">
         <div>
           <h1 className="text-3xl font-display font-bold text-white tracking-tight">Outreach Operations</h1>
-          <p className="text-text-secondary text-sm mt-1">Campaign orchestration, sender health, and automated dispatch.</p>
+          <p className="text-text-secondary text-sm mt-1">
+            Persisted campaigns, real dispatch queue, AI personalization, and sender health from the admin backend.
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-          <Button variant="outline" className="flex items-center gap-2 border-surface-3 bg-[#0B0F14] hover:bg-surface-2 text-white flex-grow sm:flex-grow-0">
-            <Inbox className="w-4 h-4" /> Connect Inbox
+          <Button
+            variant="outline"
+            className="border-surface-3 bg-[#0B0F14] text-white hover:bg-surface-2"
+            onClick={() => setShowAccountForm((current) => !current)}
+          >
+            <Inbox className="mr-2 h-4 w-4" />
+            Connect Inbox
           </Button>
-          <Button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-black font-bold flex-grow sm:flex-grow-0 group">
-            <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" /> New Campaign
+          <Button className="bg-primary hover:bg-primary/90 text-black font-bold" onClick={() => setShowCampaignForm((current) => !current)}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Campaign
           </Button>
         </div>
       </div>
 
-      {/* Top Level Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <MetricCard 
-          title="Daily Send Volume" 
-          value="1,248" 
-          subtext="of 2,500 limit" 
-          progress={50}
-          icon={Send} 
-          color="text-primary" 
-          bg="bg-primary/10" 
-          border="border-primary/20" 
-        />
-        <MetricCard 
-          title="Sender Health Score" 
-          value="98.5%" 
-          subtext="0.1% bounce rate" 
-          progress={98.5}
-          icon={ShieldCheck} 
-          color="text-success" 
-          bg="bg-success/10" 
-          border="border-success/20" 
-        />
-        <MetricCard 
-          title="Avg Open Rate" 
-          value="42.8%" 
-          subtext="+4.1% vs last week" 
-          progress={42.8}
-          icon={Activity} 
-          color="text-secondary" 
-          bg="bg-secondary/10" 
-          border="border-secondary/20" 
-        />
-        <MetricCard 
-          title="CRM Conversion" 
-          value="12.4%" 
-          subtext="Reply to Qualified" 
-          progress={12.4}
-          icon={Target} 
-          color="text-warning" 
-          bg="bg-warning/10" 
-          border="border-warning/20" 
-        />
-      </div>
+      {error ? (
+        <div className="rounded-xl border border-danger/25 bg-danger/10 px-4 py-3 text-sm text-danger">
+          {error}
+        </div>
+      ) : null}
 
-      {/* Navigation */}
-      <div className="flex items-center gap-1 bg-[#0B0F14] p-1 rounded-xl border border-surface-3 w-full sm:w-fit overflow-x-auto hide-scrollbar">
-        {[
-          { id: 'campaigns', label: 'Active Campaigns', icon: BarChart3 },
-          { id: 'queue', label: 'Dispatch Queue', icon: Clock },
-          { id: 'accounts', label: 'Sender Accounts', icon: Inbox },
-        ].map((tab) => {
-          const Icon = tab.icon;
+      {showCampaignForm ? (
+        <Card className="bg-surface-1 border-surface-3 p-6 shadow-2xl">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-display font-semibold text-white">Create Campaign</h2>
+              <p className="mt-1 text-sm text-text-secondary">Campaigns persist to Supabase and immediately show up in CRM handoffs and queue filters.</p>
+            </div>
+            <Button variant="outline" onClick={() => setShowCampaignForm(false)} className="border-surface-3 bg-[#0B0F14] text-white hover:bg-surface-2">
+              Close
+            </Button>
+          </div>
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            <input
+              value={campaignName}
+              onChange={(event) => setCampaignName(event.target.value)}
+              placeholder="Campaign name"
+              className="h-12 rounded-xl border border-surface-3 bg-[#0B0F14] px-4 text-sm text-white outline-none"
+            />
+            <input
+              value={campaignAudience}
+              onChange={(event) => setCampaignAudience(event.target.value)}
+              placeholder="Audience"
+              className="h-12 rounded-xl border border-surface-3 bg-[#0B0F14] px-4 text-sm text-white outline-none"
+            />
+            <select
+              value={campaignChannel}
+              onChange={(event) => setCampaignChannel(event.target.value as OutreachChannel)}
+              className="h-12 rounded-xl border border-surface-3 bg-[#0B0F14] px-4 text-sm text-white outline-none"
+            >
+              <option value="Email">Email</option>
+              <option value="SMS">SMS</option>
+              <option value="Email + SMS">Email + SMS</option>
+            </select>
+            <input
+              value={campaignObjective}
+              onChange={(event) => setCampaignObjective(event.target.value)}
+              placeholder="Objective"
+              className="h-12 rounded-xl border border-surface-3 bg-[#0B0F14] px-4 text-sm text-white outline-none"
+            />
+          </div>
+          <div className="mt-4 flex justify-end">
+            <Button onClick={() => void handleCreateCampaign()} disabled={creating} className="font-semibold">
+              {creating ? 'Creating...' : 'Create Campaign'}
+            </Button>
+          </div>
+        </Card>
+      ) : null}
+
+      {showAccountForm ? (
+        <Card className="bg-surface-1 border-surface-3 p-6 shadow-2xl">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-display font-semibold text-white">Connect Sender Account</h2>
+              <p className="mt-1 text-sm text-text-secondary">Sender accounts persist as operator resources and feed delivery capacity calculations.</p>
+            </div>
+            <Button variant="outline" onClick={() => setShowAccountForm(false)} className="border-surface-3 bg-[#0B0F14] text-white hover:bg-surface-2">
+              Close
+            </Button>
+          </div>
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input
+              value={senderEmail}
+              onChange={(event) => setSenderEmail(event.target.value)}
+              placeholder="ops@novalyte.io"
+              className="h-12 rounded-xl border border-surface-3 bg-[#0B0F14] px-4 text-sm text-white outline-none"
+            />
+            <input
+              value={senderProvider}
+              onChange={(event) => setSenderProvider(event.target.value)}
+              placeholder="Google Workspace"
+              className="h-12 rounded-xl border border-surface-3 bg-[#0B0F14] px-4 text-sm text-white outline-none"
+            />
+          </div>
+          <div className="mt-4 flex justify-end">
+            <Button onClick={() => void handleCreateAccount()} disabled={creating} className="font-semibold">
+              {creating ? 'Connecting...' : 'Connect Account'}
+            </Button>
+          </div>
+        </Card>
+      ) : null}
+
+      {data ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <MetricCard title="Daily Send Volume" value={`${data.summary.dailySendVolume.toLocaleString()} / ${data.summary.sendLimit.toLocaleString()}`} icon={Send} />
+          <MetricCard title="Sender Health Score" value={`${data.summary.senderHealthScore}%`} icon={ShieldCheck} />
+          <MetricCard title="Avg Open Rate" value={`${data.summary.avgOpenRate}%`} icon={RefreshCw} />
+          <MetricCard title="CRM Conversion" value={`${data.summary.crmConversionRate}%`} icon={Target} />
+        </div>
+      ) : null}
+
+      <div className="flex items-center gap-1 bg-[#0B0F14] p-1 rounded-xl border border-surface-3 w-full sm:w-fit overflow-x-auto">
+        {TABS.map((entry) => {
+          const Icon = entry.icon;
+          const active = tab === entry.id;
           return (
             <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              key={entry.id}
+              type="button"
+              onClick={() => setTab(entry.id)}
               className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
-                activeTab === tab.id 
-                  ? 'bg-primary/10 text-primary shadow-[0_0_15px_rgba(53,212,255,0.1)]' 
+                active
+                  ? 'bg-primary/10 text-primary shadow-[0_0_15px_rgba(53,212,255,0.1)]'
                   : 'text-text-secondary hover:text-white hover:bg-surface-2'
               }`}
             >
-              <Icon className="w-4 h-4" />
-              {tab.label}
+              <Icon className="h-4 w-4" />
+              {entry.label}
             </button>
           );
         })}
       </div>
 
-      {/* Tab Content: Campaigns */}
-      {activeTab === 'campaigns' && (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {[
-            { 
-              name: "Clinic Onboarding Sequence", 
-              audience: "New Clinics", 
-              sent: 450, 
-              opens: "48%", 
-              replies: "12%", 
-              bounces: "0.2%",
-              status: "Active", 
-              type: "Email", 
-              crmFeedback: "14 Leads Qualified",
-              nextSend: "In 2 hours" 
-            },
-            { 
-              name: "Patient Re-engagement (TRT)", 
-              audience: "Lost Leads", 
-              sent: 1200, 
-              opens: "35%", 
-              replies: "8%", 
-              bounces: "1.1%",
-              status: "Paused", 
-              type: "Email + SMS", 
-              crmFeedback: "3 Reactivated",
-              nextSend: "Paused" 
-            },
-            { 
-              name: "Vendor Partnership Outreach", 
-              audience: "Health Tech", 
-              sent: 150, 
-              opens: "62%", 
-              replies: "24%", 
-              bounces: "0.0%",
-              status: "Active", 
-              type: "Email", 
-              crmFeedback: "8 Meetings Booked",
-              nextSend: "Tomorrow 9AM" 
-            },
-            { 
-              name: "Workforce Talent Activation", 
-              audience: "Inactive RNs", 
-              sent: 850, 
-              opens: "41%", 
-              replies: "15%", 
-              bounces: "0.5%",
-              status: "Active", 
-              type: "SMS", 
-              crmFeedback: "42 Profiles Updated",
-              nextSend: "In 45 mins" 
-            },
-          ].map((campaign, i) => (
-            <Card key={i} className="bg-surface-1 border-surface-3 p-0 flex flex-col group hover:border-surface-3/80 transition-colors shadow-xl">
-              <div className="p-6 border-b border-surface-3 bg-gradient-to-r from-surface-2 to-surface-1">
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2.5 rounded-xl border ${campaign.status === 'Active' ? 'bg-success/10 text-success border-success/20' : 'bg-warning/10 text-warning border-warning/20'}`}>
-                      {campaign.status === 'Active' ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
-                    </div>
+      {tab === 'campaigns' && (
+        <div className="grid grid-cols-1 xl:grid-cols-[1.75fr_1fr] gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            {data?.campaigns.map((campaign) => (
+              <Card
+                key={campaign.id}
+                className={`bg-surface-1 border-surface-3 p-0 shadow-xl ${campaignFilterId === campaign.id ? 'ring-1 ring-primary/30' : ''}`}
+              >
+                <div className="p-6 border-b border-surface-3 bg-gradient-to-r from-surface-2 to-surface-1">
+                  <div className="flex items-start justify-between gap-4">
                     <div>
-                      <h3 className="font-bold text-lg text-white group-hover:text-primary transition-colors">{campaign.name}</h3>
-                      <div className="flex items-center gap-3 text-xs text-text-secondary mt-1 font-mono">
-                        <span className="flex items-center gap-1"><Target className="w-3.5 h-3.5" /> {campaign.audience}</span>
-                        <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" /> {campaign.type}</span>
+                      <button
+                        type="button"
+                        onClick={() => setSearchParams(new URLSearchParams({ tab: 'campaigns', campaignId: campaign.id }))}
+                        className="text-left"
+                      >
+                        <h3 className="text-lg font-bold text-white hover:text-primary transition-colors">{campaign.name}</h3>
+                      </button>
+                      <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-text-secondary">
+                        <span className="flex items-center gap-1">
+                          <Target className="h-3.5 w-3.5" />
+                          {campaign.audience}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Mail className="h-3.5 w-3.5" />
+                          {campaign.channel}
+                        </span>
                       </div>
                     </div>
-                  </div>
-                  <button className="p-1.5 text-text-secondary hover:text-white hover:bg-surface-3 rounded-md transition-colors">
-                    <MoreHorizontal className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-              
-              <div className="p-6 grid grid-cols-2 sm:grid-cols-4 gap-4 flex-grow">
-                <StatBlock label="Sent" value={campaign.sent} />
-                <StatBlock label="Open Rate" value={campaign.opens} color="text-success" />
-                <StatBlock label="Reply Rate" value={campaign.replies} color="text-primary" />
-                <StatBlock label="Bounce Rate" value={campaign.bounces} color={parseFloat(campaign.bounces) > 1 ? 'text-danger' : 'text-text-secondary'} />
-              </div>
-              
-              <div className="px-6 py-4 bg-[#0B0F14] border-t border-surface-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2 text-xs text-text-secondary font-mono">
-                    <Clock className="w-3.5 h-3.5" /> Next send: <strong className="text-white">{campaign.nextSend}</strong>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-primary font-mono">
-                    <RefreshCw className="w-3.5 h-3.5" /> CRM Sync: <strong>{campaign.crmFeedback}</strong>
+                    <span className={`rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${
+                      campaign.status === 'Active'
+                        ? 'border-success/20 bg-success/10 text-success'
+                        : campaign.status === 'Paused'
+                          ? 'border-warning/20 bg-warning/10 text-warning'
+                          : 'border-primary/20 bg-primary/10 text-primary'
+                    }`}>
+                      {campaign.status}
+                    </span>
                   </div>
                 </div>
-                <div className="flex gap-2 w-full sm:w-auto">
-                  <Button variant="outline" size="sm" className="h-9 border-surface-3 bg-surface-1 text-white hover:bg-surface-2 w-full sm:w-auto">
-                    Analytics
-                  </Button>
-                  <Button variant={campaign.status === 'Active' ? 'secondary' : 'primary'} size="sm" className="w-10 h-9 p-0 flex items-center justify-center shrink-0">
-                    {campaign.status === 'Active' ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                  </Button>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-6">
+                  <StatBlock label="Sent" value={campaign.sentCount.toLocaleString()} />
+                  <StatBlock label="Open Rate" value={`${campaign.openRate.toFixed(1)}%`} />
+                  <StatBlock label="Reply Rate" value={`${campaign.replyRate.toFixed(1)}%`} />
+                  <StatBlock label="Qualified" value={campaign.qualifiedCount.toLocaleString()} />
                 </div>
-              </div>
-            </Card>
-          ))}
+
+                <div className="px-6 py-4 border-t border-surface-3 bg-[#0B0F14] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div>
+                    <p className="text-xs text-text-secondary">
+                      {campaign.nextSendAt ? `Next send: ${new Date(campaign.nextSendAt).toLocaleString()}` : 'No dispatch scheduled'}
+                    </p>
+                    <p className="mt-1 text-xs text-primary">{campaign.crmFeedback}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="border-surface-3 bg-surface-1 text-white hover:bg-surface-2"
+                      onClick={() => setSearchParams(new URLSearchParams({ tab: 'queue', campaignId: campaign.id }))}
+                    >
+                      Queue
+                    </Button>
+                    <Button
+                      onClick={() => void handleCampaignToggle(campaign.id, campaign.status)}
+                      disabled={campaignBusyId === campaign.id}
+                      className="font-semibold"
+                    >
+                      {campaign.status === 'Active' ? (
+                        <>
+                          <Pause className="mr-2 h-4 w-4" />
+                          Pause
+                        </>
+                      ) : (
+                        <>
+                          <Play className="mr-2 h-4 w-4" />
+                          Activate
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          <Card className="bg-surface-1 border-surface-3 p-6 shadow-2xl">
+            <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.2em] text-white">
+              <BarChart3 className="h-4 w-4 text-primary" />
+              7-Day Reporting
+            </div>
+            <div className="mt-6 space-y-4">
+              {data?.reports.map((point) => (
+                <div key={point.label} className="rounded-xl border border-surface-3 bg-[#0B0F14] p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-white">{point.label}</p>
+                    <p className="text-xs text-text-secondary">{point.sent} sent</p>
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-3 text-xs">
+                    <ReportStat label="Opened" value={point.opened} />
+                    <ReportStat label="Replied" value={point.replied} />
+                    <ReportStat label="Qualified" value={point.qualified} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
         </div>
       )}
 
-      {/* Tab Content: Dispatch Queue */}
-      {activeTab === 'queue' && (
-        <Card className="bg-surface-1 border-surface-3 p-0 overflow-hidden flex flex-col shadow-2xl">
-          <div className="p-4 border-b border-surface-3 bg-gradient-to-r from-surface-2 to-surface-1 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div className="flex items-center gap-4 w-full sm:w-auto">
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
-                <input 
-                  type="text" 
-                  placeholder="Search queue..." 
-                  className="w-full pl-9 pr-4 py-2 bg-[#0B0F14] border border-surface-3 rounded-lg text-sm text-white focus:outline-none focus:border-primary/50 transition-all"
-                />
-              </div>
-              <Button variant="outline" size="sm" className="flex items-center gap-2 h-9 border-surface-3 bg-[#0B0F14] text-white">
-                <Filter className="w-4 h-4" /> Filter
-              </Button>
+      {tab === 'queue' && (
+        <Card className="bg-surface-1 border-surface-3 p-0 overflow-hidden shadow-2xl">
+          <div className="p-4 border-b border-surface-3 bg-gradient-to-r from-surface-2 to-surface-1 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+            <div>
+              <p className="text-sm font-semibold text-white">Dispatch Queue</p>
+              <p className="mt-1 text-xs text-text-secondary">
+                {campaignFilterId
+                  ? `Filtered to campaign ${campaignFilterId}`
+                  : `${data?.summary.pendingQueueCount || 0} recipients pending admin dispatch`}
+              </p>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-text-secondary font-mono"><strong className="text-white">342</strong> pending</span>
-              <Button size="sm" variant="secondary" className="h-9"><Pause className="w-4 h-4 mr-2" /> Pause Queue</Button>
-            </div>
+            <Button variant="outline" onClick={() => void loadData(true)} className="border-surface-3 bg-[#0B0F14] text-white hover:bg-surface-2">
+              {refreshing ? 'Refreshing...' : 'Refresh Queue'}
+            </Button>
           </div>
-          
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead className="text-[10px] text-text-secondary uppercase tracking-wider bg-[#0B0F14] border-b border-surface-3">
+            <table className="w-full text-left">
+              <thead className="bg-[#0B0F14] text-[10px] uppercase tracking-[0.2em] text-text-secondary">
                 <tr>
-                  <th className="px-6 py-3 w-10"><Square className="w-4 h-4" /></th>
-                  <th className="px-6 py-3 font-medium">Recipient</th>
-                  <th className="px-6 py-3 font-medium">Campaign</th>
-                  <th className="px-6 py-3 font-medium">AI Personalization</th>
-                  <th className="px-6 py-3 font-medium">Scheduled</th>
-                  <th className="px-6 py-3 text-right font-medium">Actions</th>
+                  <th className="px-6 py-3">Recipient</th>
+                  <th className="px-6 py-3">Campaign</th>
+                  <th className="px-6 py-3">AI Personalization</th>
+                  <th className="px-6 py-3">Scheduled</th>
+                  <th className="px-6 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-3 text-sm">
-                {[
-                  { name: "Dr. Sarah Jenkins", email: "sarah.j@example.com", campaign: "Clinic Onboarding", ai: "Drafted - Ready", aiStatus: "success", time: "10:45 AM" },
-                  { name: "Marcus Thorne", email: "m.thorne@example.com", campaign: "Patient Re-engagement", ai: "Manual Review Required", aiStatus: "warning", time: "10:48 AM" },
-                  { name: "Elena Rodriguez", email: "elena.r@example.com", campaign: "Vendor Partnership", ai: "Drafted - Ready", aiStatus: "success", time: "10:50 AM" },
-                  { name: "Dr. James Wilson", email: "j.wilson@example.com", campaign: "Clinic Onboarding", ai: "Missing Variables", aiStatus: "danger", time: "11:00 AM" },
-                ].map((item, i) => (
-                  <tr key={i} className="hover:bg-surface-2/50 transition-colors">
-                    <td className="px-6 py-4"><Square className="w-4 h-4 text-text-secondary" /></td>
+                {filteredQueue.map((item) => (
+                  <tr key={item.id} className="hover:bg-surface-2/50 transition-colors">
                     <td className="px-6 py-4">
-                      <div className="font-bold text-white mb-0.5">{item.name}</div>
-                      <div className="text-xs text-text-secondary font-mono">{item.email}</div>
+                      <p className="font-semibold text-white">{item.recipientName}</p>
+                      <p className="mt-1 text-xs text-text-secondary">
+                        {item.recipientEmail || item.recipientPhone || item.recipientId}
+                      </p>
                     </td>
-                    <td className="px-6 py-4 text-text-secondary">{item.campaign}</td>
+                    <td className="px-6 py-4 text-text-secondary">{item.campaignName}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border flex items-center gap-1.5 w-fit ${
-                        item.aiStatus === 'success' ? 'bg-success/10 text-success border-success/20' :
-                        item.aiStatus === 'warning' ? 'bg-warning/10 text-warning border-warning/20' :
-                        'bg-danger/10 text-danger border-danger/20'
+                      <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${
+                        item.personalizationStatus === 'drafted' || item.personalizationStatus === 'sent'
+                          ? 'border-success/20 bg-success/10 text-success'
+                          : item.personalizationStatus === 'missing_data'
+                            ? 'border-danger/20 bg-danger/10 text-danger'
+                            : 'border-warning/20 bg-warning/10 text-warning'
                       }`}>
-                        {item.aiStatus === 'success' && <Zap className="w-3 h-3" />}
-                        {item.aiStatus === 'warning' && <AlertTriangle className="w-3 h-3" />}
-                        {item.aiStatus === 'danger' && <XCircle className="w-3 h-3" />}
-                        {item.ai}
+                        {item.personalizationStatus.replace('_', ' ')}
                       </span>
+                      <p className="mt-2 max-w-sm text-xs text-text-secondary">{item.draftPreview}</p>
                     </td>
-                    <td className="px-6 py-4 font-mono text-white">{item.time}</td>
+                    <td className="px-6 py-4 text-white">{new Date(item.scheduledFor).toLocaleString()}</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button variant="outline" size="sm" className="h-8 px-2 border-surface-3 bg-[#0B0F14] text-white hover:bg-surface-2">
-                          <Edit3 className="w-3.5 h-3.5" />
+                        <Button
+                          variant="outline"
+                          className="border-surface-3 bg-[#0B0F14] text-white hover:bg-surface-2"
+                          onClick={() => void handlePersonalize(item.id)}
+                          disabled={queueBusyId === item.id}
+                        >
+                          <Zap className="mr-2 h-4 w-4" />
+                          Personalize
                         </Button>
-                        <Button size="sm" className="h-8 bg-primary hover:bg-primary/90 text-black font-bold px-3">
-                          Send Now
+                        <Button
+                          onClick={() => void handleSend(item.id)}
+                          disabled={queueBusyId === item.id || item.state === 'sent'}
+                          className="font-semibold"
+                        >
+                          <Send className="mr-2 h-4 w-4" />
+                          {item.state === 'sent' ? 'Sent' : 'Send Now'}
                         </Button>
                       </div>
                     </td>
@@ -284,111 +535,119 @@ export function Outreacher() {
         </Card>
       )}
 
-      {/* Tab Content: Sender Accounts */}
-      {activeTab === 'accounts' && (
+      {tab === 'accounts' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {[
-            { email: "alex@novalyte.io", provider: "Google Workspace", health: 99.2, limit: "450/500", status: "Healthy", warmup: false },
-            { email: "hello@novalyte.io", provider: "Google Workspace", health: 98.5, limit: "480/500", status: "Warning", warmup: false },
-            { email: "partners@novalyte.io", provider: "Microsoft 365", health: 100, limit: "12/50", status: "Warming Up", warmup: true },
-          ].map((acc, i) => (
-            <Card key={i} className="bg-surface-1 border-surface-3 p-6 shadow-xl relative overflow-hidden">
-              <div className="flex justify-between items-start mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-surface-2 border border-surface-3 text-white">
-                    <Inbox className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-white">{acc.email}</h3>
-                    <p className="text-xs text-text-secondary">{acc.provider}</p>
-                  </div>
+          {data?.accounts.map((account) => (
+            <Card key={account.id} className="bg-surface-1 border-surface-3 p-6 shadow-xl">
+              <div className="flex items-center gap-3">
+                <div className="rounded-2xl border border-surface-3 bg-surface-2 p-3 text-white">
+                  <Inbox className="h-5 w-5" />
                 </div>
-                <button className="p-1.5 text-text-secondary hover:text-white hover:bg-surface-3 rounded-md transition-colors">
-                  <MoreHorizontal className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
                 <div>
-                  <div className="flex justify-between text-xs mb-1.5">
-                    <span className="text-text-secondary uppercase tracking-wider font-bold">Sender Health</span>
-                    <span className={acc.health > 95 ? 'text-success font-mono font-bold' : 'text-warning font-mono font-bold'}>{acc.health}%</span>
-                  </div>
-                  <div className="w-full bg-[#0B0F14] h-1.5 rounded-full overflow-hidden border border-surface-3">
-                    <div className={`h-full ${acc.health > 95 ? 'bg-success' : 'bg-warning'}`} style={{ width: `${acc.health}%` }} />
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex justify-between text-xs mb-1.5">
-                    <span className="text-text-secondary uppercase tracking-wider font-bold">Daily Limit</span>
-                    <span className="text-white font-mono font-bold">{acc.limit}</span>
-                  </div>
-                  <div className="w-full bg-[#0B0F14] h-1.5 rounded-full overflow-hidden border border-surface-3">
-                    <div className="h-full bg-primary" style={{ width: `${(parseInt(acc.limit.split('/')[0]) / parseInt(acc.limit.split('/')[1])) * 100}%` }} />
-                  </div>
+                  <h3 className="font-semibold text-white">{account.email}</h3>
+                  <p className="text-xs text-text-secondary">{account.provider}</p>
                 </div>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-surface-3 flex items-center justify-between">
-                <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border flex items-center gap-1.5 ${
-                  acc.status === 'Healthy' ? 'bg-success/10 text-success border-success/20' :
-                  acc.status === 'Warming Up' ? 'bg-primary/10 text-primary border-primary/20' :
-                  'bg-warning/10 text-warning border-warning/20'
+              <div className="mt-6 space-y-4">
+                <AccountMeter label="Sender Health" current={account.healthScore} max={100} suffix="%" tone="success" />
+                <AccountMeter label="Daily Volume" current={account.dailySent} max={account.dailyLimit} suffix="" tone="primary" />
+              </div>
+
+              <div className="mt-6 flex items-center justify-between">
+                <span className={`rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${
+                  account.status === 'Healthy'
+                    ? 'border-success/20 bg-success/10 text-success'
+                    : account.status === 'Warning'
+                      ? 'border-warning/20 bg-warning/10 text-warning'
+                      : account.status === 'Paused'
+                        ? 'border-danger/20 bg-danger/10 text-danger'
+                        : 'border-primary/20 bg-primary/10 text-primary'
                 }`}>
-                  {acc.status === 'Healthy' && <ShieldCheck className="w-3 h-3" />}
-                  {acc.status === 'Warming Up' && <Zap className="w-3 h-3" />}
-                  {acc.status === 'Warning' && <AlertTriangle className="w-3 h-3" />}
-                  {acc.status}
+                  {account.status}
                 </span>
-                <Button variant="outline" size="sm" className="h-8 text-xs border-surface-3 bg-[#0B0F14] text-white hover:bg-surface-2">
-                  Settings
-                </Button>
+                <p className="text-xs text-text-secondary">
+                  {account.dailySent} / {account.dailyLimit}
+                </p>
               </div>
             </Card>
           ))}
-          
-          <button className="bg-[#0B0F14] border border-dashed border-surface-3 rounded-2xl p-6 flex flex-col items-center justify-center text-text-secondary hover:text-white hover:border-surface-4 transition-colors min-h-[250px]">
-            <Plus className="w-8 h-8 mb-3" />
-            <span className="font-bold">Connect New Inbox</span>
-            <span className="text-xs mt-1">Google Workspace or Microsoft 365</span>
-          </button>
         </div>
       )}
     </div>
   );
 }
 
-// Helper Components
-
-function MetricCard({ title, value, subtext, progress, icon: Icon, color, bg, border }: any) {
+function MetricCard({
+  title,
+  value,
+  icon: Icon,
+}: {
+  title: string;
+  value: string;
+  icon: React.ComponentType<any>;
+}) {
   return (
-    <Card className="bg-surface-1 border-surface-3 p-5 relative overflow-hidden group shadow-2xl">
-      <div className={`absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity ${color}`}>
-        <Icon className="w-24 h-24" />
-      </div>
-      <div className="relative z-10">
-        <div className="flex justify-between items-start mb-4">
-          <div className={`p-2 rounded-xl ${bg} ${color} border ${border}`}><Icon className="w-4 h-4" /></div>
+    <Card className="bg-surface-1 border-surface-3 p-5 shadow-2xl">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.24em] text-text-secondary">{title}</p>
+          <p className="mt-3 text-3xl font-display font-bold text-white">{value}</p>
         </div>
-        <h3 className="text-text-secondary text-xs font-bold uppercase tracking-wider mb-1">{title}</h3>
-        <div className="flex items-baseline gap-2 mb-4">
-          <p className="text-3xl font-display font-bold text-white">{value}</p>
-          <span className="text-[10px] text-text-secondary uppercase tracking-wider font-mono">{subtext}</span>
-        </div>
-        <div className="w-full bg-[#0B0F14] h-1.5 rounded-full overflow-hidden border border-surface-3">
-          <div className={`h-full rounded-full ${bg.replace('/10', '')}`} style={{ width: `${progress}%` }} />
+        <div className="rounded-2xl border border-primary/20 bg-primary/10 p-3 text-primary">
+          <Icon className="h-5 w-5" />
         </div>
       </div>
     </Card>
   );
 }
 
-function StatBlock({ label, value, color = "text-white" }: { label: string, value: string | number, color?: string }) {
+function StatBlock({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-[#0B0F14] p-4 rounded-xl border border-surface-3">
-      <p className="text-[10px] text-text-secondary mb-1 uppercase tracking-wider font-bold">{label}</p>
-      <p className={`font-mono text-xl font-bold ${color}`}>{value}</p>
+    <div className="rounded-xl border border-surface-3 bg-[#0B0F14] p-3">
+      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-text-secondary">{label}</p>
+      <p className="mt-2 text-lg font-semibold text-white">{value}</p>
+    </div>
+  );
+}
+
+function ReportStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg border border-surface-3 bg-surface-1 px-3 py-2">
+      <p className="text-[10px] uppercase tracking-[0.16em] text-text-secondary">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-white">{value}</p>
+    </div>
+  );
+}
+
+function AccountMeter({
+  label,
+  current,
+  max,
+  suffix,
+  tone,
+}: {
+  label: string;
+  current: number;
+  max: number;
+  suffix: string;
+  tone: 'primary' | 'success';
+}) {
+  const width = max > 0 ? Math.min(100, (current / max) * 100) : 0;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-3 text-xs">
+        <span className="uppercase tracking-[0.16em] text-text-secondary">{label}</span>
+        <span className="font-mono font-bold text-white">
+          {current}
+          {suffix}
+          {suffix === '' ? ` / ${max}` : ''}
+        </span>
+      </div>
+      <div className="mt-2 h-2 w-full overflow-hidden rounded-full border border-surface-3 bg-[#0B0F14]">
+        <div className={`h-full ${tone === 'success' ? 'bg-success' : 'bg-primary'}`} style={{ width: `${Math.max(width, 4)}%` }} />
+      </div>
     </div>
   );
 }

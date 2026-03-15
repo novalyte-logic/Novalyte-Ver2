@@ -67,7 +67,7 @@ export function SymptomChecker() {
         const data = await AIService.generatePatientInsights(patientData as any);
         setAiResult(data);
 
-        // Persist symptom check to Firestore
+        // Persist symptom check to Supabase
         await addDoc(collection(db, 'symptom_checks'), {
           symptoms: selectedSymptoms,
           duration,
@@ -461,4 +461,3 @@ export function SymptomChecker() {
     </div>
   );
 }
-

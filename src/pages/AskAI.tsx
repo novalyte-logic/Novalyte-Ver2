@@ -89,7 +89,7 @@ export function AskAI() {
       const chatHistory = messages.map(m => ({ role: m.role, content: m.content }));
       const response = await AIService.chat(textToSend, chatHistory);
       
-      // Persist interaction to Firestore
+      // Persist interaction to Supabase
       await addDoc(collection(db, 'ai_interactions'), {
         userQuery: textToSend,
         aiResponse: response.response,

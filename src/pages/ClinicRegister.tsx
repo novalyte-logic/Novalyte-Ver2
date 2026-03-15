@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
@@ -68,10 +68,17 @@ export function ClinicRegister() {
     setError('');
   };
 
+  useEffect(() => {
+    if (user && currentStep === 0) {
+      setCurrentStep(1);
+    }
+  }, [currentStep, user]);
+
   const handleNext = async () => {
     if (currentStep === 0 && !user) {
       try {
         await signInWithGoogle();
+        return;
       } catch (err) {
         setError('Authentication failed. Please try again.');
         return;

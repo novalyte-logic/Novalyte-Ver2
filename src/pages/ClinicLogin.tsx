@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/src/lib/auth/AuthContext';
@@ -8,12 +8,18 @@ import { Activity, ArrowRight, ShieldCheck, Key, UserCircle, ChevronLeft } from 
 
 export function ClinicLogin() {
   const navigate = useNavigate();
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'admin' | 'provider' | 'staff'>('admin');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [navigate, user]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,7 +28,6 @@ export function ClinicLogin() {
 
     try {
       await signInWithGoogle();
-      navigate('/dashboard');
     } catch (err) {
       setError('Authentication failed. Please verify your credentials.');
     } finally {

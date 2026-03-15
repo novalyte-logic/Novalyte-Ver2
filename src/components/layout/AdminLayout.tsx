@@ -1,22 +1,30 @@
 import React, { useState } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Activity, Users, Send, Database, Rocket, Server, Menu, X, Search, Bell, Sparkles } from 'lucide-react';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Activity, Users, Send, Database, Rocket, Server, Menu, X, Search, Bell, Sparkles, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useShell } from '../shell/ShellContext';
+import { useAuth } from '@/src/lib/auth/AuthContext';
 
 export function AdminLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const { setCommandOpen, setCopilotOpen } = useShell();
+  const { hasAdminAccess, revokeAdminAccess } = useAuth();
 
   const navItems = [
-    { path: '/admin', icon: Activity, label: 'Command Center' },
+    { path: '/admin/command-center', icon: Activity, label: 'Command Center' },
     { path: '/admin/crm', icon: Users, label: 'CRM' },
     { path: '/admin/outreacher', icon: Send, label: 'Outreacher' },
     { path: '/admin/directory', icon: Database, label: 'Directory' },
     { path: '/admin/launch', icon: Rocket, label: 'Launch' },
     { path: '/admin/mcp', icon: Server, label: 'MCP Control' },
   ];
+
+  const handleLockAdmin = () => {
+    revokeAdminAccess();
+    navigate('/admin', { replace: true });
+  };
 
   return (
     <div className="min-h-screen bg-background text-text-primary flex">
@@ -55,6 +63,16 @@ export function AdminLayout() {
               <p className="text-xs text-text-secondary">System Operator</p>
             </div>
           </div>
+          {hasAdminAccess ? (
+            <button
+              type="button"
+              onClick={handleLockAdmin}
+              className="mt-4 w-full flex items-center justify-center gap-2 rounded-lg border border-surface-3 px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              Lock Admin Access
+            </button>
+          ) : null}
         </div>
       </aside>
 
@@ -97,6 +115,18 @@ export function AdminLayout() {
                   );
                 })}
               </nav>
+              {hasAdminAccess ? (
+                <div className="p-4 border-t border-surface-3">
+                  <button
+                    type="button"
+                    onClick={handleLockAdmin}
+                    className="w-full flex items-center justify-center gap-2 rounded-lg border border-surface-3 px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Lock Admin Access
+                  </button>
+                </div>
+              ) : null}
             </div>
             <div className="flex-grow bg-background/80 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
           </motion.div>
