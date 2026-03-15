@@ -36,6 +36,7 @@ import { VisualIntelligence } from './pages/VisualIntelligence';
 import { Contact } from './pages/Contact';
 import { Practitioners } from './pages/Practitioners';
 import { PractitionerOnboarding } from './pages/PractitionerOnboarding';
+import { PractitionerProfile } from './pages/PractitionerProfile';
 import { CommandCenter } from './pages/admin/CommandCenter';
 import { CRM } from './pages/admin/CRM';
 import { Outreacher } from './pages/admin/Outreacher';
@@ -113,6 +114,7 @@ export default function App() {
           <Route path="/workforce/apply/:id" element={<WorkforceApply />} />
           <Route path="/workforce/dashboard" element={<WorkforceDashboard />} />
           <Route path="/practitioners/onboarding" element={<PractitionerOnboarding />} />
+          <Route path="/practitioners/profile" element={<PractitionerProfile />} />
           
           {/* Clinic Deep Links */}
           <Route path="/clinic/workforce" element={<Navigate to="/dashboard/workforce" replace />} />

@@ -642,10 +642,10 @@ export function PractitionerOnboarding() {
               </Card>
 
               <Button 
-                onClick={() => navigate('/practitioners')}
+                onClick={() => navigate('/practitioners/profile')}
                 className="bg-primary hover:bg-primary/90 text-black font-bold px-8 py-3"
               >
-                Return to Network Home
+                View Your Profile
               </Button>
             </motion.div>
           )}
