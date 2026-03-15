@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { 
@@ -155,7 +155,7 @@ export function ClinicPipeline() {
   };
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col animate-in fade-in duration-500">
+    <div className="h-auto min-h-[calc(100vh-8rem)] md:h-[calc(100vh-8rem)] flex flex-col animate-in fade-in duration-500">
       
       {/* Header */}
       <div className="flex-none flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
@@ -163,7 +163,7 @@ export function ClinicPipeline() {
           <h1 className="text-3xl font-display font-bold text-white">Patient Pipeline</h1>
           <p className="text-text-secondary mt-1">Manage patient flow, intent signals, and operational stages.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
             <input 
@@ -175,8 +175,8 @@ export function ClinicPipeline() {
           <Button variant="outline" className="border-surface-3 text-white hover:bg-surface-2 hidden sm:flex">
             <Filter className="w-4 h-4 mr-2" /> Filter
           </Button>
-          <Link to="/dashboard/leads">
-            <Button className="bg-primary hover:bg-primary/90 text-black font-bold whitespace-nowrap">
+          <Link to="/dashboard/leads" className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-black font-bold whitespace-nowrap">
               <Plus className="w-4 h-4 mr-2" /> New Patient
             </Button>
           </Link>
@@ -270,9 +270,9 @@ export function ClinicPipeline() {
           {selectedPatient && (
             <motion.div
               initial={{ width: 0, opacity: 0, x: 20 }}
-              animate={{ width: 400, opacity: 1, x: 0 }}
+              animate={{ width: '100%', maxWidth: 400, opacity: 1, x: 0 }}
               exit={{ width: 0, opacity: 0, x: 20 }}
-              className="flex-shrink-0 border-l border-surface-3 bg-[#0B0F14] flex flex-col rounded-l-2xl overflow-hidden shadow-2xl"
+              className="fixed md:relative right-0 top-0 bottom-0 z-50 md:z-auto flex-shrink-0 border-l border-surface-3 bg-[#0B0F14] flex flex-col rounded-l-2xl overflow-hidden shadow-2xl w-full md:w-[400px]"
             >
               {/* Dossier Header */}
               <div className="p-6 border-b border-surface-3 bg-surface-1/50 relative">

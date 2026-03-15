@@ -88,11 +88,11 @@ export function DirectoryManager() {
           <h1 className="text-3xl font-display font-bold text-white tracking-tight">Directory Management</h1>
           <p className="text-text-secondary text-sm mt-1">Clinic inventory, verification, and relationship oversight.</p>
         </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <Button variant="outline" className="flex items-center gap-2 border-surface-3 bg-[#0B0F14] hover:bg-surface-2 text-white w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          <Button variant="outline" className="flex items-center gap-2 border-surface-3 bg-[#0B0F14] hover:bg-surface-2 text-white flex-grow sm:flex-grow-0">
             <Download className="w-4 h-4" /> Export CSV
           </Button>
-          <Button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-black font-bold w-full sm:w-auto group">
+          <Button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-black font-bold flex-grow sm:flex-grow-0 group">
             <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" /> Add Node
           </Button>
         </div>

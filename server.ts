@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
+import aiRouter from "./server/routes/ai";
 
 async function startServer() {
   const app = express();
@@ -9,6 +10,8 @@ async function startServer() {
   app.use(express.json());
 
   // API routes
+  app.use("/api/ai", aiRouter);
+  
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
   });

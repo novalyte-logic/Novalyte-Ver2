@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
+import { AIService } from '@/src/services/ai';
 import { Activity, ArrowRight, ChevronLeft, Shield, AlertTriangle, CheckCircle2, Bot, Brain, ActivitySquare, Stethoscope, Clock } from 'lucide-react';
 
 const SYMPTOMS = [
@@ -46,10 +47,26 @@ export function SymptomChecker() {
     );
   };
 
-  const handleNext = () => {
+  const [aiResult, setAiResult] = useState<any>(null);
+
+  const handleNext = async () => {
     if (step === 3) {
       setIsProcessing(true);
       setStep(4);
+      
+      try {
+        const patientData = {
+          symptoms: selectedSymptoms,
+          duration,
+          severity,
+          demographics: {},
+          healthProfile: { primaryGoals: [] }
+        };
+        const data = await AIService.generatePatientInsights(patientData as any);
+        setAiResult(data);
+      } catch (error) {
+        console.error('AI Triage error:', error);
+      }
     } else {
       setStep(prev => prev + 1);
     }
@@ -91,6 +108,7 @@ export function SymptomChecker() {
 
   // Calculate a mock "Clinical Match Score" based on inputs
   const calculateScore = () => {
+    if (aiResult?.score) return aiResult.score;
     let score = 40; // Base score
     score += selectedSymptoms.length * 5;
     if (duration === 'months' || duration === 'years') score += 10;

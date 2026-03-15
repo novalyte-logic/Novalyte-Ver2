@@ -115,11 +115,11 @@ export function CRM() {
           <h1 className="text-3xl font-display font-bold text-white tracking-tight">Patient CRM</h1>
           <p className="text-text-secondary text-sm mt-1">Lead management, segmentation, and outreach handoff.</p>
         </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <Button variant="outline" className="flex items-center gap-2 border-surface-3 bg-[#0B0F14] hover:bg-surface-2 text-white w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          <Button variant="outline" className="flex items-center gap-2 border-surface-3 bg-[#0B0F14] hover:bg-surface-2 text-white flex-grow sm:flex-grow-0">
             <Upload className="w-4 h-4" /> Import CSV
           </Button>
-          <Button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-black font-bold w-full sm:w-auto group">
+          <Button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-black font-bold flex-grow sm:flex-grow-0 group">
             <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" /> Add Lead
           </Button>
         </div>
@@ -183,7 +183,7 @@ export function CRM() {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="bg-primary/5 border-b border-primary/20 px-4 py-3 flex items-center justify-between"
+              className="bg-primary/5 border-b border-primary/20 px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
             >
               <div className="flex items-center gap-3">
                 <span className="text-sm font-bold text-primary bg-primary/10 px-2 py-1 rounded-md border border-primary/20">
@@ -191,14 +191,14 @@ export function CRM() {
                 </span>
                 <span className="text-sm text-text-secondary">Bulk actions:</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" className="h-8 border-surface-3 bg-[#0B0F14] text-white hover:bg-surface-2">
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                <Button size="sm" variant="outline" className="h-8 border-surface-3 bg-[#0B0F14] text-white hover:bg-surface-2 flex-grow sm:flex-grow-0">
                   <Tag className="w-3.5 h-3.5 mr-1.5" /> Tag
                 </Button>
-                <Button size="sm" variant="outline" className="h-8 border-surface-3 bg-[#0B0F14] text-white hover:bg-surface-2">
+                <Button size="sm" variant="outline" className="h-8 border-surface-3 bg-[#0B0F14] text-white hover:bg-surface-2 flex-grow sm:flex-grow-0">
                   <Edit3 className="w-3.5 h-3.5 mr-1.5" /> Change Stage
                 </Button>
-                <Button size="sm" className="h-8 bg-primary hover:bg-primary/90 text-black font-bold">
+                <Button size="sm" className="h-8 bg-primary hover:bg-primary/90 text-black font-bold flex-grow sm:flex-grow-0 w-full sm:w-auto mt-2 sm:mt-0">
                   <Send className="w-3.5 h-3.5 mr-1.5" /> Push to Outreacher
                 </Button>
               </div>

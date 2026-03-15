@@ -21,11 +21,11 @@ export function Outreacher() {
           <h1 className="text-3xl font-display font-bold text-white tracking-tight">Outreach Operations</h1>
           <p className="text-text-secondary text-sm mt-1">Campaign orchestration, sender health, and automated dispatch.</p>
         </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <Button variant="outline" className="flex items-center gap-2 border-surface-3 bg-[#0B0F14] hover:bg-surface-2 text-white w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          <Button variant="outline" className="flex items-center gap-2 border-surface-3 bg-[#0B0F14] hover:bg-surface-2 text-white flex-grow sm:flex-grow-0">
             <Inbox className="w-4 h-4" /> Connect Inbox
           </Button>
-          <Button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-black font-bold w-full sm:w-auto group">
+          <Button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-black font-bold flex-grow sm:flex-grow-0 group">
             <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" /> New Campaign
           </Button>
         </div>
@@ -76,7 +76,7 @@ export function Outreacher() {
       </div>
 
       {/* Navigation */}
-      <div className="flex items-center gap-1 bg-[#0B0F14] p-1 rounded-xl border border-surface-3 w-fit">
+      <div className="flex items-center gap-1 bg-[#0B0F14] p-1 rounded-xl border border-surface-3 w-full sm:w-fit overflow-x-auto hide-scrollbar">
         {[
           { id: 'campaigns', label: 'Active Campaigns', icon: BarChart3 },
           { id: 'queue', label: 'Dispatch Queue', icon: Clock },
@@ -87,7 +87,7 @@ export function Outreacher() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
                 activeTab === tab.id 
                   ? 'bg-primary/10 text-primary shadow-[0_0_15px_rgba(53,212,255,0.1)]' 
                   : 'text-text-secondary hover:text-white hover:bg-surface-2'

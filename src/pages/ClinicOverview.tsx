@@ -49,14 +49,14 @@ export function ClinicOverview() {
           <h1 className="text-3xl font-display font-bold text-white">Command Overview</h1>
           <p className="text-text-secondary mt-1">Real-time pulse of your clinic operations and patient pipeline.</p>
         </div>
-        <div className="flex gap-3">
-          <Link to="/dashboard/pipeline">
-            <Button variant="outline" className="border-surface-3 text-white hover:bg-surface-2">
+        <div className="flex flex-wrap gap-3 w-full md:w-auto">
+          <Link to="/dashboard/pipeline" className="w-full sm:w-auto">
+            <Button variant="outline" className="w-full sm:w-auto border-surface-3 text-white hover:bg-surface-2">
               <Calendar className="w-4 h-4 mr-2" /> View Schedule
             </Button>
           </Link>
-          <Link to="/dashboard/pipeline">
-            <Button className="bg-primary hover:bg-primary/90 text-black font-bold">
+          <Link to="/dashboard/pipeline" className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-black font-bold">
               <Users className="w-4 h-4 mr-2" /> New Patient
             </Button>
           </Link>

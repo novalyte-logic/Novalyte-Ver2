@@ -31,13 +31,13 @@ export function ClinicWorkforce() {
           <h1 className="text-3xl font-display font-bold text-white">Staffing Operations</h1>
           <p className="text-text-secondary mt-1">Manage role demand, requisitions, and candidate pipeline.</p>
         </div>
-        <div className="flex gap-3">
-          <Link to="/workforce/jobs">
-            <Button variant="outline" className="border-surface-3 text-white hover:bg-surface-2">
+        <div className="flex flex-wrap gap-3 w-full md:w-auto">
+          <Link to="/workforce/jobs" className="w-full sm:w-auto">
+            <Button variant="outline" className="w-full sm:w-auto border-surface-3 text-white hover:bg-surface-2">
               <Search className="w-4 h-4 mr-2" /> Browse Network
             </Button>
           </Link>
-          <Button className="bg-primary hover:bg-primary/90 text-black font-bold">
+          <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-black font-bold">
             <Plus className="w-4 h-4 mr-2" /> Open Requisition
           </Button>
         </div>

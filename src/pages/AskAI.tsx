@@ -4,6 +4,7 @@ import { Send, User, Sparkles, Activity, ArrowRight, ShieldAlert, Stethoscope, S
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
 import { Link, useNavigate } from 'react-router-dom';
+import { AIService } from '@/src/services/ai';
 
 interface Action {
   label: string;
@@ -68,7 +69,7 @@ export function AskAI() {
     scrollToBottom();
   }, [messages, isTyping]);
 
-  const handleSend = (overrideInput?: string) => {
+  const handleSend = async (overrideInput?: string) => {
     const textToSend = overrideInput || input;
     if (!textToSend.trim()) return;
 
@@ -82,49 +83,39 @@ export function AskAI() {
     setInput('');
     setIsTyping(true);
 
-    // Simulate AI response with structured routing
-    setTimeout(() => {
-      setIsTyping(false);
+    try {
+      const chatHistory = messages.map(m => ({ role: m.role, content: m.content }));
+      const response = await AIService.chat(textToSend, chatHistory);
       
-      const lowerMsg = textToSend.toLowerCase();
-      let aiResponse = "Based on your inquiry, a comprehensive clinical assessment is the most effective next step. This allows us to map your specific symptoms to potential underlying metabolic or endocrine factors.";
-      let disclaimer = "This information is for educational purposes only and does not constitute medical advice.";
-      let actions: Action[] = [
-        { label: 'Start Clinical Assessment', path: '/patient/assessment', icon: Activity, primary: true },
-        { label: 'Browse Clinic Directory', path: '/directory', icon: Search }
-      ];
-
-      if (lowerMsg.includes('testosterone') || lowerMsg.includes('trt') || lowerMsg.includes('fatigue')) {
-        aiResponse = "Testosterone Replacement Therapy (TRT) is a clinical protocol designed to restore optimal hormone levels in men experiencing symptoms like chronic fatigue, muscle loss, and cognitive fog (brain fog).\n\nBefore beginning any protocol, comprehensive blood work (including Total T, Free T, Estradiol, and SHBG) is required. A qualified provider will use these biomarkers to determine if TRT is medically appropriate.";
-        disclaimer = "Hormone optimization requires clinical supervision. Never begin a protocol without comprehensive lab work and a prescribing physician.";
-        actions = [
-          { label: 'Check Your Symptoms', path: '/symptom-checker', icon: Activity, primary: true },
-          { label: 'Find a TRT Clinic', path: '/directory', icon: Stethoscope },
-          { label: 'Read TRT Guide', path: '/blog', icon: BookOpen }
-        ];
-      } else if (lowerMsg.includes('peptide') || lowerMsg.includes('bpc')) {
-        aiResponse = "Peptide therapy utilizes specific amino acid sequences to signal the body to perform targeted functions. For example, BPC-157 is frequently researched for its potential to accelerate tissue repair and reduce inflammation.\n\nBecause peptides act as signaling molecules, they must be sourced from compounding pharmacies and prescribed by a physician who understands their specific mechanisms of action.";
-        disclaimer = "Peptide regulations vary by region. Always consult a licensed provider and ensure medications are sourced from regulated compounding pharmacies.";
-        actions = [
-          { label: 'Find a Peptide Specialist', path: '/directory', icon: Search, primary: true },
-          { label: 'Explore Health Tech', path: '/marketplace/health-tech', icon: Sparkles }
-        ];
-      } else if (lowerMsg.includes('clinic') || lowerMsg.includes('provider') || lowerMsg.includes('doctor')) {
-        aiResponse = "Choosing the right clinical partner is critical for successful health optimization. You should look for clinics that prioritize comprehensive blood work, offer personalized protocols (rather than cookie-cutter dosages), and provide ongoing monitoring.\n\nOur directory connects you with vetted clinics that meet these operational and clinical standards.";
-        actions = [
-          { label: 'Browse Vetted Clinics', path: '/directory', icon: Search, primary: true },
-          { label: 'Start Patient Intake', path: '/patient/assessment', icon: Activity }
-        ];
+      let actions: Action[] = [];
+      if (response.suggestedActions) {
+        actions = response.suggestedActions.map((a: any) => {
+          let icon = Search;
+          if (a.path.includes('assessment')) icon = Activity;
+          if (a.path.includes('directory')) icon = Stethoscope;
+          if (a.path.includes('blog')) icon = BookOpen;
+          return { ...a, icon };
+        });
       }
 
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'ai',
-        content: aiResponse,
-        disclaimer: disclaimer,
-        actions: actions
+        content: response.response,
+        disclaimer: response.rationale,
+        actions: actions.length > 0 ? actions : undefined
       }]);
-    }, 1800);
+    } catch (error) {
+      console.error('Chat error:', error);
+      setMessages(prev => [...prev, {
+        id: (Date.now() + 1).toString(),
+        role: 'ai',
+        content: "I'm sorry, I'm having trouble connecting to the intelligence server right now. Please try again later.",
+        disclaimer: "Connection error",
+      }]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

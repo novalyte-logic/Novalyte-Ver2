@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { 
@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
+import { AIService } from '@/src/services/ai';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   BarChart, Bar, Legend, PieChart, Pie, Cell, LineChart, Line
@@ -66,6 +67,23 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export function ClinicIntelligence() {
   const [timeframe, setTimeframe] = useState('30d');
+  const [insights, setInsights] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchInsights = async () => {
+      setLoading(true);
+      try {
+        const data = await AIService.generateClinicInsights({ name: 'Clinic' }, { showRate: '85%', cac: '$345' });
+        setInsights(data);
+      } catch (error) {
+        console.error('Error fetching insights:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInsights();
+  }, [timeframe]);
 
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col animate-in fade-in duration-500">
@@ -76,17 +94,17 @@ export function ClinicIntelligence() {
           <h1 className="text-3xl font-display font-bold text-white">Strategic Intelligence</h1>
           <p className="text-text-secondary mt-1">AI-interpreted performance, acquisition, and retention analytics.</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3 w-full md:w-auto">
           <select 
             value={timeframe}
             onChange={(e) => setTimeframe(e.target.value)}
-            className="bg-surface-1 border border-surface-3 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-primary/50"
+            className="bg-surface-1 border border-surface-3 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-primary/50 w-full sm:w-auto"
           >
             <option value="30d">Last 30 Days</option>
             <option value="90d">Last 90 Days</option>
             <option value="ytd">Year to Date</option>
           </select>
-          <Button className="bg-primary hover:bg-primary/90 text-black font-bold">
+          <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-black font-bold">
             Export Report
           </Button>
         </div>
@@ -107,12 +125,12 @@ export function ClinicIntelligence() {
                 <h2 className="text-sm font-bold text-white uppercase tracking-wider">Executive Summary</h2>
               </div>
               <p className="text-2xl font-display font-bold text-white leading-tight mb-6">
-                Your show rate is up <span className="text-success">12%</span> this month, driven by automated SMS triage. However, <span className="text-warning">Paid Social leads</span> are converting 15% lower than average. Consider shifting $2,500 of ad spend to the Novalyte Directory.
+                {loading ? 'Analyzing clinic performance...' : (insights?.insights?.[0] || 'Your show rate is up 12% this month, driven by automated SMS triage. However, Paid Social leads are converting 15% lower than average. Consider shifting $2,500 of ad spend to the Novalyte Directory.')}
               </p>
               <div className="flex flex-wrap gap-4">
                 <Link to="/dashboard/leads">
                   <Button className="bg-secondary hover:bg-secondary/90 text-white font-bold">
-                    Review Ad Spend Allocation
+                    {loading ? 'Loading...' : (insights?.nextBestAction || 'Review Ad Spend Allocation')}
                   </Button>
                 </Link>
                 <Link to="/dashboard/settings">

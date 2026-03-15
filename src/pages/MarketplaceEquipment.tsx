@@ -69,8 +69,8 @@ export function MarketplaceEquipment() {
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-            <div className="flex items-center gap-6">
-              <div className="w-16 h-16 rounded-2xl bg-surface-2/80 backdrop-blur-xl border border-surface-3 flex items-center justify-center text-primary shadow-2xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+              <div className="w-16 h-16 shrink-0 rounded-2xl bg-surface-2/80 backdrop-blur-xl border border-surface-3 flex items-center justify-center text-primary shadow-2xl">
                 <Server className="w-8 h-8" />
               </div>
               <div>
@@ -83,8 +83,8 @@ export function MarketplaceEquipment() {
               </div>
             </div>
             
-            <div className="flex gap-3">
-              <Button variant="outline" className="border-surface-3 hover:bg-surface-2 text-white" onClick={() => setIsROICalculatorOpen(true)}>
+            <div className="flex gap-3 w-full md:w-auto">
+              <Button variant="outline" className="w-full md:w-auto border-surface-3 hover:bg-surface-2 text-white" onClick={() => setIsROICalculatorOpen(true)}>
                 <Calculator className="w-4 h-4 mr-2" /> ROI Calculator
               </Button>
             </div>

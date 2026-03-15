@@ -76,20 +76,20 @@ export function ClinicLeads() {
           <h1 className="text-3xl font-display font-bold text-white">Lead Engine</h1>
           <p className="text-text-secondary mt-1">Acquisition metrics, quality control, and intake queue.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-2 border border-surface-3">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
             </span>
-            <span className="text-xs font-bold text-white">Receiving Leads</span>
+            <span className="text-xs font-bold text-white whitespace-nowrap">Receiving Leads</span>
           </div>
-          <Link to="/clinics/icp">
-            <Button variant="outline" className="border-surface-3 text-white hover:bg-surface-2">
+          <Link to="/clinics/icp" className="w-full sm:w-auto">
+            <Button variant="outline" className="w-full sm:w-auto border-surface-3 text-white hover:bg-surface-2">
               <Filter className="w-4 h-4 mr-2" /> Adjust Volume
             </Button>
           </Link>
-          <Button className="bg-primary hover:bg-primary/90 text-black font-bold">
+          <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-black font-bold">
             <Zap className="w-4 h-4 mr-2" /> Buy Leads
           </Button>
         </div>

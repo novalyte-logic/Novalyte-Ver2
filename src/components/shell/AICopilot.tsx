@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useShell } from './ShellContext';
 import { X, Sparkles, Send, Activity, FileText, Zap } from 'lucide-react';
+import { AIService } from '@/src/services/ai';
 
 export function AICopilot() {
   const { isCopilotOpen, setCopilotOpen } = useShell();
@@ -10,20 +11,29 @@ export function AICopilot() {
   ]);
   const [input, setInput] = useState('');
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
     
-    setMessages([...messages, { role: 'user', content: input }]);
+    const userMessage = { role: 'user', content: input };
+    setMessages(prev => [...prev, userMessage]);
     setInput('');
     
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      const chatHistory = messages.map(m => ({ role: m.role, content: m.content }));
+      const response = await AIService.chat(input, chatHistory);
+      
       setMessages(prev => [...prev, { 
         role: 'assistant', 
-        content: 'I have analyzed the current pipeline. Lead velocity is up 12% this week, primarily driven by the new Hormone Optimization campaign. Would you like me to draft a follow-up sequence for the pending leads?' 
+        content: response.response 
       }]);
-    }, 1000);
+    } catch (error) {
+      console.error('Copilot error:', error);
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: 'I encountered an error connecting to the intelligence server.' 
+      }]);
+    }
   };
 
   return (

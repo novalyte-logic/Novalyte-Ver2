@@ -44,10 +44,10 @@ export function Workforce() {
           
           {/* Role Toggle */}
           <div className="flex justify-center mb-12">
-            <div className="inline-flex items-center p-1 rounded-xl bg-surface-2 border border-surface-3">
+            <div className="flex flex-col sm:flex-row items-center p-1 rounded-xl bg-surface-2 border border-surface-3 w-full sm:w-auto">
               <button
                 onClick={() => setRole('talent')}
-                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition-all w-full sm:w-auto ${
                   role === 'talent' 
                     ? 'bg-secondary text-white shadow-[0_0_15px_rgba(139,92,246,0.3)]' 
                     : 'text-text-secondary hover:text-white'
@@ -58,7 +58,7 @@ export function Workforce() {
               </button>
               <button
                 onClick={() => setRole('clinic')}
-                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition-all w-full sm:w-auto ${
                   role === 'clinic' 
                     ? 'bg-primary text-black shadow-[0_0_15px_rgba(6,182,212,0.3)]' 
                     : 'text-text-secondary hover:text-white'

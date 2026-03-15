@@ -116,14 +116,14 @@ export function ClinicMarketplace() {
           <h1 className="text-3xl font-display font-bold text-white">Infrastructure & Procurement</h1>
           <p className="text-text-secondary mt-1">Curated equipment, diagnostics, and protocols tailored to your clinic's growth.</p>
         </div>
-        <div className="flex gap-3">
-          <Link to="/dashboard/billing">
-            <Button variant="outline" className="border-surface-3 text-white hover:bg-surface-2">
+        <div className="flex flex-wrap gap-3 w-full md:w-auto">
+          <Link to="/dashboard/billing" className="w-full sm:w-auto">
+            <Button variant="outline" className="w-full sm:w-auto border-surface-3 text-white hover:bg-surface-2">
               Procurement History
             </Button>
           </Link>
-          <Link to="/contact">
-            <Button className="bg-primary hover:bg-primary/90 text-black font-bold">
+          <Link to="/contact" className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-black font-bold">
               Request Custom Sourcing
             </Button>
           </Link>

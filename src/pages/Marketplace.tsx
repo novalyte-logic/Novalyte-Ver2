@@ -54,18 +54,20 @@ export function Marketplace() {
             
             <div className="max-w-3xl mx-auto relative group">
               <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 to-secondary/30 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-500" />
-              <div className="relative flex items-center bg-surface-1/80 backdrop-blur-xl border border-surface-3 rounded-2xl p-2 shadow-2xl">
-                <Search className="w-6 h-6 text-text-secondary ml-4" />
-                <input 
-                  type="text" 
-                  placeholder="Search equipment, diagnostics, vendors, or protocols..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-14 bg-transparent border-none text-lg text-white placeholder-text-secondary focus:outline-none focus:ring-0 px-4"
-                />
-                <Link to="/marketplace/equipment">
+              <div className="relative flex flex-col sm:flex-row items-center bg-surface-1/80 backdrop-blur-xl border border-surface-3 rounded-2xl p-2 shadow-2xl gap-2 sm:gap-0">
+                <div className="flex items-center w-full">
+                  <Search className="w-6 h-6 text-text-secondary ml-4 shrink-0" />
+                  <input 
+                    type="text" 
+                    placeholder="Search equipment, diagnostics, vendors, or protocols..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full h-14 bg-transparent border-none text-base sm:text-lg text-white placeholder-text-secondary focus:outline-none focus:ring-0 px-4"
+                  />
+                </div>
+                <Link to="/marketplace/equipment" className="w-full sm:w-auto">
                   <Button 
-                    className="h-12 px-8 bg-primary hover:bg-primary-hover text-background font-semibold rounded-xl transition-colors"
+                    className="w-full sm:w-auto h-12 px-8 bg-primary hover:bg-primary-hover text-background font-semibold rounded-xl transition-colors"
                   >
                     Search
                   </Button>

@@ -85,14 +85,14 @@ export function ClinicSettings() {
           <h1 className="text-3xl font-display font-bold text-white">Settings</h1>
           <p className="text-text-secondary mt-1">Configure your clinic profile, preferences, and system integrations.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           <AnimatePresence>
             {showSuccess && (
               <motion.div 
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
-                className="flex items-center gap-2 text-success text-sm font-bold mr-2"
+                className="flex items-center gap-2 text-success text-sm font-bold mr-2 w-full sm:w-auto"
               >
                 <CheckCircle2 className="w-4 h-4" /> Saved Successfully
               </motion.div>
@@ -101,7 +101,7 @@ export function ClinicSettings() {
           
           <Button 
             variant="outline" 
-            className="border-surface-3 text-white hover:bg-surface-2"
+            className="border-surface-3 text-white hover:bg-surface-2 flex-grow sm:flex-grow-0"
             disabled={!hasUnsavedChanges || isSaving}
             onClick={() => {
               // Reset logic would go here
@@ -111,7 +111,7 @@ export function ClinicSettings() {
             Discard
           </Button>
           <Button 
-            className="bg-primary hover:bg-primary/90 text-black font-bold min-w-[140px]"
+            className="bg-primary hover:bg-primary/90 text-black font-bold min-w-[140px] flex-grow sm:flex-grow-0"
             disabled={!hasUnsavedChanges || isSaving}
             onClick={handleSave}
           >
