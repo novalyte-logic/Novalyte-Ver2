@@ -14,8 +14,9 @@ export function Navbar() {
     { name: 'Patients', path: '/patient' },
     { name: 'Clinics', path: '/clinics' },
     { name: 'Directory', path: '/directory' },
-    { name: 'Marketplace', path: '/marketplace' },
     { name: 'Workforce', path: '/workforce' },
+    { name: 'Blog', path: '/blog' },
+    { name: 'Visuals', path: '/visual-intelligence' },
   ];
 
   return (
@@ -53,35 +54,12 @@ export function Navbar() {
           </div>
           
           <div className="hidden md:flex items-center gap-4">
-            <button 
-              onClick={() => setCommandOpen(true)}
-              className="p-2 text-text-secondary hover:text-primary transition-colors"
-              aria-label="Search"
-            >
-              <Search className="w-5 h-5" />
-            </button>
-            <button 
-              onClick={() => setCopilotOpen(true)}
-              className="p-2 text-text-secondary hover:text-secondary transition-colors"
-              aria-label="AI Copilot"
-            >
-              <Sparkles className="w-5 h-5" />
-            </button>
-            <Link to="/auth/clinic-login">
-              <Button variant="ghost" size="sm">Log In</Button>
-            </Link>
-            <Link to="/patient/assessment">
-              <Button size="sm">Start Assessment</Button>
+            <Link to="/marketplace">
+              <Button size="sm">Marketplace</Button>
             </Link>
           </div>
 
           <div className="-mr-2 flex md:hidden items-center gap-2">
-            <button 
-              onClick={() => setCommandOpen(true)}
-              className="p-2 text-text-secondary hover:text-primary transition-colors"
-            >
-              <Search className="w-5 h-5" />
-            </button>
             <button
               onClick={() => setIsOpen(!isOpen)}
               className="inline-flex items-center justify-center p-2 rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-2 focus:outline-none"
@@ -112,21 +90,8 @@ export function Navbar() {
               </Link>
             ))}
             <div className="mt-4 pt-4 border-t border-surface-3 flex flex-col gap-2 px-3">
-              <button 
-                onClick={() => {
-                  setIsOpen(false);
-                  setCopilotOpen(true);
-                }}
-                className="flex items-center justify-center gap-2 w-full px-4 py-2 rounded-lg bg-surface-2 text-text-primary border border-surface-3"
-              >
-                <Sparkles className="w-4 h-4 text-secondary" />
-                Ask AI Copilot
-              </button>
-              <Link to="/auth/clinic-login" onClick={() => setIsOpen(false)}>
-                <Button variant="outline" className="w-full">Log In</Button>
-              </Link>
-              <Link to="/patient/assessment" onClick={() => setIsOpen(false)}>
-                <Button className="w-full">Start Assessment</Button>
+              <Link to="/marketplace" onClick={() => setIsOpen(false)}>
+                <Button className="w-full">Marketplace</Button>
               </Link>
             </div>
           </div>
