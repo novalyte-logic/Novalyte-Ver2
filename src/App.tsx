@@ -53,6 +53,9 @@ import { ClinicIntelligence } from './pages/ClinicIntelligence';
 import { ClinicBilling } from './pages/ClinicBilling';
 import { ClinicSettings } from './pages/ClinicSettings';
 import { ClinicHelp } from './pages/ClinicHelp';
+import { ClinicICP } from './pages/ClinicICP';
+import { VendorApply } from './pages/VendorApply';
+import { PartnerNetwork } from './pages/PartnerNetwork';
 import { NotFound } from './pages/NotFound';
 import { PatientSupport } from './pages/support/PatientSupport';
 import { ClinicSupport } from './pages/support/ClinicSupport';
@@ -85,6 +88,7 @@ export default function App() {
             <Route path="marketplace/health-tech" element={<MarketplaceHealthTech />} />
             <Route path="marketplace/:category" element={<MarketplaceCategory />} />
             <Route path="marketplace/product/:id" element={<ProductDetail />} />
+            <Route path="network" element={<PartnerNetwork />} />
             <Route path="workforce" element={<Workforce />} />
             <Route path="workforce/jobs" element={<WorkforceJobs />} />
             <Route path="practitioners" element={<Practitioners />} />
@@ -108,6 +112,8 @@ export default function App() {
           {/* Standalone Routes without global Navbar/Footer */}
           <Route path="/patient/assessment" element={<PatientAssessment />} />
           <Route path="/clinics/apply" element={<ClinicApply />} />
+          <Route path="/clinics/icp" element={<ClinicICP />} />
+          <Route path="/vendors/apply" element={<VendorApply />} />
           <Route path="/auth/register-clinic" element={<ClinicRegister />} />
           <Route path="/auth/clinic-login" element={<ClinicLogin />} />
           <Route path="/workforce/profile" element={<WorkforceProfile />} />
