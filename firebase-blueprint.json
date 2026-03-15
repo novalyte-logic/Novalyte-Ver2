@@ -100,17 +100,33 @@
     },
     "Product": {
       "title": "Product",
-      "description": "Marketplace product.",
+      "description": "Marketplace product or service.",
       "type": "object",
       "properties": {
         "vendorId": { "type": "string" },
+        "vendorName": { "type": "string" },
         "name": { "type": "string" },
-        "category": { "type": "string" },
+        "slug": { "type": "string" },
+        "category": { "type": "string", "enum": ["Equipment", "Supplies", "Software", "Services", "Staffing", "Marketing"] },
+        "subCategory": { "type": "string" },
         "price": { "type": "number" },
+        "priceDisplay": { "type": "string" },
         "description": { "type": "string" },
-        "createdAt": { "type": "timestamp" }
+        "detailedDescription": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "gallery": { "type": "array", "items": { "type": "string" } },
+        "specifications": { "type": "object" },
+        "conversionType": { "type": "string", "enum": ["direct", "inquiry", "assessment", "approval"] },
+        "targetSpecialties": { "type": "array", "items": { "type": "string" } },
+        "isPopular": { "type": "boolean" },
+        "isNew": { "type": "boolean" },
+        "rating": { "type": "number" },
+        "reviewCount": { "type": "number" },
+        "inventory": { "type": "number" },
+        "createdAt": { "type": "timestamp" },
+        "updatedAt": { "type": "timestamp" }
       },
-      "required": ["vendorId", "name", "category", "price", "createdAt"]
+      "required": ["vendorId", "name", "slug", "category", "conversionType", "createdAt"]
     },
     "Vendor": {
       "title": "Vendor",
@@ -119,7 +135,12 @@
       "properties": {
         "uid": { "type": "string" },
         "companyName": { "type": "string" },
-        "status": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "description": { "type": "string" },
+        "website": { "type": "string" },
+        "contactEmail": { "type": "string" },
+        "rating": { "type": "number" },
+        "status": { "type": "string", "enum": ["Active", "Pending", "Suspended"] },
         "createdAt": { "type": "timestamp" }
       },
       "required": ["uid", "companyName", "status", "createdAt"]
