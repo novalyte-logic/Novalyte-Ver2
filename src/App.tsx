@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ShellRoot } from './components/shell/ShellRoot';
 import { MainLayout } from './components/layout/MainLayout';
 import { AdminLayout } from './components/layout/AdminLayout';
@@ -34,6 +34,8 @@ import { BlogIndex } from './pages/BlogIndex';
 import { BlogDetail } from './pages/BlogDetail';
 import { VisualIntelligence } from './pages/VisualIntelligence';
 import { Contact } from './pages/Contact';
+import { Practitioners } from './pages/Practitioners';
+import { PractitionerOnboarding } from './pages/PractitionerOnboarding';
 import { CommandCenter } from './pages/admin/CommandCenter';
 import { CRM } from './pages/admin/CRM';
 import { Outreacher } from './pages/admin/Outreacher';
@@ -44,6 +46,7 @@ import { ClinicOverview } from './pages/ClinicOverview';
 import { ClinicLeads } from './pages/ClinicLeads';
 import { ClinicPipeline } from './pages/ClinicPipeline';
 import { ClinicWorkforce } from './pages/ClinicWorkforce';
+import { ClinicActivate } from './pages/ClinicActivate';
 import { ClinicMarketplace } from './pages/ClinicMarketplace';
 import { ClinicIntelligence } from './pages/ClinicIntelligence';
 import { ClinicBilling } from './pages/ClinicBilling';
@@ -83,6 +86,7 @@ export default function App() {
             <Route path="marketplace/product/:id" element={<ProductDetail />} />
             <Route path="workforce" element={<Workforce />} />
             <Route path="workforce/jobs" element={<WorkforceJobs />} />
+            <Route path="practitioners" element={<Practitioners />} />
             <Route path="directory" element={<Directory />} />
             <Route path="blog" element={<BlogIndex />} />
             <Route path="blog/:id" element={<BlogDetail />} />
@@ -108,10 +112,16 @@ export default function App() {
           <Route path="/workforce/profile" element={<WorkforceProfile />} />
           <Route path="/workforce/apply/:id" element={<WorkforceApply />} />
           <Route path="/workforce/dashboard" element={<WorkforceDashboard />} />
+          <Route path="/practitioners/onboarding" element={<PractitionerOnboarding />} />
           
+          {/* Clinic Deep Links */}
+          <Route path="/clinic/workforce" element={<Navigate to="/dashboard/workforce" replace />} />
+          <Route path="/clinic/activate" element={<Navigate to="/dashboard/activate" replace />} />
+
           {/* Clinic Routes with ClinicLayout */}
           <Route path="/dashboard" element={<ClinicLayout />}>
             <Route index element={<ClinicOverview />} />
+            <Route path="activate" element={<ClinicActivate />} />
             <Route path="leads" element={<ClinicLeads />} />
             <Route path="pipeline" element={<ClinicPipeline />} />
             <Route path="workforce" element={<ClinicWorkforce />} />

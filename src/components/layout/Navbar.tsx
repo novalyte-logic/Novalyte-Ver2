@@ -13,6 +13,7 @@ export function Navbar() {
   const navLinks = [
     { name: 'Patients', path: '/patient' },
     { name: 'Clinics', path: '/clinics' },
+    { name: 'Practitioners', path: '/practitioners' },
     { name: 'Directory', path: '/directory' },
     { name: 'Workforce', path: '/workforce' },
     { name: 'Blog', path: '/blog' },

@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
-import { Search, Filter, MoreVertical, CheckCircle2, XCircle, Clock, ArrowRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  Search, Filter, MoreVertical, CheckCircle2, XCircle, 
+  Clock, ArrowRight, TrendingUp, Users, DollarSign, 
+  Target, ShieldCheck, Zap, BarChart3, ChevronDown, Activity
+} from 'lucide-react';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 import { useShell } from '../components/shell/ShellContext';
@@ -8,125 +12,272 @@ import { useShell } from '../components/shell/ShellContext';
 export function ClinicLeads() {
   const { openEntity } = useShell();
   const [filter, setFilter] = useState('all');
+  const [expandedLead, setExpandedLead] = useState<string | null>(null);
 
   const leads = [
-    { id: '1', name: "Michael T.", intent: "Hormone Optimization", score: 92, status: "new", time: "10m ago", email: "m.t@example.com", phone: "(555) 123-4567" },
-    { id: '2', name: "David R.", intent: "Peptide Therapy", score: 85, status: "new", time: "1h ago", email: "david.r@example.com", phone: "(555) 987-6543" },
-    { id: '3', name: "James L.", intent: "Longevity", score: 78, status: "contacted", time: "3h ago", email: "j.l@example.com", phone: "(555) 456-7890" },
-    { id: '4', name: "Robert K.", intent: "Cognitive Enhancement", score: 88, status: "qualified", time: "1d ago", email: "rob.k@example.com", phone: "(555) 234-5678" },
-    { id: '5', name: "William S.", intent: "Hormone Optimization", score: 81, status: "disqualified", time: "1d ago", email: "will.s@example.com", phone: "(555) 876-5432" },
+    { 
+      id: '1', name: "Michael T.", intent: "Hormone Optimization", score: 92, status: "new", time: "10m ago", 
+      email: "m.t@example.com", phone: "(555) 123-4567", source: "Organic Search", budget: "$500+",
+      urgency: "High", aiReasoning: "Strong clinical fit. High budget. Ready to start immediately. Completed full assessment."
+    },
+    { 
+      id: '2', name: "David R.", intent: "Peptide Therapy", score: 85, status: "new", time: "1h ago", 
+      email: "david.r@example.com", phone: "(555) 987-6543", source: "Marketplace", budget: "$200-$500",
+      urgency: "Medium", aiReasoning: "Good clinical fit. Moderate budget. Exploring options."
+    },
+    { 
+      id: '3', name: "James L.", intent: "Longevity", score: 78, status: "contacted", time: "3h ago", 
+      email: "j.l@example.com", phone: "(555) 456-7890", source: "Referral", budget: "$100-$200",
+      urgency: "Low", aiReasoning: "Borderline budget. High interest but low urgency."
+    },
+    { 
+      id: '4', name: "Robert K.", intent: "Cognitive Enhancement", score: 88, status: "qualified", time: "1d ago", 
+      email: "rob.k@example.com", phone: "(555) 234-5678", source: "Paid Social", budget: "$500+",
+      urgency: "High", aiReasoning: "Excellent fit. High budget. Booked consult."
+    },
+    { 
+      id: '5', name: "William S.", intent: "Hormone Optimization", score: 45, status: "disqualified", time: "1d ago", 
+      email: "will.s@example.com", phone: "(555) 876-5432", source: "Organic Search", budget: "Under $100",
+      urgency: "Low", aiReasoning: "Disqualified: Budget below clinic minimum threshold. Unwilling to do labs."
+    },
   ];
 
   const filteredLeads = filter === 'all' ? leads : leads.filter(l => l.status === filter);
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 animate-in fade-in duration-500">
+      
+      {/* Header & Controls */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold">Lead Management</h1>
-          <p className="text-text-secondary mt-1">Review, qualify, and route incoming patient leads.</p>
+          <h1 className="text-3xl font-display font-bold text-white">Lead Engine</h1>
+          <p className="text-text-secondary mt-1">Acquisition metrics, quality control, and intake queue.</p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline">Export CSV</Button>
-          <Button>Request Leads</Button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-2 border border-surface-3">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+            </span>
+            <span className="text-xs font-bold text-white">Receiving Leads</span>
+          </div>
+          <Button variant="outline" className="border-surface-3 text-white hover:bg-surface-2">
+            <Filter className="w-4 h-4 mr-2" /> Adjust Volume
+          </Button>
+          <Button className="bg-primary hover:bg-primary/90 text-black font-bold">
+            <Zap className="w-4 h-4 mr-2" /> Buy Leads
+          </Button>
         </div>
       </div>
 
-      <Card className="p-6 bg-surface-1 border-surface-3">
-        {/* Filters & Search */}
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
-          <div className="flex gap-2 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0">
-            {['all', 'new', 'contacted', 'qualified', 'disqualified'].map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                  filter === f 
-                    ? 'bg-primary text-background' 
-                    : 'bg-surface-2 text-text-secondary hover:bg-surface-3 hover:text-text-primary'
-                }`}
-              >
-                {f.charAt(0).toUpperCase() + f.slice(1)}
-              </button>
-            ))}
-          </div>
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
-            <input 
-              type="text" 
-              placeholder="Search leads..." 
-              className="w-full pl-9 pr-4 py-2 bg-surface-2 border border-surface-3 rounded-lg text-sm focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all"
-            />
-          </div>
+      {/* Performance Metrics */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Lead Velocity', value: '12/day', trend: '+2 vs last week', icon: Activity, color: 'text-primary', bg: 'bg-primary/10' },
+          { label: 'Avg AI Score', value: '84', trend: 'Top 10% network', icon: Target, color: 'text-secondary', bg: 'bg-secondary/10' },
+          { label: 'Cost Per Lead', value: '$45', trend: '-$5 vs target', icon: DollarSign, color: 'text-success', bg: 'bg-success/10' },
+          { label: 'Conversion Rate', value: '28%', trend: '+2.1% this mo', icon: TrendingUp, color: 'text-warning', bg: 'bg-warning/10' },
+        ].map((metric, i) => (
+          <Card key={i} className="p-5 bg-[#0B0F14] border-surface-3">
+            <div className="flex items-start justify-between mb-4">
+              <div className={`w-10 h-10 rounded-lg ${metric.bg} flex items-center justify-center ${metric.color}`}>
+                <metric.icon className="w-5 h-5" />
+              </div>
+              <BarChart3 className="w-4 h-4 text-text-secondary opacity-50" />
+            </div>
+            <div>
+              <h3 className="text-3xl font-display font-bold text-white mb-1">{metric.value}</h3>
+              <p className="text-sm font-medium text-text-secondary mb-1">{metric.label}</p>
+              <p className="text-xs text-text-secondary/70">{metric.trend}</p>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      {/* Source Quality & Intake Queue */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        
+        {/* Left Column: Source Quality (1/4) */}
+        <div className="lg:col-span-1 space-y-6">
+          <Card className="p-6 bg-[#0B0F14] border-surface-3 h-full">
+            <h2 className="text-lg font-bold text-white mb-6">Source Quality</h2>
+            <div className="space-y-6">
+              {[
+                { source: 'Organic Search', volume: '45%', score: 88, conv: '32%' },
+                { source: 'Marketplace', volume: '30%', score: 92, conv: '38%' },
+                { source: 'Paid Social', volume: '15%', score: 72, conv: '18%' },
+                { source: 'Referral', volume: '10%', score: 85, conv: '45%' },
+              ].map((s, i) => (
+                <div key={i}>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="font-bold text-white">{s.source}</span>
+                    <span className="text-text-secondary">{s.volume}</span>
+                  </div>
+                  <div className="w-full h-2 bg-surface-2 rounded-full overflow-hidden mb-2">
+                    <div className="h-full bg-primary rounded-full" style={{ width: s.volume }} />
+                  </div>
+                  <div className="flex justify-between text-xs text-text-secondary">
+                    <span>Avg Score: <span className="text-white">{s.score}</span></span>
+                    <span>Conv: <span className="text-success">{s.conv}</span></span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <Button variant="outline" className="w-full mt-8 border-surface-3 text-white hover:bg-surface-2">
+              View Attribution Report
+            </Button>
+          </Card>
         </div>
 
-        {/* Leads Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-surface-3 text-text-secondary text-sm">
-                <th className="pb-3 font-medium">Patient Name</th>
-                <th className="pb-3 font-medium">Primary Intent</th>
-                <th className="pb-3 font-medium">AI Score</th>
-                <th className="pb-3 font-medium">Status</th>
-                <th className="pb-3 font-medium">Received</th>
-                <th className="pb-3 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm">
-              {filteredLeads.map((lead, i) => (
-                <tr key={i} className="border-b border-surface-3 hover:bg-surface-2/50 transition-colors group cursor-pointer" onClick={() => openEntity('patient', lead.id)}>
-                  <td className="py-4">
-                    <div className="font-medium text-text-primary">{lead.name}</div>
-                    <div className="text-xs text-text-secondary mt-1">{lead.email}</div>
-                  </td>
-                  <td className="py-4 text-text-secondary">{lead.intent}</td>
-                  <td className="py-4">
-                    <span className={`px-2 py-1 rounded text-xs font-mono font-medium border ${
-                      lead.score >= 90 ? 'bg-success/10 text-success border-success/20' :
-                      lead.score >= 80 ? 'bg-warning/10 text-warning border-warning/20' :
-                      'bg-surface-3 text-text-secondary border-surface-3'
-                    }`}>
-                      {lead.score}/100
-                    </span>
-                  </td>
-                  <td className="py-4">
-                    <span className={`px-2 py-1 rounded text-xs font-medium capitalize ${
-                      lead.status === 'new' ? 'bg-primary/10 text-primary' :
-                      lead.status === 'qualified' ? 'bg-success/10 text-success' :
-                      lead.status === 'disqualified' ? 'bg-danger/10 text-danger' :
-                      'bg-surface-3 text-text-secondary'
-                    }`}>
-                      {lead.status}
-                    </span>
-                  </td>
-                  <td className="py-4 text-text-secondary flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> {lead.time}
-                  </td>
-                  <td className="py-4 text-right">
-                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="p-1.5 rounded hover:bg-surface-3 text-success transition-colors" title="Qualify">
-                        <CheckCircle2 className="w-4 h-4" />
-                      </button>
-                      <button className="p-1.5 rounded hover:bg-surface-3 text-danger transition-colors" title="Disqualify">
-                        <XCircle className="w-4 h-4" />
-                      </button>
-                      <button className="p-1.5 rounded hover:bg-surface-3 text-text-secondary transition-colors">
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {filteredLeads.length === 0 && (
-            <div className="py-12 text-center text-text-secondary">
-              No leads found matching the current filters.
+        {/* Right Column: Intake Queue (3/4) */}
+        <div className="lg:col-span-3">
+          <Card className="p-0 bg-[#0B0F14] border-surface-3 overflow-hidden">
+            
+            {/* Queue Controls */}
+            <div className="p-4 border-b border-surface-3 bg-surface-1/50 flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="flex gap-2 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0 hide-scrollbar">
+                {['all', 'new', 'contacted', 'qualified', 'disqualified'].map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    className={`px-4 py-1.5 rounded-lg text-sm font-bold whitespace-nowrap transition-colors ${
+                      filter === f 
+                        ? 'bg-primary/20 text-primary border border-primary/30' 
+                        : 'bg-surface-2 text-text-secondary border border-transparent hover:text-white'
+                    }`}
+                  >
+                    {f.charAt(0).toUpperCase() + f.slice(1)}
+                  </button>
+                ))}
+              </div>
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
+                <input 
+                  type="text" 
+                  placeholder="Search leads..." 
+                  className="w-full pl-9 pr-4 py-1.5 bg-surface-2 border border-surface-3 rounded-lg text-sm text-white focus:outline-none focus:border-primary/50 transition-all placeholder:text-text-secondary/50"
+                />
+              </div>
             </div>
-          )}
+
+            {/* Leads List */}
+            <div className="divide-y divide-surface-3">
+              {filteredLeads.map((lead) => (
+                <div key={lead.id} className="group">
+                  {/* Lead Row */}
+                  <div 
+                    className="p-4 hover:bg-surface-2/50 transition-colors cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                    onClick={() => setExpandedLead(expandedLead === lead.id ? null : lead.id)}
+                  >
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="w-10 h-10 rounded-full bg-surface-2 border border-surface-3 flex items-center justify-center shrink-0">
+                        <span className="font-bold text-text-secondary">{lead.name.charAt(0)}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-bold text-white truncate">{lead.name}</h4>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
+                            lead.status === 'new' ? 'bg-primary/10 text-primary border-primary/20' :
+                            lead.status === 'qualified' ? 'bg-success/10 text-success border-success/20' :
+                            lead.status === 'disqualified' ? 'bg-danger/10 text-danger border-danger/20' :
+                            'bg-surface-3 text-text-secondary border-surface-3'
+                          }`}>
+                            {lead.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-text-secondary">
+                          <span className="truncate">{lead.intent}</span>
+                          <span className="hidden sm:inline">•</span>
+                          <span className="hidden sm:flex items-center gap-1"><Clock className="w-3 h-3" /> {lead.time}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between sm:justify-end gap-6 shrink-0">
+                      <div className="text-right hidden md:block">
+                        <div className="text-sm font-bold text-white">{lead.budget}</div>
+                        <div className="text-xs text-text-secondary">{lead.urgency} Urgency</div>
+                      </div>
+                      
+                      <div className="flex flex-col items-end">
+                        <span className={`px-2 py-1 rounded text-xs font-mono font-bold border flex items-center gap-1 ${
+                          lead.score >= 90 ? 'bg-success/10 text-success border-success/20' :
+                          lead.score >= 80 ? 'bg-warning/10 text-warning border-warning/20' :
+                          'bg-danger/10 text-danger border-danger/20'
+                        }`}>
+                          <ShieldCheck className="w-3 h-3" /> {lead.score}/100
+                        </span>
+                        <span className="text-[10px] text-text-secondary mt-1 uppercase tracking-wider">AI Score</span>
+                      </div>
+
+                      <ChevronDown className={`w-5 h-5 text-text-secondary transition-transform ${expandedLead === lead.id ? 'rotate-180' : ''}`} />
+                    </div>
+                  </div>
+
+                  {/* Expanded AI Reasoning & Actions */}
+                  <AnimatePresence>
+                    {expandedLead === lead.id && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden bg-surface-1/30 border-t border-surface-3"
+                      >
+                        <div className="p-4 sm:p-6 flex flex-col md:flex-row gap-6">
+                          <div className="flex-grow space-y-4">
+                            <div>
+                              <h5 className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">AI Qualification Reasoning</h5>
+                              <p className="text-sm text-white leading-relaxed p-3 rounded-lg bg-surface-2 border border-surface-3">
+                                {lead.aiReasoning}
+                              </p>
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                              <div>
+                                <span className="text-xs text-text-secondary block mb-1">Source</span>
+                                <span className="text-sm font-bold text-white">{lead.source}</span>
+                              </div>
+                              <div>
+                                <span className="text-xs text-text-secondary block mb-1">Email</span>
+                                <span className="text-sm font-bold text-white truncate block">{lead.email}</span>
+                              </div>
+                              <div>
+                                <span className="text-xs text-text-secondary block mb-1">Phone</span>
+                                <span className="text-sm font-bold text-white">{lead.phone}</span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="shrink-0 flex flex-row md:flex-col gap-2 justify-end">
+                            <Button className="bg-primary hover:bg-primary/90 text-black font-bold w-full md:w-auto" onClick={(e) => { e.stopPropagation(); openEntity('patient', lead.id); }}>
+                              Open Dossier
+                            </Button>
+                            <Button variant="outline" className="border-success/30 text-success hover:bg-success/10 font-bold w-full md:w-auto">
+                              <CheckCircle2 className="w-4 h-4 mr-2" /> Qualify
+                            </Button>
+                            <Button variant="outline" className="border-danger/30 text-danger hover:bg-danger/10 font-bold w-full md:w-auto">
+                              <XCircle className="w-4 h-4 mr-2" /> Disqualify
+                            </Button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ))}
+              
+              {filteredLeads.length === 0 && (
+                <div className="p-12 text-center flex flex-col items-center justify-center">
+                  <div className="w-16 h-16 rounded-full bg-surface-2 flex items-center justify-center mb-4">
+                    <Search className="w-8 h-8 text-text-secondary" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-2">No leads found</h3>
+                  <p className="text-text-secondary">Try adjusting your filters or search query.</p>
+                </div>
+              )}
+            </div>
+          </Card>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }
