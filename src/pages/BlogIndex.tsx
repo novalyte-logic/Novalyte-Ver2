@@ -360,7 +360,9 @@ export function BlogIndex() {
                   placeholder="Enter your email" 
                   className="w-full px-4 py-2 rounded-lg bg-surface-2 border border-surface-3 text-white placeholder-text-secondary focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
-                <Button className="w-full">Subscribe</Button>
+                <Link to="/contact">
+                  <Button className="w-full">Subscribe</Button>
+                </Link>
               </div>
             </Card>
 

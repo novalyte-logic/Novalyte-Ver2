@@ -342,9 +342,9 @@ export function ClinicRegister() {
                               <p className="text-sm text-text-secondary mb-2">
                                 I acknowledge and agree to the standard Novalyte AI BAA for the handling of Protected Health Information (PHI).
                               </p>
-                              <a href="#" className="text-primary text-sm hover:underline flex items-center gap-1">
+                              <Link to="#" className="text-primary text-sm hover:underline flex items-center gap-1">
                                 <FileText className="w-4 h-4" /> View Full BAA
-                              </a>
+                              </Link>
                             </div>
                           </div>
                         </>

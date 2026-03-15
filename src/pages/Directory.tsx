@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/src/components/ui/Button';
+import { collection, query, onSnapshot } from 'firebase/firestore';
+import { db } from '@/src/firebase';
 import { Card } from '@/src/components/ui/Card';
 import { 
   MapPin, 
@@ -82,6 +84,35 @@ export function Directory() {
   const [compareList, setCompareList] = useState<string[]>([]);
   const [isAiMatching, setIsAiMatching] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [clinics, setClinics] = useState<any[]>(MOCK_CLINICS);
+
+  React.useEffect(() => {
+    const q = query(collection(db, 'clinics'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const clinicsData = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.name || 'Unknown Clinic',
+          location: data.city && data.state ? `${data.city}, ${data.state}` : 'Unknown Location',
+          rating: data.rating || 4.5,
+          matchScore: 85,
+          tags: data.tags || ['General'],
+          symptoms: data.symptoms || [],
+          waitlist: data.waitlist || 'Contact for availability',
+          price: data.price || '$$',
+          image: data.image || 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=800'
+        };
+      });
+      
+      // Merge with mock clinics for demo purposes if firestore is empty
+      if (clinicsData.length > 0) {
+        setClinics(clinicsData);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const toggleSelection = (item: string, list: string[], setList: React.Dispatch<React.SetStateAction<string[]>>) => {
     if (list.includes(item)) {
@@ -106,7 +137,7 @@ export function Directory() {
     }, 1500);
   };
 
-  const filteredClinics = MOCK_CLINICS.filter(clinic => {
+  const filteredClinics = clinics.filter(clinic => {
     const matchesSearch = clinic.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           clinic.location.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesSymptoms = selectedSymptoms.length === 0 || selectedSymptoms.some(s => clinic.symptoms.includes(s));
@@ -327,12 +358,16 @@ export function Directory() {
                             </div>
 
                             <div className="flex flex-col sm:flex-row gap-3 mt-6 pt-4 border-t border-surface-3">
-                              <Button className="flex-grow bg-white text-black hover:bg-gray-200 gap-2">
-                                <Calendar className="w-4 h-4" /> Quick Book
-                              </Button>
-                              <Button variant="outline" className="flex-grow gap-2 hover:bg-surface-2 hover:text-white">
-                                <MessageSquare className="w-4 h-4" /> Chat with Clinic
-                              </Button>
+                              <Link to={`/clinics/${clinic.id}`} className="flex-grow flex">
+                                <Button className="w-full bg-white text-black hover:bg-gray-200 gap-2">
+                                  <Calendar className="w-4 h-4" /> Quick Book
+                                </Button>
+                              </Link>
+                              <Link to={`/clinics/${clinic.id}`} className="flex-grow flex">
+                                <Button variant="outline" className="w-full gap-2 hover:bg-surface-2 hover:text-white">
+                                  <MessageSquare className="w-4 h-4" /> Chat with Clinic
+                                </Button>
+                              </Link>
                             </div>
                           </div>
                         </div>

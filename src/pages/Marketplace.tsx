@@ -63,9 +63,13 @@ export function Marketplace() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full h-14 bg-transparent border-none text-lg text-white placeholder-text-secondary focus:outline-none focus:ring-0 px-4"
                 />
-                <Button className="h-12 px-8 bg-primary hover:bg-primary-hover text-background font-semibold rounded-xl transition-colors">
-                  Search
-                </Button>
+                <Link to="/marketplace/equipment">
+                  <Button 
+                    className="h-12 px-8 bg-primary hover:bg-primary-hover text-background font-semibold rounded-xl transition-colors"
+                  >
+                    Search
+                  </Button>
+                </Link>
               </div>
             </div>
           </motion.div>
@@ -227,9 +231,11 @@ export function Marketplace() {
                   <p className="text-text-secondary text-sm mb-8 flex-grow leading-relaxed">
                     Connect your Clinic OS to receive personalized equipment and protocol recommendations based on your patient demographics, capacity, and revenue goals.
                   </p>
-                  <Button className="w-full bg-surface-3 hover:bg-surface-3/80 text-white border border-surface-3">
-                    Run Clinic Analysis
-                  </Button>
+                  <Link to="/clinics/icp">
+                    <Button className="w-full bg-surface-3 hover:bg-surface-3/80 text-white border border-surface-3">
+                      Run Clinic Analysis
+                    </Button>
+                  </Link>
                 </div>
               </Card>
             </div>

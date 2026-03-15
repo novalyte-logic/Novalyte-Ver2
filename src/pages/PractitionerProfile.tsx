@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { 
   User, MapPin, ShieldCheck, Star, Clock, DollarSign, 
   Briefcase, FileText, CheckCircle2, ChevronRight, Zap,
@@ -263,9 +263,11 @@ export function PractitionerProfile() {
                     </div>
                   ))}
                 </div>
-                <Button variant="outline" className="w-full mt-4 border-surface-3 text-white hover:bg-surface-2">
-                  View Timesheets
-                </Button>
+                <Link to="/dashboard">
+                  <Button variant="outline" className="w-full mt-4 border-surface-3 text-white hover:bg-surface-2">
+                    View Timesheets
+                  </Button>
+                </Link>
               </Card>
             </motion.div>
 
@@ -292,15 +294,19 @@ export function PractitionerProfile() {
                         <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {opp.location}</span>
                         <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {opp.type}</span>
                       </div>
-                      <Button className="w-full bg-surface-2 hover:bg-primary hover:text-black text-white transition-colors flex items-center justify-center gap-2">
-                        Review Match <ArrowUpRight className="w-4 h-4" />
-                      </Button>
+                      <Link to="/workforce/jobs">
+                        <Button className="w-full bg-surface-2 hover:bg-primary hover:text-black text-white transition-colors flex items-center justify-center gap-2">
+                          Review Match <ArrowUpRight className="w-4 h-4" />
+                        </Button>
+                      </Link>
                     </div>
                   ))}
                 </div>
-                <Button variant="ghost" className="w-full mt-4 text-text-secondary hover:text-white">
-                  View All Opportunities
-                </Button>
+                <Link to="/workforce/jobs">
+                  <Button variant="ghost" className="w-full mt-4 text-text-secondary hover:text-white">
+                    View All Opportunities
+                  </Button>
+                </Link>
               </Card>
             </motion.div>
 

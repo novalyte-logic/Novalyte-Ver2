@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Link } from 'react-router-dom';
 import { 
   Search, Filter, Package, Zap, TrendingUp, CheckCircle2, 
   AlertTriangle, Sparkles, DollarSign, Users, Activity,
@@ -116,12 +117,16 @@ export function ClinicMarketplace() {
           <p className="text-text-secondary mt-1">Curated equipment, diagnostics, and protocols tailored to your clinic's growth.</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" className="border-surface-3 text-white hover:bg-surface-2">
-            Procurement History
-          </Button>
-          <Button className="bg-primary hover:bg-primary/90 text-black font-bold">
-            Request Custom Sourcing
-          </Button>
+          <Link to="/dashboard/billing">
+            <Button variant="outline" className="border-surface-3 text-white hover:bg-surface-2">
+              Procurement History
+            </Button>
+          </Link>
+          <Link to="/contact">
+            <Button className="bg-primary hover:bg-primary/90 text-black font-bold">
+              Request Custom Sourcing
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -143,12 +148,16 @@ export function ClinicMarketplace() {
                 Based on <span className="text-primary">45 recent patient leads</span> requesting ED treatments in your area, adding <span className="text-white">Acoustic Wave Therapy</span> could increase your monthly revenue by <span className="text-success">$12,500</span> with a payback period of 2.5 months.
               </p>
               <div className="flex flex-wrap gap-4">
-                <Button className="bg-primary hover:bg-primary/90 text-black font-bold">
-                  View ROI Calculator
-                </Button>
-                <Button variant="outline" className="border-surface-3 text-white hover:bg-surface-2">
-                  Explore Equipment
-                </Button>
+                <Link to="/marketplace/equipment">
+                  <Button className="bg-primary hover:bg-primary/90 text-black font-bold">
+                    View ROI Calculator
+                  </Button>
+                </Link>
+                <Link to="/marketplace/equipment">
+                  <Button variant="outline" className="border-surface-3 text-white hover:bg-surface-2">
+                    Explore Equipment
+                  </Button>
+                </Link>
               </div>
             </div>
           </Card>
@@ -277,9 +286,11 @@ export function ClinicMarketplace() {
                           <p className="text-lg font-display font-bold text-white">{product.price}</p>
                           <p className="text-xs text-text-secondary">or {product.financing}</p>
                         </div>
-                        <Button className="bg-surface-2 hover:bg-surface-3 text-white border border-surface-3 group-hover:border-primary/50 transition-colors">
-                          Procurement Details <ArrowUpRight className="w-4 h-4 ml-2 opacity-50 group-hover:opacity-100 group-hover:text-primary transition-all" />
-                        </Button>
+                        <Link to="/marketplace/equipment">
+                          <Button className="bg-surface-2 hover:bg-surface-3 text-white border border-surface-3 group-hover:border-primary/50 transition-colors">
+                            Procurement Details <ArrowUpRight className="w-4 h-4 ml-2 opacity-50 group-hover:opacity-100 group-hover:text-primary transition-all" />
+                          </Button>
+                        </Link>
                       </div>
                     </div>
                   </Card>

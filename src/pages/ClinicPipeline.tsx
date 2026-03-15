@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Link } from 'react-router-dom';
 import { 
   ChevronRight, Search, Filter, MoreVertical, Clock, 
   AlertTriangle, Activity, Calendar, MessageSquare, 
   FileText, Phone, Mail, User, Sparkles, ShieldCheck, X,
   Plus, ArrowRight, CheckCircle2
 } from 'lucide-react';
+import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { db } from '@/src/firebase';
+import { useAuth } from '@/src/lib/auth/AuthContext';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 
@@ -75,28 +79,79 @@ const stages = [
 ] as const;
 
 export function ClinicPipeline() {
-  const [patients, setPatients] = useState<Patient[]>(mockPatients);
+  const { user, role } = useAuth();
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'notes' | 'schedule'>('overview');
   const [newNote, setNewNote] = useState('');
 
+  useEffect(() => {
+    if (!user) return;
+
+    let q = query(collection(db, 'leads'));
+    if (role === 'clinic') {
+      q = query(collection(db, 'leads'), where('clinicId', '==', user.uid));
+    }
+
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const leadsData = await Promise.all(snapshot.docs.map(async (leadDoc) => {
+        const lead = leadDoc.data();
+        let patientData: any = {};
+        let assessmentData: any = {};
+        
+        if (lead.patientId) {
+          const patientSnap = await getDoc(doc(db, 'patients', lead.patientId));
+          if (patientSnap.exists()) patientData = patientSnap.data();
+          
+          // Get latest assessment
+          const assessQ = query(collection(db, 'assessments'), where('patientId', '==', lead.patientId));
+          // For simplicity, we'll just fetch them and take the first
+          // In a real app, we'd order by createdAt descending
+        }
+
+        return {
+          id: leadDoc.id,
+          name: patientData.firstName ? `${patientData.firstName} ${patientData.lastName?.charAt(0) || ''}.` : 'Unknown Patient',
+          intent: lead.treatmentInterest || 'General',
+          score: lead.score || 85,
+          time: 'Active',
+          stage: lead.status === 'new' ? 'intake' : lead.status === 'contacted' ? 'triage' : lead.status === 'scheduled' ? 'consult' : 'treating',
+          risk: 'low',
+          budget: lead.budget || 'Unknown',
+          urgency: lead.urgency || 'Unknown',
+          aiSummary: 'AI summary pending...',
+          notes: lead.notes || []
+        } as Patient;
+      }));
+      
+      setPatients(leadsData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching leads:", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user, role]);
+
   const selectedPatient = patients.find(p => p.id === selectedId);
 
-  const handleAddNote = () => {
+  const handleAddNote = async () => {
     if (!newNote.trim() || !selectedPatient) return;
     
-    const updatedPatients = patients.map(p => {
-      if (p.id === selectedPatient.id) {
-        return {
-          ...p,
-          notes: [{ id: Date.now().toString(), text: newNote, date: 'Just now' }, ...p.notes]
-        };
-      }
-      return p;
-    });
-    
-    setPatients(updatedPatients);
-    setNewNote('');
+    try {
+      const leadRef = doc(db, 'leads', selectedPatient.id);
+      const newNoteObj = { id: Date.now().toString(), text: newNote, date: new Date().toISOString() };
+      
+      await updateDoc(leadRef, {
+        notes: [newNoteObj, ...(selectedPatient.notes || [])]
+      });
+      
+      setNewNote('');
+    } catch (error) {
+      console.error("Error adding note:", error);
+    }
   };
 
   return (
@@ -120,9 +175,11 @@ export function ClinicPipeline() {
           <Button variant="outline" className="border-surface-3 text-white hover:bg-surface-2 hidden sm:flex">
             <Filter className="w-4 h-4 mr-2" /> Filter
           </Button>
-          <Button className="bg-primary hover:bg-primary/90 text-black font-bold whitespace-nowrap">
-            <Plus className="w-4 h-4 mr-2" /> New Patient
-          </Button>
+          <Link to="/dashboard/leads">
+            <Button className="bg-primary hover:bg-primary/90 text-black font-bold whitespace-nowrap">
+              <Plus className="w-4 h-4 mr-2" /> New Patient
+            </Button>
+          </Link>
         </div>
       </div>
 

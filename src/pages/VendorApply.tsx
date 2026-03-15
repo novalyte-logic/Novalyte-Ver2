@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Link } from 'react-router-dom';
 import { 
   Building2, Box, Code2, ShieldCheck, ChevronRight, ChevronLeft, 
   CheckCircle2, ArrowRight, Network, Zap, Globe
@@ -92,9 +93,11 @@ export function VendorApply() {
             </div>
           </div>
           
-          <Button className="w-full bg-primary hover:bg-primary/90 text-black font-bold h-12 text-lg">
-            Return to Homepage
-          </Button>
+          <Link to="/">
+            <Button className="w-full bg-primary hover:bg-primary/90 text-black font-bold h-12 text-lg">
+              Return to Homepage
+            </Button>
+          </Link>
         </Card>
       </div>
     );

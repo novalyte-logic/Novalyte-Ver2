@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import { Link } from 'react-router-dom';
 import { 
   CreditCard, Download, CheckCircle2, AlertTriangle, 
   ShieldCheck, Zap, ArrowUpRight, Clock, Receipt, Building2
@@ -18,9 +19,11 @@ export function ClinicBilling() {
           <p className="text-text-secondary mt-1">Manage your Novalyte OS plan, billing methods, and invoice history.</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" className="border-surface-3 text-white hover:bg-surface-2">
-            Contact Billing Support
-          </Button>
+          <Link to="/contact">
+            <Button variant="outline" className="border-surface-3 text-white hover:bg-surface-2">
+              Contact Billing Support
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -96,12 +99,16 @@ export function ClinicBilling() {
                   <Clock className="w-4 h-4" /> Renews automatically on April 1, 2026
                 </p>
                 <div className="flex gap-3">
-                  <Button variant="outline" className="border-surface-3 text-white hover:bg-surface-2">
-                    Cancel Plan
-                  </Button>
-                  <Button className="bg-primary hover:bg-primary/90 text-black font-bold">
-                    Upgrade to Enterprise <ArrowUpRight className="w-4 h-4 ml-2" />
-                  </Button>
+                  <Link to="/contact">
+                    <Button variant="outline" className="border-surface-3 text-white hover:bg-surface-2">
+                      Cancel Plan
+                    </Button>
+                  </Link>
+                  <Link to="/contact">
+                    <Button className="bg-primary hover:bg-primary/90 text-black font-bold">
+                      Upgrade to Enterprise <ArrowUpRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </Link>
                 </div>
               </div>
             </Card>

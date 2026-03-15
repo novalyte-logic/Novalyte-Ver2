@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { 
   Stethoscope, ShieldCheck, Zap, ArrowRight, 
   MapPin, Clock, DollarSign, Star, CheckCircle2,
@@ -88,12 +88,14 @@ export function Practitioners() {
               >
                 Apply to Network <ArrowRight className="w-5 h-5" />
               </Button>
-              <Button 
-                variant="outline"
-                className="border-surface-3 text-white hover:bg-surface-2 text-lg px-8 py-4 h-auto"
-              >
-                View Network Standards
-              </Button>
+              <Link to="/platform">
+                <Button 
+                  variant="outline"
+                  className="border-surface-3 text-white hover:bg-surface-2 text-lg px-8 py-4 h-auto"
+                >
+                  View Network Standards
+                </Button>
+              </Link>
             </div>
             <div className="mt-8 flex items-center gap-6 text-sm text-text-secondary font-medium">
               <span className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-success" /> Free for Practitioners</span>

@@ -1,46 +1,69 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Link } from 'react-router-dom';
 import { 
   Search, Filter, MoreVertical, CheckCircle2, XCircle, 
   Clock, ArrowRight, TrendingUp, Users, DollarSign, 
   Target, ShieldCheck, Zap, BarChart3, ChevronDown, Activity
 } from 'lucide-react';
+import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { db } from '@/src/firebase';
+import { useAuth } from '@/src/lib/auth/AuthContext';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 import { useShell } from '../components/shell/ShellContext';
 
 export function ClinicLeads() {
+  const { user, role } = useAuth();
   const { openEntity } = useShell();
   const [filter, setFilter] = useState('all');
   const [expandedLead, setExpandedLead] = useState<string | null>(null);
+  const [leads, setLeads] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const leads = [
-    { 
-      id: '1', name: "Michael T.", intent: "Hormone Optimization", score: 92, status: "new", time: "10m ago", 
-      email: "m.t@example.com", phone: "(555) 123-4567", source: "Organic Search", budget: "$500+",
-      urgency: "High", aiReasoning: "Strong clinical fit. High budget. Ready to start immediately. Completed full assessment."
-    },
-    { 
-      id: '2', name: "David R.", intent: "Peptide Therapy", score: 85, status: "new", time: "1h ago", 
-      email: "david.r@example.com", phone: "(555) 987-6543", source: "Marketplace", budget: "$200-$500",
-      urgency: "Medium", aiReasoning: "Good clinical fit. Moderate budget. Exploring options."
-    },
-    { 
-      id: '3', name: "James L.", intent: "Longevity", score: 78, status: "contacted", time: "3h ago", 
-      email: "j.l@example.com", phone: "(555) 456-7890", source: "Referral", budget: "$100-$200",
-      urgency: "Low", aiReasoning: "Borderline budget. High interest but low urgency."
-    },
-    { 
-      id: '4', name: "Robert K.", intent: "Cognitive Enhancement", score: 88, status: "qualified", time: "1d ago", 
-      email: "rob.k@example.com", phone: "(555) 234-5678", source: "Paid Social", budget: "$500+",
-      urgency: "High", aiReasoning: "Excellent fit. High budget. Booked consult."
-    },
-    { 
-      id: '5', name: "William S.", intent: "Hormone Optimization", score: 45, status: "disqualified", time: "1d ago", 
-      email: "will.s@example.com", phone: "(555) 876-5432", source: "Organic Search", budget: "Under $100",
-      urgency: "Low", aiReasoning: "Disqualified: Budget below clinic minimum threshold. Unwilling to do labs."
-    },
-  ];
+  React.useEffect(() => {
+    if (!user) return;
+
+    let q = query(collection(db, 'leads'));
+    if (role === 'clinic') {
+      q = query(collection(db, 'leads'), where('clinicId', '==', user.uid));
+    }
+
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const leadsData = await Promise.all(snapshot.docs.map(async (leadDoc) => {
+        const lead = leadDoc.data();
+        let patientData: any = {};
+        
+        if (lead.patientId) {
+          const patientSnap = await getDoc(doc(db, 'patients', lead.patientId));
+          if (patientSnap.exists()) patientData = patientSnap.data();
+        }
+
+        return {
+          id: leadDoc.id,
+          name: patientData.firstName ? `${patientData.firstName} ${patientData.lastName?.charAt(0) || ''}.` : 'Unknown Patient',
+          intent: lead.treatmentInterest || 'General',
+          score: lead.score || 85,
+          status: lead.status || 'new',
+          time: 'Active',
+          email: patientData.email || 'N/A',
+          phone: patientData.phone || 'N/A',
+          source: 'Organic Search',
+          budget: lead.budget || 'Unknown',
+          urgency: lead.urgency || 'Unknown',
+          aiReasoning: 'AI summary pending...'
+        };
+      }));
+      
+      setLeads(leadsData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching leads:", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user, role]);
 
   const filteredLeads = filter === 'all' ? leads : leads.filter(l => l.status === filter);
 
@@ -61,9 +84,11 @@ export function ClinicLeads() {
             </span>
             <span className="text-xs font-bold text-white">Receiving Leads</span>
           </div>
-          <Button variant="outline" className="border-surface-3 text-white hover:bg-surface-2">
-            <Filter className="w-4 h-4 mr-2" /> Adjust Volume
-          </Button>
+          <Link to="/clinics/icp">
+            <Button variant="outline" className="border-surface-3 text-white hover:bg-surface-2">
+              <Filter className="w-4 h-4 mr-2" /> Adjust Volume
+            </Button>
+          </Link>
           <Button className="bg-primary hover:bg-primary/90 text-black font-bold">
             <Zap className="w-4 h-4 mr-2" /> Buy Leads
           </Button>
@@ -123,9 +148,11 @@ export function ClinicLeads() {
                 </div>
               ))}
             </div>
-            <Button variant="outline" className="w-full mt-8 border-surface-3 text-white hover:bg-surface-2">
-              View Attribution Report
-            </Button>
+            <Link to="/dashboard/intelligence">
+              <Button variant="outline" className="w-full mt-8 border-surface-3 text-white hover:bg-surface-2">
+                View Attribution Report
+              </Button>
+            </Link>
           </Card>
         </div>
 

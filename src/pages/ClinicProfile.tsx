@@ -6,6 +6,8 @@ import {
   Clock, Phone, Globe, Sparkles, Microscope, TrendingUp, 
   Users, Award, Calendar, MessageSquare, ChevronRight, FileText
 } from 'lucide-react';
+import { collection, doc, getDoc } from 'firebase/firestore';
+import { db } from '@/src/firebase';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
 
@@ -79,6 +81,40 @@ const SIMILAR_CLINICS = [
 export function ClinicProfile() {
   const { id } = useParams();
   const [isBooking, setIsBooking] = useState(false);
+  const [clinicData, setClinicData] = useState<any>(CLINIC_DATA);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    const fetchClinic = async () => {
+      if (!id) return;
+      try {
+        const docRef = doc(db, 'clinics', id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setClinicData({
+            ...CLINIC_DATA, // fallback to mock data for missing fields
+            id: docSnap.id,
+            name: data.name || CLINIC_DATA.name,
+            location: data.city && data.state ? `${data.city}, ${data.state}` : CLINIC_DATA.location,
+            rating: data.rating || CLINIC_DATA.rating,
+            description: data.description || CLINIC_DATA.description,
+            specialties: data.tags || CLINIC_DATA.specialties,
+            heroImage: data.image || CLINIC_DATA.heroImage,
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching clinic:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchClinic();
+  }, [id]);
+
+  if (loading) {
+    return <div className="min-h-screen bg-[#05070A] flex items-center justify-center text-white">Loading...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-[#05070A] font-sans text-text-primary pb-24">
@@ -86,8 +122,8 @@ export function ClinicProfile() {
       {/* Editorial Hero Section */}
       <div className="relative h-[60vh] min-h-[500px] w-full">
         <img 
-          src={CLINIC_DATA.heroImage} 
-          alt={CLINIC_DATA.name} 
+          src={clinicData.heroImage} 
+          alt={clinicData.name} 
           className="absolute inset-0 w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#05070A] via-[#05070A]/60 to-transparent" />
@@ -108,17 +144,17 @@ export function ClinicProfile() {
                 </div>
                 <div className="px-3 py-1 rounded-full bg-primary/20 border border-primary/30 flex items-center gap-1.5 backdrop-blur-md">
                   <Sparkles className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-xs font-bold text-white tracking-wide uppercase">{CLINIC_DATA.matchScore}% AI Match</span>
+                  <span className="text-xs font-bold text-white tracking-wide uppercase">{clinicData.matchScore}% AI Match</span>
                 </div>
               </div>
               
               <h1 className="text-5xl md:text-6xl font-display font-bold text-white mb-4 tracking-tight leading-tight">
-                {CLINIC_DATA.name}
+                {clinicData.name}
               </h1>
               
               <div className="flex flex-wrap items-center gap-6 text-text-secondary text-lg">
-                <span className="flex items-center gap-2"><MapPin className="w-5 h-5 text-primary" /> {CLINIC_DATA.location}</span>
-                <span className="flex items-center gap-2 text-warning"><Star className="w-5 h-5 fill-current" /> {CLINIC_DATA.rating} ({CLINIC_DATA.reviews} Reviews)</span>
+                <span className="flex items-center gap-2"><MapPin className="w-5 h-5 text-primary" /> {clinicData.location}</span>
+                <span className="flex items-center gap-2 text-warning"><Star className="w-5 h-5 fill-current" /> {clinicData.rating} ({clinicData.reviews} Reviews)</span>
               </div>
             </motion.div>
           </div>
@@ -138,10 +174,10 @@ export function ClinicProfile() {
                 <Activity className="w-6 h-6 text-primary" /> Clinical Philosophy
               </h2>
               <p className="text-text-secondary text-lg leading-relaxed mb-8">
-                {CLINIC_DATA.description}
+                {clinicData.description}
               </p>
               <div className="flex flex-wrap gap-2">
-                {CLINIC_DATA.specialties.map((spec, i) => (
+                {clinicData.specialties.map((spec: string, i: number) => (
                   <span key={i} className="px-4 py-2 rounded-lg bg-[#0B0F14] border border-surface-3 text-sm font-medium text-white">
                     {spec}
                   </span>
@@ -168,7 +204,7 @@ export function ClinicProfile() {
                   </p>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {CLINIC_DATA.outcomes.map((outcome, i) => (
+                    {clinicData.outcomes.map((outcome: any, i: number) => (
                       <div key={i} className="p-4 rounded-xl bg-[#05070A] border border-surface-3 text-center">
                         <div className="text-3xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary mb-1">
                           {outcome.metric}
@@ -188,7 +224,7 @@ export function ClinicProfile() {
                 <Microscope className="w-6 h-6 text-primary" /> Core Protocols
               </h2>
               <div className="space-y-4">
-                {CLINIC_DATA.protocols.map((protocol, i) => (
+                {clinicData.protocols.map((protocol: any, i: number) => (
                   <Card key={i} className="p-6 bg-[#0B0F14] border-surface-3 hover:border-primary/30 transition-colors">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
                       <h3 className="text-xl font-bold text-white">{protocol.name}</h3>
@@ -211,7 +247,7 @@ export function ClinicProfile() {
                 <Users className="w-6 h-6 text-primary" /> Medical Team
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {CLINIC_DATA.providers.map((provider, i) => (
+                {clinicData.providers.map((provider: any, i: number) => (
                   <Card key={i} className="p-6 bg-[#0B0F14] border-surface-3">
                     <div className="flex items-center gap-4 mb-4">
                       <img src={provider.image} alt={provider.name} className="w-16 h-16 rounded-full object-cover border-2 border-surface-3" />
@@ -235,7 +271,7 @@ export function ClinicProfile() {
                 <Award className="w-6 h-6 text-primary" /> Facility & Experience
               </h2>
               <div className="grid grid-cols-3 gap-4">
-                {CLINIC_DATA.gallery.map((img, i) => (
+                {clinicData.gallery.map((img: string, i: number) => (
                   <div key={i} className={`rounded-xl overflow-hidden border border-surface-3 ${i === 0 ? 'col-span-3 h-64' : 'col-span-1 h-32 md:h-48'}`}>
                     <img src={img} alt="Clinic Facility" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                   </div>
@@ -291,9 +327,11 @@ export function ClinicProfile() {
                     >
                       Start Assessment
                     </Button>
-                    <Button variant="outline" className="w-full gap-2">
-                      <MessageSquare className="w-4 h-4" /> Message Clinic
-                    </Button>
+                    <Link to="/contact">
+                      <Button variant="outline" className="w-full gap-2">
+                        <MessageSquare className="w-4 h-4" /> Message Clinic
+                      </Button>
+                    </Link>
                   </div>
                 ) : (
                   <motion.div
@@ -325,14 +363,14 @@ export function ClinicProfile() {
                     <MapPin className="w-5 h-5 text-primary shrink-0" />
                     <div>
                       <p className="text-white font-medium mb-1">Location</p>
-                      <p>{CLINIC_DATA.address}</p>
+                      <p>{clinicData.address}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3 text-text-secondary text-sm">
                     <Clock className="w-5 h-5 text-primary shrink-0" />
                     <div>
                       <p className="text-white font-medium mb-1">Hours</p>
-                      <p>{CLINIC_DATA.hours}</p>
+                      <p>{clinicData.hours}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3 text-text-secondary text-sm">
@@ -347,7 +385,7 @@ export function ClinicProfile() {
                 <div className="mt-6 pt-6 border-t border-surface-3">
                   <h4 className="font-bold text-white text-sm mb-3">Amenities & Features</h4>
                   <ul className="space-y-2">
-                    {CLINIC_DATA.features.map((feature, i) => (
+                    {clinicData.features.map((feature: string, i: number) => (
                       <li key={i} className="flex items-center gap-2 text-sm text-text-secondary">
                         <CheckCircle2 className="w-4 h-4 text-primary" />
                         {feature}

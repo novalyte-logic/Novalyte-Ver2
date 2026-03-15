@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
+import { collection, doc, getDoc } from 'firebase/firestore';
+import { db } from '@/src/firebase';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
 import { 
@@ -69,26 +71,44 @@ export function ProductDetail() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [activeImage, setActiveImage] = useState(0);
+  const [product, setProduct] = useState<any>(defaultProductData);
+  const [loading, setLoading] = useState(true);
 
   // Scroll to top on mount
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [id]);
 
-  // Look up product from available catalogs
-  const foundHomeGymProduct = homeGymProducts.find(p => p.id === id);
-  const foundHealthTechProduct = healthTechProducts.find(p => p.id === id);
-  const foundProduct = foundHomeGymProduct || foundHealthTechProduct;
-  
-  // Merge with default data to ensure all universal fields exist for the template
-  const product = foundProduct ? { 
-    ...defaultProductData, 
-    ...foundProduct,
-    gallery: [foundProduct.image, `https://picsum.photos/seed/${foundProduct.id}a/800/600`, `https://picsum.photos/seed/${foundProduct.id}b/800/600`],
-    roi: foundProduct.price.includes('/mo') ? 'Immediate ROI' : (foundProduct.category.toLowerCase().includes('equipment') ? '3-6 Months' : null),
-    benefits: (foundProduct as any).benefits || defaultProductData.benefits,
-    compliance: (foundProduct as any).validation || (foundProduct as any).compliance || 'Vetted Partner'
-  } : defaultProductData;
+  useEffect(() => {
+    const fetchProduct = async () => {
+      if (!id) return;
+      try {
+        const docRef = doc(db, 'products', id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setProduct({
+            ...defaultProductData,
+            ...data,
+            id: docSnap.id,
+            gallery: data.gallery || [data.image, `https://picsum.photos/seed/${docSnap.id}a/800/600`, `https://picsum.photos/seed/${docSnap.id}b/800/600`],
+            roi: data.price?.includes('/mo') ? 'Immediate ROI' : (data.category?.toLowerCase().includes('equipment') ? '3-6 Months' : null),
+            benefits: data.benefits || defaultProductData.benefits,
+            compliance: data.validation || data.compliance || 'Vetted Partner'
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching product:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProduct();
+  }, [id]);
+
+  if (loading) {
+    return <div className="min-h-screen bg-[#05070A] flex items-center justify-center text-white">Loading...</div>;
+  }
 
   // Intelligent Routing Logic
   const getRoutingLogic = () => {

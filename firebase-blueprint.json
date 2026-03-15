@@ -1,0 +1,221 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the platform (patient, clinic admin, practitioner, vendor, or platform admin).",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["patient", "clinic", "practitioner", "vendor", "admin"] },
+        "name": { "type": "string" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "Patient": {
+      "title": "Patient",
+      "description": "Patient profile data.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "phone": { "type": "string" },
+        "city": { "type": "string" },
+        "state": { "type": "string" },
+        "age": { "type": "number" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["uid", "createdAt"]
+    },
+    "Assessment": {
+      "title": "Assessment",
+      "description": "Patient assessment data.",
+      "type": "object",
+      "properties": {
+        "patientId": { "type": "string" },
+        "treatmentInterest": { "type": "string" },
+        "urgency": { "type": "string" },
+        "budget": { "type": "string" },
+        "clinicalScore": { "type": "number" },
+        "financialScore": { "type": "number" },
+        "motivationScore": { "type": "number" },
+        "priority": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["patientId", "createdAt"]
+    },
+    "Clinic": {
+      "title": "Clinic",
+      "description": "Clinic profile data.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "specialties": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["pending", "active", "rejected"] },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["uid", "name", "status", "createdAt"]
+    },
+    "Lead": {
+      "title": "Lead",
+      "description": "Lead assigned to a clinic.",
+      "type": "object",
+      "properties": {
+        "clinicId": { "type": "string" },
+        "patientId": { "type": "string" },
+        "assessmentId": { "type": "string" },
+        "status": { "type": "string", "enum": ["new", "contacted", "scheduled", "enrolled", "dismissed"] },
+        "createdAt": { "type": "timestamp" },
+        "updatedAt": { "type": "timestamp" }
+      },
+      "required": ["clinicId", "patientId", "status", "createdAt"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Patient booking with a clinic.",
+      "type": "object",
+      "properties": {
+        "patientId": { "type": "string" },
+        "clinicId": { "type": "string" },
+        "date": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["patientId", "clinicId", "date", "status", "createdAt"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Marketplace product.",
+      "type": "object",
+      "properties": {
+        "vendorId": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "price": { "type": "number" },
+        "description": { "type": "string" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["vendorId", "name", "category", "price", "createdAt"]
+    },
+    "Vendor": {
+      "title": "Vendor",
+      "description": "Vendor profile.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "companyName": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["uid", "companyName", "status", "createdAt"]
+    },
+    "Practitioner": {
+      "title": "Practitioner",
+      "description": "Practitioner profile.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "specialty": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["uid", "status", "createdAt"]
+    },
+    "StaffingRequest": {
+      "title": "StaffingRequest",
+      "description": "Clinic staffing request.",
+      "type": "object",
+      "properties": {
+        "clinicId": { "type": "string" },
+        "role": { "type": "string" },
+        "status": { "type": "string", "enum": ["open", "filled", "closed"] },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["clinicId", "role", "status", "createdAt"]
+    },
+    "Application": {
+      "title": "Application",
+      "description": "Practitioner application for a staffing request.",
+      "type": "object",
+      "properties": {
+        "requestId": { "type": "string" },
+        "practitionerId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "rejected"] },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["requestId", "practitionerId", "status", "createdAt"]
+    },
+    "Campaign": {
+      "title": "Campaign",
+      "description": "Admin outreach campaign.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "status": { "type": "string" },
+        "sentCount": { "type": "number" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["name", "status", "createdAt"]
+    },
+    "Invoice": {
+      "title": "Invoice",
+      "description": "Clinic invoice.",
+      "type": "object",
+      "properties": {
+        "clinicId": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["paid", "pending", "overdue"] },
+        "dueDate": { "type": "timestamp" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["clinicId", "amount", "status", "createdAt"]
+    },
+    "Alert": {
+      "title": "Alert",
+      "description": "System alert or notification.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "message": { "type": "string" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["userId", "message", "read", "createdAt"]
+    },
+    "AuditEvent": {
+      "title": "AuditEvent",
+      "description": "System audit log.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "action": { "type": "string" },
+        "details": { "type": "string" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["userId", "action", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": { "$ref": "User" }, "description": "User roles and base info." },
+    "/patients/{patientId}": { "schema": { "$ref": "Patient" }, "description": "Patient profiles." },
+    "/assessments/{assessmentId}": { "schema": { "$ref": "Assessment" }, "description": "Patient assessments." },
+    "/clinics/{clinicId}": { "schema": { "$ref": "Clinic" }, "description": "Clinic profiles." },
+    "/leads/{leadId}": { "schema": { "$ref": "Lead" }, "description": "Clinic leads." },
+    "/bookings/{bookingId}": { "schema": { "$ref": "Booking" }, "description": "Patient bookings." },
+    "/products/{productId}": { "schema": { "$ref": "Product" }, "description": "Marketplace products." },
+    "/vendors/{vendorId}": { "schema": { "$ref": "Vendor" }, "description": "Vendor profiles." },
+    "/practitioners/{practitionerId}": { "schema": { "$ref": "Practitioner" }, "description": "Practitioner profiles." },
+    "/staffingRequests/{requestId}": { "schema": { "$ref": "StaffingRequest" }, "description": "Clinic staffing requests." },
+    "/applications/{applicationId}": { "schema": { "$ref": "Application" }, "description": "Practitioner applications." },
+    "/campaigns/{campaignId}": { "schema": { "$ref": "Campaign" }, "description": "Outreach campaigns." },
+    "/invoices/{invoiceId}": { "schema": { "$ref": "Invoice" }, "description": "Clinic invoices." },
+    "/alerts/{alertId}": { "schema": { "$ref": "Alert" }, "description": "System alerts." },
+    "/auditEvents/{eventId}": { "schema": { "$ref": "AuditEvent" }, "description": "Audit events." }
+  }
+}

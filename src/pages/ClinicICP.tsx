@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Link } from 'react-router-dom';
 import { 
   Target, Users, MapPin, DollarSign, Activity, ChevronRight, ChevronLeft, 
   CheckCircle2, ShieldCheck, Zap, BrainCircuit, ArrowRight, Building2
@@ -105,9 +106,11 @@ export function ClinicICP() {
             </div>
           </div>
           
-          <Button className="w-full bg-secondary hover:bg-secondary/90 text-white font-bold h-12 text-lg">
-            Return to Homepage
-          </Button>
+          <Link to="/">
+            <Button className="w-full bg-secondary hover:bg-secondary/90 text-white font-bold h-12 text-lg">
+              Return to Homepage
+            </Button>
+          </Link>
         </Card>
       </div>
     );

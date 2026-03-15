@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/src/firebase';
 import { Activity, ArrowRight, CheckCircle2, Building2, Users, Stethoscope, DollarSign, Shield, AlertCircle, XCircle, ChevronLeft, Brain, Zap } from 'lucide-react';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
@@ -56,37 +58,51 @@ export function ClinicApply() {
     }
   };
 
-  const processApplication = () => {
+  const processApplication = async () => {
     setIsProcessing(true);
     
-    // Simulate AI qualification processing
-    setTimeout(() => {
-      setIsProcessing(false);
-      
+    try {
       // Hard Disqualifiers
+      let finalResult: 'approved' | 'manual_review' | 'rejected' = 'approved';
+      
       if (
         formData.monthlyVolume === 'Under 50' ||
         formData.frontDeskStaff === '0' ||
         formData.emr === 'Paper / None' ||
         formData.investment === 'No'
       ) {
-        setResult('rejected');
-        return;
-      }
-
-      // Manual Review Triggers
-      if (
+        finalResult = 'rejected';
+      } else if (
         formData.isFranchise === 'Yes' ||
         formData.monthlyVolume === '50 - 100' ||
         formData.emr === 'Other / Custom'
       ) {
-        setResult('manual_review');
-        return;
+        finalResult = 'manual_review';
       }
 
-      // Fast-Track Approval
-      setResult('approved');
-    }, 3500);
+      await addDoc(collection(db, 'clinics'), {
+        name: formData.clinicName,
+        website: formData.website,
+        npi: formData.npi,
+        isFranchise: formData.isFranchise,
+        monthlyVolume: formData.monthlyVolume,
+        frontDeskStaff: formData.frontDeskStaff,
+        emr: formData.emr,
+        telehealth: formData.telehealth,
+        avgLtv: formData.avgLtv,
+        investment: formData.investment,
+        status: finalResult === 'approved' ? 'Verified' : finalResult === 'manual_review' ? 'Pending Review' : 'Suspended',
+        outreachStatus: 'Onboarding',
+        createdAt: serverTimestamp(),
+      });
+
+      setResult(finalResult);
+    } catch (error) {
+      console.error("Error saving clinic application:", error);
+      setResult('manual_review');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleNext = () => {

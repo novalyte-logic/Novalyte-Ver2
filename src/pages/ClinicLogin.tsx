@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/src/lib/auth/AuthContext';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
 import { Activity, ArrowRight, ShieldCheck, Key, UserCircle, ChevronLeft } from 'lucide-react';
 
 export function ClinicLogin() {
   const navigate = useNavigate();
+  const { signInWithGoogle } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'admin' | 'provider' | 'staff'>('admin');
@@ -18,21 +20,8 @@ export function ClinicLogin() {
     setIsLoading(true);
     setError('');
 
-    // Simulate real auth request
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      if (!email || !password) {
-        throw new Error('Invalid credentials');
-      }
-
-      // Set session
-      localStorage.setItem('novalyte_clinic_session', JSON.stringify({
-        email,
-        role,
-        authenticatedAt: new Date().toISOString()
-      }));
-
+      await signInWithGoogle();
       navigate('/dashboard');
     } catch (err) {
       setError('Authentication failed. Please verify your credentials.');
@@ -165,7 +154,7 @@ export function ClinicLogin() {
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <label className="block text-sm font-medium text-text-secondary">Password / Access Code</label>
-                    <a href="#" className="text-xs text-primary hover:text-primary-hover transition-colors">Forgot code?</a>
+                    <Link to="#" className="text-xs text-primary hover:text-primary-hover transition-colors">Forgot code?</Link>
                   </div>
                   <div className="relative">
                     <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary" />
@@ -187,7 +176,8 @@ export function ClinicLogin() {
                 )}
 
                 <Button 
-                  type="submit" 
+                  type="button" 
+                  onClick={handleLogin}
                   size="lg" 
                   className="w-full group bg-primary text-black hover:bg-primary-hover font-bold shadow-[0_0_20px_rgba(6,182,212,0.3)]"
                   disabled={isLoading}
@@ -199,7 +189,7 @@ export function ClinicLogin() {
                     </span>
                   ) : (
                     <>
-                      Authorize Access
+                      Sign In with Google
                       <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </>
                   )}

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/src/firebase';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
 import { Shield, Activity, ArrowRight, CheckCircle2, ChevronLeft, Brain, Zap, AlertCircle, Calendar, Clock, Lock } from 'lucide-react';
@@ -79,19 +81,60 @@ export function PatientAssessment() {
     });
   };
 
-  const processAssessment = () => {
+  const processAssessment = async () => {
     setIsProcessing(true);
     
-    // Simulate AI Triage & Scoring
-    setTimeout(() => {
+    try {
       const isDisqualified = 
         data.labWork === 'No, I am not willing to do lab work' || 
         (data.paymentPreference === 'Insurance Only' && data.budget === 'Under $200/mo');
       
-      setResult(isDisqualified ? 'disqualified' : 'qualified');
+      const status = isDisqualified ? 'disqualified' : 'qualified';
+
+      // Save patient
+      const patientRef = await addDoc(collection(db, 'patients'), {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        phone: data.phone,
+        zip: data.zip,
+        createdAt: serverTimestamp()
+      });
+
+      // Save assessment
+      await addDoc(collection(db, 'assessments'), {
+        patientId: patientRef.id,
+        treatmentInterest: data.goal,
+        symptoms: data.symptoms,
+        urgency: data.urgency,
+        budget: data.budget,
+        paymentPreference: data.paymentPreference,
+        labWork: data.labWork,
+        status: status,
+        createdAt: serverTimestamp()
+      });
+
+      // Save lead if qualified
+      if (!isDisqualified) {
+        await addDoc(collection(db, 'leads'), {
+          patientId: patientRef.id,
+          clinicId: 'unassigned', // To be assigned later
+          status: 'new',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+      }
+
+      setResult(status);
       setStep(totalSteps + 1);
+    } catch (error) {
+      console.error("Error saving assessment:", error);
+      // Fallback or show error
+      setResult('disqualified');
+      setStep(totalSteps + 1);
+    } finally {
       setIsProcessing(false);
-    }, 3500);
+    }
   };
 
   const handleBookConsultation = () => {

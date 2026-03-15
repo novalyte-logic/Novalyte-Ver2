@@ -1,35 +1,55 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '@/src/firebase';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
 import { Search, Filter, ShieldCheck, Clock, CheckCircle2, Zap, TrendingUp, Server, Calculator, FileText, ArrowRight, Activity, DollarSign, X } from 'lucide-react';
 
-// Mock data for equipment
-const equipment = [
-  { id: 'e1', name: 'InBody 770', category: 'Body Composition', price: '$18,500', roi: '3 months', payback: '90 days', description: 'Advanced body composition analyzer providing detailed muscle and fat analysis.', image: 'https://picsum.photos/seed/inbody/400/300', vendor: 'InBody', rating: '4.9', revenuePerPatient: '$50-$100', basePrice: 18500, avgRevPerSession: 75 },
-  { id: 'e2', name: 'Storz Medical DUOLITH', category: 'Shockwave Therapy', price: '$45,000', roi: '4 months', payback: '120 days', description: 'Focused shockwave therapy for ED and musculoskeletal conditions.', image: 'https://picsum.photos/seed/shockwave/400/300', vendor: 'Storz', rating: '4.8', revenuePerPatient: '$300-$500', basePrice: 45000, avgRevPerSession: 400 },
-  { id: 'e3', name: 'BTL Emsella', category: 'Pelvic Floor', price: '$95,000', roi: '6 months', payback: '180 days', description: 'Non-invasive HIFEM technology for pelvic floor strengthening.', image: 'https://picsum.photos/seed/emsella/400/300', vendor: 'BTL', rating: '4.9', revenuePerPatient: '$400/session', basePrice: 95000, avgRevPerSession: 400 },
-  { id: 'e4', name: 'Hyperbaric Chamber', category: 'Recovery', price: '$25,000', roi: '5 months', payback: '150 days', description: 'Mild hyperbaric oxygen therapy for accelerated recovery and longevity.', image: 'https://picsum.photos/seed/hbot/400/300', vendor: 'OxyHealth', rating: '4.7', revenuePerPatient: '$150/session', basePrice: 25000, avgRevPerSession: 150 },
-];
+// Mock data for equipment removed
 
 export function MarketplaceEquipment() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isROICalculatorOpen, setIsROICalculatorOpen] = useState(false);
-  const [selectedEquipment, setSelectedEquipment] = useState(equipment[0]);
+  const [equipment, setEquipment] = useState<any[]>([]);
+  const [selectedEquipment, setSelectedEquipment] = useState<any>(null);
   const [patientsPerWeek, setPatientsPerWeek] = useState(10);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    const fetchEquipment = async () => {
+      try {
+        const q = query(collection(db, 'products'), where('category', '==', 'equipment'));
+        const querySnapshot = await getDocs(q);
+        const equipmentData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setEquipment(equipmentData);
+        if (equipmentData.length > 0) {
+          setSelectedEquipment(equipmentData[0]);
+        }
+      } catch (error) {
+        console.error("Error fetching equipment:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEquipment();
+  }, []);
 
   const filteredEquipment = equipment.filter(e => 
-    e.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    e.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    e.category.toLowerCase().includes(searchQuery.toLowerCase())
+    e.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    e.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    e.category?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const calculateROI = () => {
-    const weeklyRevenue = patientsPerWeek * selectedEquipment.avgRevPerSession;
+    if (!selectedEquipment) return { monthlyRevenue: '0', paybackMonths: '0', annualProfit: '0' };
+    const avgRevPerSession = selectedEquipment.avgRevPerSession || (selectedEquipment.basePrice ? selectedEquipment.basePrice / 100 : 100);
+    const basePrice = selectedEquipment.basePrice || 10000;
+    const weeklyRevenue = patientsPerWeek * avgRevPerSession;
     const monthlyRevenue = weeklyRevenue * 4.33;
-    const paybackMonths = selectedEquipment.basePrice / monthlyRevenue;
-    const annualProfit = (monthlyRevenue * 12) - selectedEquipment.basePrice;
+    const paybackMonths = basePrice / monthlyRevenue;
+    const annualProfit = (monthlyRevenue * 12) - basePrice;
     
     return {
       monthlyRevenue: Math.round(monthlyRevenue).toLocaleString(),
@@ -143,9 +163,11 @@ export function MarketplaceEquipment() {
                 <p className="text-sm text-text-secondary mb-4 leading-relaxed">
                   Let our AI analyze your current patient volume and treatment mix to recommend the equipment with the fastest payback period for your specific clinic.
                 </p>
-                <Button className="w-full bg-surface-3 hover:bg-surface-3/80 text-white text-sm">
-                  Run CapEx Analysis
-                </Button>
+                <Link to="/clinics/icp">
+                  <Button className="w-full bg-surface-3 hover:bg-surface-3/80 text-white text-sm">
+                    Run CapEx Analysis
+                  </Button>
+                </Link>
               </div>
             </Card>
           </div>
@@ -253,12 +275,16 @@ export function MarketplaceEquipment() {
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <Button className="bg-primary hover:bg-primary-hover text-background font-semibold">
-                      Request Equipment Quote
-                    </Button>
-                    <Button variant="outline" className="border-surface-3 hover:bg-surface-2 text-white">
-                      View Financing Options
-                    </Button>
+                    <Link to="/contact">
+                      <Button className="bg-primary hover:bg-primary-hover text-background font-semibold">
+                        Request Equipment Quote
+                      </Button>
+                    </Link>
+                    <Link to="/contact">
+                      <Button variant="outline" className="border-surface-3 hover:bg-surface-2 text-white">
+                        View Financing Options
+                      </Button>
+                    </Link>
                   </div>
                 </div>
               </motion.div>
@@ -365,9 +391,11 @@ export function MarketplaceEquipment() {
                 <Button variant="outline" className="border-surface-3 hover:bg-surface-3 text-white" onClick={() => setIsROICalculatorOpen(false)}>
                   Close
                 </Button>
-                <Button className="bg-primary hover:bg-primary-hover text-background font-semibold">
-                  Request Financing Quote
-                </Button>
+                <Link to="/contact">
+                  <Button className="bg-primary hover:bg-primary-hover text-background font-semibold">
+                    Request Financing Quote
+                  </Button>
+                </Link>
               </div>
             </motion.div>
           </div>

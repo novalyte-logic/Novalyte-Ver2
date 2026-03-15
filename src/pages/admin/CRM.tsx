@@ -6,6 +6,8 @@ import {
   Phone, Mail, ChevronRight, Upload, Send, Tag, Edit3, MessageSquare,
   FileText, X, CheckCircle2, AlertTriangle, Zap
 } from 'lucide-react';
+import { collection, query, onSnapshot, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db } from '@/src/firebase';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 
@@ -32,15 +34,47 @@ export function CRM() {
   const [view, setView] = useState<'all' | 'new' | 'qualified' | 'nurture' | 'lost'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const leads: Lead[] = [
-    { id: "LD-8821", name: "Michael T.", email: "michael.t@example.com", phone: "+1 (555) 123-4567", location: "Miami, FL", intent: "Hormone Optimization", score: 92, status: "New", date: "2023-10-24T14:30:00Z", source: "Assessment", ltv: "$4,200", tags: ["High Priority", "TRT"], notes: "Completed full assessment. High budget." },
-    { id: "LD-8822", name: "David R.", email: "david.r@example.com", phone: "+1 (555) 234-5678", location: "Austin, TX", intent: "Peptide Therapy", score: 85, status: "Contacted", date: "2023-10-24T10:15:00Z", source: "Directory", ltv: "$2,800", tags: ["Peptides"], notes: "Sent initial outreach email." },
-    { id: "LD-8823", name: "James L.", email: "james.l@example.com", phone: "+1 (555) 345-6789", location: "New York, NY", intent: "Longevity", score: 78, status: "Qualified", date: "2023-10-23T16:45:00Z", source: "Symptom Checker", ltv: "$5,500", tags: ["VIP", "Longevity"], notes: "Ready for clinic routing." },
-    { id: "LD-8824", name: "Robert K.", email: "robert.k@example.com", phone: "+1 (555) 456-7890", location: "Chicago, IL", intent: "Cognitive Enhancement", score: 88, status: "New", date: "2023-10-23T09:20:00Z", source: "Assessment", ltv: "$3,100", tags: ["Cognitive"], notes: "Interested in nootropics." },
-    { id: "LD-8825", name: "William S.", email: "william.s@example.com", phone: "+1 (555) 567-8901", location: "Los Angeles, CA", intent: "Hormone Optimization", score: 81, status: "Nurture", date: "2023-10-22T11:10:00Z", source: "Direct", ltv: "$0", tags: ["TRT", "Low Budget"], notes: "Needs more education before booking." },
-    { id: "LD-8826", name: "Thomas B.", email: "thomas.b@example.com", phone: "+1 (555) 678-9012", location: "Denver, CO", intent: "Weight Management", score: 95, status: "Qualified", date: "2023-10-22T08:05:00Z", source: "Assessment", ltv: "$6,200", tags: ["Weight Loss", "High Priority"], notes: "Highly motivated. Routing to Denver clinic." },
-  ];
+  React.useEffect(() => {
+    const q = query(collection(db, 'leads'));
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const leadsData = await Promise.all(snapshot.docs.map(async (leadDoc) => {
+        const lead = leadDoc.data();
+        let patientData: any = {};
+        
+        if (lead.patientId) {
+          const patientSnap = await getDoc(doc(db, 'patients', lead.patientId));
+          if (patientSnap.exists()) patientData = patientSnap.data();
+        }
+
+        return {
+          id: leadDoc.id,
+          name: patientData.firstName ? `${patientData.firstName} ${patientData.lastName?.charAt(0) || ''}.` : 'Unknown Patient',
+          email: patientData.email || 'N/A',
+          phone: patientData.phone || 'N/A',
+          location: patientData.city ? `${patientData.city}, ${patientData.state}` : 'Unknown',
+          intent: lead.treatmentInterest || 'General',
+          score: lead.score || 85,
+          status: lead.status === 'new' ? 'New' : lead.status === 'contacted' ? 'Contacted' : lead.status === 'scheduled' ? 'Qualified' : 'Nurture',
+          date: lead.createdAt?.toDate().toISOString() || new Date().toISOString(),
+          source: 'Assessment',
+          ltv: lead.budget || 'Unknown',
+          tags: lead.tags || [],
+          notes: lead.notes?.[0]?.text || 'No notes'
+        } as Lead;
+      }));
+      
+      setLeads(leadsData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching leads:", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const filteredLeads = leads.filter(lead => {
     const matchesTab = 

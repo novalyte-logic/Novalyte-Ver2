@@ -1,6 +1,8 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ShellRoot } from './components/shell/ShellRoot';
+import { AuthProvider } from './lib/auth/AuthContext';
+import { ProtectedRoute } from './lib/auth/ProtectedRoute';
 import { MainLayout } from './components/layout/MainLayout';
 import { AdminLayout } from './components/layout/AdminLayout';
 import { ClinicLayout } from './components/layout/ClinicLayout';
@@ -68,8 +70,9 @@ import { Platform } from './pages/Platform';
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <ShellRoot>
+    <AuthProvider>
+      <BrowserRouter>
+        <ShellRoot>
         <Routes>
           {/* Public Routes with Navbar/Footer */}
           <Route path="/" element={<MainLayout />}>
@@ -127,7 +130,7 @@ export default function App() {
           <Route path="/clinic/activate" element={<Navigate to="/dashboard/activate" replace />} />
 
           {/* Clinic Routes with ClinicLayout */}
-          <Route path="/dashboard" element={<ClinicLayout />}>
+          <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['clinic', 'admin']}><ClinicLayout /></ProtectedRoute>}>
             <Route index element={<ClinicOverview />} />
             <Route path="activate" element={<ClinicActivate />} />
             <Route path="leads" element={<ClinicLeads />} />
@@ -141,7 +144,7 @@ export default function App() {
           </Route>
 
           {/* Admin Routes with AdminLayout */}
-          <Route path="/admin" element={<AdminLayout />}>
+          <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminLayout /></ProtectedRoute>}>
             <Route index element={<CommandCenter />} />
             <Route path="crm" element={<CRM />} />
             <Route path="outreacher" element={<Outreacher />} />
@@ -152,6 +155,7 @@ export default function App() {
         </Routes>
       </ShellRoot>
     </BrowserRouter>
+    </AuthProvider>
   );
 }
 

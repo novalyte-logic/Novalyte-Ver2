@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Link } from 'react-router-dom';
 import { 
   Search, LifeBuoy, BookOpen, MessageCircle, FileText, 
   ExternalLink, PlayCircle, Activity, CheckCircle2, 
@@ -184,13 +185,17 @@ export function ClinicHelp() {
               </h2>
               
               <div className="space-y-3">
-                <Button className="w-full bg-primary hover:bg-primary/90 text-black font-bold flex items-center justify-center gap-2 py-3">
-                  <MessageCircle className="w-4 h-4" /> Live Chat Support
-                </Button>
+                <Link to="/contact">
+                  <Button className="w-full bg-primary hover:bg-primary/90 text-black font-bold flex items-center justify-center gap-2 py-3">
+                    <MessageCircle className="w-4 h-4" /> Live Chat Support
+                  </Button>
+                </Link>
                 
-                <Button variant="outline" className="w-full border-surface-3 text-white hover:bg-surface-2 flex items-center justify-center gap-2 py-3">
-                  <Ticket className="w-4 h-4" /> Submit a Ticket
-                </Button>
+                <Link to="/contact">
+                  <Button variant="outline" className="w-full border-surface-3 text-white hover:bg-surface-2 flex items-center justify-center gap-2 py-3">
+                    <Ticket className="w-4 h-4" /> Submit a Ticket
+                  </Button>
+                </Link>
 
                 <div className="pt-4 mt-4 border-t border-surface-3">
                   <p className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-3">Enterprise Support</p>

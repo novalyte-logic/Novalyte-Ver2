@@ -6,6 +6,8 @@ import {
   Activity, Users, ArrowUpRight, ArrowDownRight, Clock, Edit3, MessageSquare,
   FileText, Zap, X
 } from 'lucide-react';
+import { collection, query, onSnapshot, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db } from '@/src/firebase';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 
@@ -30,45 +32,39 @@ export function DirectoryManager() {
   const [activeTab, setActiveTab] = useState<'all' | 'verified' | 'pending' | 'suspended'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
+  const [clinics, setClinics] = useState<Clinic[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const clinics: Clinic[] = [
-    { 
-      id: "CLN-001", name: "Apex Longevity Institute", location: "Miami, FL", 
-      status: "Verified", outreachStatus: "Active", rating: 4.9, 
-      leads: 142, revenue: "$12,400", joined: "2023-01-15", lastContact: "2h ago",
-      tags: ["TRT", "Peptides", "High Volume"]
-    },
-    { 
-      id: "CLN-002", name: "Vitality Men's Clinic", location: "Austin, TX", 
-      status: "Verified", outreachStatus: "Nurture", rating: 4.8, 
-      leads: 89, revenue: "$8,200", joined: "2023-03-22", lastContact: "2d ago",
-      tags: ["TRT", "Weight Loss"]
-    },
-    { 
-      id: "CLN-003", name: "NeuroHealth Partners", location: "New York, NY", 
-      status: "Pending Review", outreachStatus: "Onboarding", rating: 0, 
-      leads: 0, revenue: "$0", joined: "2023-10-20", lastContact: "1h ago",
-      tags: ["Cognitive", "New"]
-    },
-    { 
-      id: "CLN-004", name: "Peak Performance TRT", location: "Chicago, IL", 
-      status: "Verified", outreachStatus: "Active", rating: 4.7, 
-      leads: 210, revenue: "$18,500", joined: "2022-11-05", lastContact: "5h ago",
-      tags: ["TRT", "High Volume", "VIP"]
-    },
-    { 
-      id: "CLN-005", name: "Elite Wellness Center", location: "Los Angeles, CA", 
-      status: "Suspended", outreachStatus: "Churn Risk", rating: 3.2, 
-      leads: 45, revenue: "$3,100", joined: "2023-05-10", lastContact: "1w ago",
-      tags: ["IV Therapy", "Compliance Issue"]
-    },
-    { 
-      id: "CLN-006", name: "Precision Health Clinic", location: "Denver, CO", 
-      status: "Verified", outreachStatus: "Active", rating: 4.9, 
-      leads: 175, revenue: "$15,800", joined: "2023-02-28", lastContact: "1d ago",
-      tags: ["TRT", "Peptides", "Longevity"]
-    },
-  ];
+  React.useEffect(() => {
+    const q = query(collection(db, 'clinics'));
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const clinicsData = await Promise.all(snapshot.docs.map(async (clinicDoc) => {
+        const clinic = clinicDoc.data();
+        
+        return {
+          id: clinicDoc.id,
+          name: clinic.name || 'Unknown Clinic',
+          location: clinic.city && clinic.state ? `${clinic.city}, ${clinic.state}` : 'Unknown Location',
+          status: clinic.status || 'Pending Review',
+          outreachStatus: clinic.outreachStatus || 'Onboarding',
+          rating: clinic.rating || 0,
+          leads: clinic.leadsCount || 0,
+          revenue: clinic.revenue || '$0',
+          joined: clinic.createdAt?.toDate().toISOString() || new Date().toISOString(),
+          lastContact: clinic.lastContact || 'Never',
+          tags: clinic.tags || []
+        } as Clinic;
+      }));
+      
+      setClinics(clinicsData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching clinics:", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const filteredClinics = clinics.filter(clinic => {
     const matchesTab = 

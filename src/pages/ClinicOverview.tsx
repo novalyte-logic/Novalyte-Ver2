@@ -50,12 +50,16 @@ export function ClinicOverview() {
           <p className="text-text-secondary mt-1">Real-time pulse of your clinic operations and patient pipeline.</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" className="border-surface-3 text-white hover:bg-surface-2">
-            <Calendar className="w-4 h-4 mr-2" /> View Schedule
-          </Button>
-          <Button className="bg-primary hover:bg-primary/90 text-black font-bold">
-            <Users className="w-4 h-4 mr-2" /> New Patient
-          </Button>
+          <Link to="/dashboard/pipeline">
+            <Button variant="outline" className="border-surface-3 text-white hover:bg-surface-2">
+              <Calendar className="w-4 h-4 mr-2" /> View Schedule
+            </Button>
+          </Link>
+          <Link to="/dashboard/pipeline">
+            <Button className="bg-primary hover:bg-primary/90 text-black font-bold">
+              <Users className="w-4 h-4 mr-2" /> New Patient
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -153,9 +157,11 @@ export function ClinicOverview() {
           <Card className="p-6 bg-[#0B0F14] border-surface-3">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-white">Today's Schedule & Priority Tasks</h2>
-              <Button variant="outline" size="sm" className="border-surface-3 text-white">
-                View All
-              </Button>
+              <Link to="/dashboard/pipeline">
+                <Button variant="outline" size="sm" className="border-surface-3 text-white">
+                  View All
+                </Button>
+              </Link>
             </div>
             
             <div className="space-y-3">

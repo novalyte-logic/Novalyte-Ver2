@@ -146,9 +146,11 @@ export function WorkforceDashboard() {
                         Your application for the TRT Specialist role at Apex Longevity is currently under review. Based on historical data, clinics typically respond within 48 hours for candidates with a 90%+ match score.
                       </p>
                       <div className="flex gap-3">
-                        <Button variant="outline" size="sm" className="border-secondary/30 text-secondary hover:bg-secondary/10">
-                          Prepare for Interview
-                        </Button>
+                        <Link to="/ask-ai">
+                          <Button variant="outline" size="sm" className="border-secondary/30 text-secondary hover:bg-secondary/10">
+                            Prepare for Interview
+                          </Button>
+                        </Link>
                       </div>
                     </div>
                   </Card>
@@ -183,15 +185,21 @@ export function WorkforceDashboard() {
                           <div className="flex flex-col sm:flex-row gap-3 shrink-0">
                             {app.status === 'Interview Scheduled' ? (
                               <>
-                                <Button variant="outline" className="border-surface-3 hover:bg-surface-2 text-white">Reschedule</Button>
-                                <Button className="bg-success hover:bg-success/90 text-black font-bold">
-                                  <Calendar className="w-4 h-4 mr-2" /> Join Interview
-                                </Button>
+                                <Link to="/contact">
+                                  <Button variant="outline" className="border-surface-3 hover:bg-surface-2 text-white">Reschedule</Button>
+                                </Link>
+                                <Link to="/contact">
+                                  <Button className="bg-success hover:bg-success/90 text-black font-bold">
+                                    <Calendar className="w-4 h-4 mr-2" /> Join Interview
+                                  </Button>
+                                </Link>
                               </>
                             ) : (
-                              <Button variant="outline" className="border-surface-3 hover:bg-surface-2 text-white">
-                                View Details <ChevronRight className="w-4 h-4 ml-2" />
-                              </Button>
+                              <Link to="/workforce/jobs">
+                                <Button variant="outline" className="border-surface-3 hover:bg-surface-2 text-white">
+                                  View Details <ChevronRight className="w-4 h-4 ml-2" />
+                                </Button>
+                              </Link>
                             )}
                           </div>
                         </div>
@@ -293,9 +301,11 @@ export function WorkforceDashboard() {
                   <Card className="p-8 bg-[#0B0F14] border-surface-3">
                     <div className="flex items-center justify-between mb-6">
                       <h2 className="text-xl font-bold text-white">Documents & Credentials</h2>
-                      <Button variant="outline" size="sm" className="border-surface-3 text-white hover:bg-surface-2">
-                        Upload New
-                      </Button>
+                      <Link to="/workforce/profile">
+                        <Button variant="outline" size="sm" className="border-surface-3 text-white hover:bg-surface-2">
+                          Upload New
+                        </Button>
+                      </Link>
                     </div>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between p-4 rounded-xl bg-surface-2 border border-surface-3 hover:border-surface-4 transition-colors">
@@ -308,7 +318,9 @@ export function WorkforceDashboard() {
                             <p className="text-xs text-text-secondary mt-0.5">Uploaded 2 days ago • 2.4 MB</p>
                           </div>
                         </div>
-                        <Button variant="outline" size="sm" className="border-surface-3 text-white">View</Button>
+                        <Link to="/workforce/profile">
+                          <Button variant="outline" size="sm" className="border-surface-3 text-white">View</Button>
+                        </Link>
                       </div>
                       <div className="flex items-center justify-between p-4 rounded-xl bg-surface-2 border border-surface-3 hover:border-surface-4 transition-colors">
                         <div className="flex items-center gap-4">

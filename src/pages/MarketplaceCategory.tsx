@@ -1,20 +1,13 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Link, useParams } from 'react-router-dom';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '@/src/firebase';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
 import { Search, Filter, ArrowRight, Package, Server, Activity, ShoppingCart, Dumbbell, Smartphone, Zap, ShieldCheck, Clock, CheckCircle2, TrendingUp } from 'lucide-react';
 
-// Mock data for products
-const products = [
-  { id: '1', name: 'InBody 770', category: 'equipment', price: '$18,500', roi: '3 months', description: 'Advanced body composition analyzer.', image: 'https://picsum.photos/seed/inbody/400/300', vendor: 'InBody', rating: '4.9' },
-  { id: '2', name: 'Shockwave Therapy Device', category: 'equipment', price: '$12,000', roi: '2 months', description: 'Non-invasive treatment for ED and musculoskeletal conditions.', image: 'https://picsum.photos/seed/shockwave/400/300', vendor: 'Storz', rating: '4.8' },
-  { id: '3', name: 'Comprehensive Male Panel', category: 'diagnostics', price: '$150/kit', roi: 'Immediate', description: 'Full hormone and metabolic blood panel.', image: 'https://picsum.photos/seed/bloodpanel/400/300', vendor: 'Quest', rating: '4.9' },
-  { id: '5', name: 'Oura Ring Gen3', category: 'health-tech', price: '$299', roi: 'Engagement', description: 'Advanced sleep and readiness tracker.', image: 'https://picsum.photos/seed/oura/400/300', vendor: 'Oura', rating: '4.8' },
-  { id: '6', name: 'Adjustable Dumbbells', category: 'home-gym', price: '$399', roi: 'N/A', description: 'Space-saving adjustable weights up to 80lbs.', image: 'https://picsum.photos/seed/dumbbells/400/300', vendor: 'Bowflex', rating: '4.7' },
-  { id: '7', name: 'Continuous Glucose Monitor', category: 'health-tech', price: '$120/mo', roi: 'Engagement', description: 'Real-time metabolic tracking.', image: 'https://picsum.photos/seed/cgm/400/300', vendor: 'Dexcom', rating: '4.9' },
-  { id: '8', name: 'Testosterone Replacement Kit', category: 'clinics', price: '$199/mo', roi: 'Recurring', description: 'Complete TRT protocol supplies.', image: 'https://picsum.photos/seed/trt/400/300', vendor: 'Compounding Rx', rating: '4.9' },
-];
+// Mock data for products removed
 
 const categoryConfig: Record<string, { title: string, description: string, icon: any, color: string, bgGlow: string }> = {
   'equipment': { title: 'Clinical Equipment', description: 'Procure capital equipment and treatment devices with verified ROI.', icon: Server, color: 'text-primary', bgGlow: 'bg-primary/10' },
@@ -28,12 +21,29 @@ const categoryConfig: Record<string, { title: string, description: string, icon:
 export function MarketplaceCategory() {
   const { category } = useParams<{ category: string }>();
   const [searchQuery, setSearchQuery] = useState('');
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const q = category ? query(collection(db, 'products'), where('category', '==', category)) : collection(db, 'products');
+        const querySnapshot = await getDocs(q);
+        const productsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setProducts(productsData);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, [category]);
   
   const config = category && categoryConfig[category] ? categoryConfig[category] : { title: 'Marketplace', description: 'Browse products.', icon: Package, color: 'text-primary', bgGlow: 'bg-primary/10' };
   const Icon = config.icon;
 
-  const filteredProducts = (category ? products.filter(p => p.category === category) : products)
-    .filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.description.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredProducts = products.filter(p => p.name?.toLowerCase().includes(searchQuery.toLowerCase()) || p.description?.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -59,9 +69,11 @@ export function MarketplaceCategory() {
             </div>
             
             <div className="flex gap-3">
-              <Button variant="outline" className="border-surface-3 hover:bg-surface-2 text-white">
-                <Clock className="w-4 h-4 mr-2" /> Procurement History
-              </Button>
+              <Link to="/auth/clinic-login">
+                <Button variant="outline" className="border-surface-3 hover:bg-surface-2 text-white">
+                  <Clock className="w-4 h-4 mr-2" /> Procurement History
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
@@ -134,9 +146,11 @@ export function MarketplaceCategory() {
                 <p className="text-sm text-text-secondary mb-4 leading-relaxed">
                   Let our AI analyze your clinic's patient demographics to recommend the highest ROI {config.title.toLowerCase()}.
                 </p>
-                <Button className="w-full bg-surface-3 hover:bg-surface-3/80 text-white text-sm">
-                  Run Analysis
-                </Button>
+                <Link to="/clinics/icp">
+                  <Button className="w-full bg-surface-3 hover:bg-surface-3/80 text-white text-sm">
+                    Run Analysis
+                  </Button>
+                </Link>
               </div>
             </Card>
           </div>
@@ -218,12 +232,16 @@ export function MarketplaceCategory() {
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <Button className="bg-primary hover:bg-primary-hover text-background font-semibold">
-                      Request Custom Procurement
-                    </Button>
-                    <Button variant="outline" className="border-surface-3 hover:bg-surface-2 text-white">
-                      Get Notified When Live
-                    </Button>
+                    <Link to="/contact">
+                      <Button className="bg-primary hover:bg-primary-hover text-background font-semibold">
+                        Request Custom Procurement
+                      </Button>
+                    </Link>
+                    <Link to="/contact">
+                      <Button variant="outline" className="border-surface-3 hover:bg-surface-2 text-white">
+                        Get Notified When Live
+                      </Button>
+                    </Link>
                   </div>
                 </div>
               </motion.div>

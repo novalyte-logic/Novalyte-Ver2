@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Link } from 'react-router-dom';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
@@ -478,9 +479,11 @@ export function VisualIntelligence() {
                       <span className="text-white font-bold">{stressLevel}%</span>
                     </div>
                   </div>
-                  <Button className="w-full">
-                    Download Full Report
-                  </Button>
+                  <Link to="/contact">
+                    <Button className="w-full">
+                      Download Full Report
+                    </Button>
+                  </Link>
                 </Card>
               </motion.div>
             )}

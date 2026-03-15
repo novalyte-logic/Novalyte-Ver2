@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
+import { Link } from 'react-router-dom';
 import { 
   BrainCircuit, TrendingUp, Activity, BarChart2, Sparkles, 
   Users, DollarSign, Target, CalendarCheck, AlertTriangle,
@@ -109,12 +110,16 @@ export function ClinicIntelligence() {
                 Your show rate is up <span className="text-success">12%</span> this month, driven by automated SMS triage. However, <span className="text-warning">Paid Social leads</span> are converting 15% lower than average. Consider shifting $2,500 of ad spend to the Novalyte Directory.
               </p>
               <div className="flex flex-wrap gap-4">
-                <Button className="bg-secondary hover:bg-secondary/90 text-white font-bold">
-                  Review Ad Spend Allocation
-                </Button>
-                <Button variant="outline" className="border-surface-3 text-white hover:bg-surface-2">
-                  View Triage Settings
-                </Button>
+                <Link to="/dashboard/leads">
+                  <Button className="bg-secondary hover:bg-secondary/90 text-white font-bold">
+                    Review Ad Spend Allocation
+                  </Button>
+                </Link>
+                <Link to="/dashboard/settings">
+                  <Button variant="outline" className="border-surface-3 text-white hover:bg-surface-2">
+                    View Triage Settings
+                  </Button>
+                </Link>
               </div>
             </div>
           </Card>

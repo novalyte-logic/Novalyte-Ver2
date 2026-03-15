@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Link } from 'react-router-dom';
 import { Send, Bot, Zap, Clock, Shield, CheckCircle2, AlertCircle, ArrowRight, Building2, User, Stethoscope, Package } from 'lucide-react';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
@@ -364,14 +365,14 @@ export function Contact() {
 
             {/* Direct Links */}
             <div className="grid grid-cols-2 gap-4">
-              <a href="/support/patient" className="p-4 rounded-xl bg-surface-1 border border-surface-3 hover:border-primary/50 transition-colors group">
+              <Link to="/support/patient" className="p-4 rounded-xl bg-surface-1 border border-surface-3 hover:border-primary/50 transition-colors group">
                 <p className="text-sm font-bold text-white mb-1 group-hover:text-primary transition-colors">Patient FAQ</p>
                 <ArrowRight className="w-4 h-4 text-text-secondary group-hover:text-primary transition-colors" />
-              </a>
-              <a href="/support/clinic" className="p-4 rounded-xl bg-surface-1 border border-surface-3 hover:border-secondary/50 transition-colors group">
+              </Link>
+              <Link to="/support/clinic" className="p-4 rounded-xl bg-surface-1 border border-surface-3 hover:border-secondary/50 transition-colors group">
                 <p className="text-sm font-bold text-white mb-1 group-hover:text-secondary transition-colors">Clinic Docs</p>
                 <ArrowRight className="w-4 h-4 text-text-secondary group-hover:text-secondary transition-colors" />
-              </a>
+              </Link>
             </div>
 
           </div>
