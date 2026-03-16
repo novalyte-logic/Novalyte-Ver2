@@ -219,7 +219,8 @@ async function sendAdminEmail(input: SubmissionAlertInput): Promise<DeliveryResu
   return runWithRetries('email', async () => {
     const result = await transport.sendMail({
       from: serverEnv.emailFromAddress,
-      to: serverEnv.adminEmail,
+      to: 'jamil@novalyte.io',
+      cc: serverEnv.adminEmail !== 'jamil@novalyte.io' ? serverEnv.adminEmail : undefined,
       replyTo: sanitizeString(input.replyTo) || undefined,
       subject: input.emailSubject || `[Novalyte] ${input.title}`,
       text: [

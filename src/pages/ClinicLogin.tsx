@@ -33,7 +33,7 @@ export function ClinicLogin() {
         <div className="relative z-10">
           <Link to="/" className="flex items-center gap-2 mb-16 text-text-secondary hover:text-white transition-colors w-fit">
             <ChevronLeft className="w-5 h-5" />
-            <span className="font-medium text-sm">Return to Public Site</span>
+            <span className="font-medium text-sm">Return to public site</span>
           </Link>
 
           <div className="flex items-center gap-3 mb-8">
@@ -47,7 +47,7 @@ export function ClinicLogin() {
 
           <h1 className="text-4xl font-display font-bold text-white mb-6 leading-tight">
             Clinic Operations <br />
-            <span className="text-text-secondary">Control Center</span>
+            <span className="text-text-secondary">Control center</span>
           </h1>
           <p className="text-lg text-text-secondary max-w-md">
             Secure access to your patient pipeline, revenue analytics, and workforce orchestration tools.
@@ -57,10 +57,10 @@ export function ClinicLogin() {
         <div className="relative z-10">
           <div className="bg-[#05070A] border border-surface-3 rounded-xl p-6 font-mono text-sm shadow-2xl">
             <div className="flex items-center justify-between mb-4 border-b border-surface-3 pb-4">
-              <span className="text-text-secondary">SYSTEM STATUS</span>
+              <span className="text-text-secondary">System status</span>
               <span className="text-success flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-success animate-pulse"></span>
-                OPTIMAL
+                Optimal
               </span>
             </div>
             <div className="space-y-3 text-text-secondary">
@@ -99,7 +99,7 @@ export function ClinicLogin() {
               <div className="w-16 h-16 rounded-2xl bg-[#101720] border border-surface-3 flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_rgba(6,182,212,0.15)]">
                 <ShieldCheck className="w-8 h-8 text-primary" />
               </div>
-              <h2 className="text-3xl font-display font-bold text-white mb-2">Secure Authentication</h2>
+              <h2 className="text-3xl font-display font-bold text-white mb-2">Secure authentication</h2>
               <p className="text-text-secondary">Email access codes are now the primary clinic sign-in path, with Google and LinkedIn available as secondary options.</p>
             </div>
 
@@ -132,7 +132,7 @@ export function ClinicLogin() {
                     className="w-full font-semibold"
                     onClick={() => logout()}
                   >
-                    Switch Account
+                    Switch account
                   </Button>
                 ) : (
                   <AccessCodeAuth

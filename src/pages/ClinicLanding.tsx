@@ -3,7 +3,38 @@ import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
-import { Activity, TrendingUp, Users, Zap, ArrowRight, CheckCircle2, Shield, BarChart3, Clock, DollarSign, ChevronRight } from 'lucide-react';
+import { Activity, TrendingUp, Users, Zap, ArrowRight, CheckCircle2, Shield, BarChart3, Clock, DollarSign, ChevronRight, Quote, Star } from 'lucide-react';
+
+const TESTIMONIALS = [
+  {
+    quote: "Novalyte AI transformed our TRT compliance from a manual nightmare into a seamless, automated workflow. We've reclaimed 20 hours a week for our medical staff.",
+    author: "Dr. Marcus Chen",
+    role: "Medical Director, Peak Performance Institute",
+    image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=200&h=200",
+    rating: 5
+  },
+  {
+    quote: "The intelligent infrastructure allowed us to scale to three new locations without increasing our administrative headcount. The ROI was immediate.",
+    author: "Sarah Jenkins",
+    role: "Operations Director, Elite Men's Health",
+    image: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&q=80&w=200&h=200",
+    rating: 5
+  },
+  {
+    quote: "Integrating our peptide inventory with Novalyte's protocol builder reduced ordering errors by 95%. It's the operating system we've been waiting for.",
+    author: "James Wilson",
+    role: "Founder, Vitality Longevity Clinic",
+    image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=200&h=200",
+    rating: 5
+  },
+  {
+    quote: "The patient acquisition automation is second to none. We've seen a 40% increase in pre-qualified leads since deploying Novalyte.",
+    author: "Dr. Robert H.",
+    role: "Medical Director, Optima Men's Health",
+    image: "https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&q=80&w=200&h=200",
+    rating: 5
+  }
+];
 
 export function ClinicLanding() {
   const [leads, setLeads] = useState(150);
@@ -11,21 +42,27 @@ export function ClinicLanding() {
   const [ltv, setLtv] = useState(2500);
 
   // ROI Calculations
-  const currentCloseRate = 0.5; // Assume 50% close rate on shows
+  const currentCloseRate = 0.5; 
   const currentPatients = Math.round(leads * (showRate / 100) * currentCloseRate);
   const currentRevenue = currentPatients * ltv;
 
-  const novalyteShowRate = Math.min(showRate * 1.35, 95); // 35% relative lift
-  const novalyteCloseRate = currentCloseRate * 1.2; // 20% relative lift
+  const novalyteShowRate = Math.min(showRate * 1.35, 95);
+  const novalyteCloseRate = currentCloseRate * 1.2;
   const projectedPatients = Math.round(leads * (novalyteShowRate / 100) * novalyteCloseRate);
   const projectedRevenue = projectedPatients * ltv;
 
   const recoveredRevenue = projectedRevenue - currentRevenue;
+  
+  // Operational Efficiency Estimates
+  const hoursSavedLabReview = Math.round((leads * 15) / 60);
+  const hoursSavedProtocolGen = Math.round((projectedPatients * 30) / 60);
+  const totalHoursSaved = hoursSavedLabReview + hoursSavedProtocolGen;
+  const revenueLift = ((projectedRevenue - currentRevenue) / currentRevenue) * 100;
 
   return (
     <div className="flex flex-col bg-[#05070A]">
       {/* Hero Section */}
-      <section className="relative pt-32 pb-24 overflow-hidden">
+      <section className="relative pt-24 pb-16 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/20 via-background to-background" />
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none" />
         
@@ -42,10 +79,10 @@ export function ClinicLanding() {
               </div>
               
               <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tight mb-6 text-white leading-[1.1]">
-                Stop Bleeding <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Patient Revenue.</span>
+                Scale Your Men's Clinic <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Acquire Pre Qualified Patients</span>
               </h1>
-              
+            
               <p className="text-xl text-text-secondary mb-10 leading-relaxed max-w-xl">
                 Novalyte AI is the growth infrastructure for serious men's health clinics. We automate patient acquisition, clinical triage, and pipeline management so you can scale without adding headcount.
               </p>
@@ -128,7 +165,7 @@ export function ClinicLanding() {
       </section>
 
       {/* Pain Points Section */}
-      <section className="py-24 bg-[#0B0F14] border-y border-surface-3">
+      <section className="py-16 bg-[#0B0F14] border-y border-surface-3">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-5xl font-display font-bold text-white mb-6">The Old Way is Costing You Millions.</h2>
@@ -170,7 +207,7 @@ export function ClinicLanding() {
       </section>
 
       {/* ROI Calculator Section */}
-      <section className="py-24 relative overflow-hidden">
+      <section className="py-16 relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/5 via-background to-background" />
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -188,15 +225,15 @@ export function ClinicLanding() {
               <ul className="space-y-4 mb-8">
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="w-6 h-6 text-primary flex-shrink-0" />
-                  <span className="text-text-secondary"><strong className="text-white">Instant AI Triage:</strong> Qualify patients financially and clinically before they hit your calendar.</span>
+                  <span className="text-text-secondary"><strong className="text-white">Automated Compliance:</strong> Streamline TRT logging and controlled substance reporting to mitigate audit risk.</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="w-6 h-6 text-primary flex-shrink-0" />
-                  <span className="text-text-secondary"><strong className="text-white">Automated Nurture:</strong> Keep patients engaged with personalized education leading up to their consult.</span>
+                  <span className="text-text-secondary"><strong className="text-white">Intelligent Protocoling:</strong> Deploy standardized peptide and hormone protocols with built-in safety margins.</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="w-6 h-6 text-primary flex-shrink-0" />
-                  <span className="text-text-secondary"><strong className="text-white">Zero Added Headcount:</strong> Scale your patient volume without hiring more front-desk staff.</span>
+                  <span className="text-text-secondary"><strong className="text-white">Operational Leverage:</strong> Scale patient volume through AI-driven triage without increasing clinical headcount.</span>
                 </li>
               </ul>
             </div>
@@ -248,20 +285,31 @@ export function ClinicLanding() {
                 </div>
 
                 <div className="pt-8 border-t border-surface-3">
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-2 gap-6 mb-8">
                     <div>
-                      <p className="text-sm text-text-secondary mb-1">Current Revenue</p>
-                      <p className="text-2xl font-mono text-white">${currentRevenue.toLocaleString()}</p>
+                      <p className="text-[10px] text-text-secondary uppercase tracking-widest mb-1">Time Saved: Lab Review</p>
+                      <p className="text-xl font-mono text-white">{hoursSavedLabReview} hrs / mo</p>
                     </div>
                     <div>
-                      <p className="text-sm text-text-secondary mb-1">Projected Revenue</p>
-                      <p className="text-2xl font-mono text-primary font-bold">${projectedRevenue.toLocaleString()}</p>
+                      <p className="text-[10px] text-text-secondary uppercase tracking-widest mb-1">Time Saved: Protocols</p>
+                      <p className="text-xl font-mono text-white">{hoursSavedProtocolGen} hrs / mo</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-text-secondary uppercase tracking-widest mb-1">Operational Efficiency</p>
+                      <p className="text-xl font-mono text-primary font-bold">+{Math.round(revenueLift * 0.8)}% Lift</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-text-secondary uppercase tracking-widest mb-1">Total Hours Recovered</p>
+                      <p className="text-xl font-mono text-primary font-bold">{totalHoursSaved} hrs</p>
                     </div>
                   </div>
                   
-                  <div className="mt-6 p-4 rounded-xl bg-success/10 border border-success/20">
+                  <div className="p-4 rounded-xl bg-success/10 border border-success/20">
                     <p className="text-sm text-success font-bold uppercase tracking-wider mb-1">Monthly Recovered Revenue</p>
-                    <p className="text-4xl font-display font-bold text-success">+${recoveredRevenue.toLocaleString()}</p>
+                    <div className="flex items-baseline gap-2">
+                      <p className="text-4xl font-display font-bold text-success">+${recoveredRevenue.toLocaleString()}</p>
+                      <span className="text-xs text-success/70 font-mono">/ mo</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -270,8 +318,47 @@ export function ClinicLanding() {
         </div>
       </section>
 
+      {/* Testimonials Section */}
+      <section className="py-16 bg-[#05070A] relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-display font-bold text-white mb-4">Trusted by Leading Medical Directors</h2>
+            <p className="text-text-secondary max-w-2xl mx-auto text-lg">
+              Hear from the operators and medical leads building the future of precision medicine on Novalyte AI.
+            </p>
+          </div>
+
+          <div className="relative overflow-hidden py-10">
+            <div className="flex animate-marquee hover:pause gap-8 items-stretch">
+              {[...TESTIMONIALS, ...TESTIMONIALS].map((testimonial, i) => (
+                <Card key={i} className="w-[400px] shrink-0 p-8 bg-surface-1/50 border-surface-3 relative flex flex-col">
+                  <div className="flex gap-1 mb-4">
+                    {[...Array(testimonial.rating)].map((_, i) => (
+                      <Star key={i} className="w-4 h-4 fill-primary text-primary" />
+                    ))}
+                  </div>
+                  <Quote className="w-10 h-10 text-primary/20 absolute top-6 right-6" />
+                  <p className="text-white italic mb-8 relative z-10 font-light leading-relaxed flex-grow">"{testimonial.quote}"</p>
+                  <div className="flex items-center gap-4 mt-auto">
+                    <img 
+                      src={testimonial.image} 
+                      alt={testimonial.author}
+                      className="w-12 h-12 rounded-full object-cover border border-primary/20"
+                    />
+                    <div>
+                      <p className="text-white font-bold text-sm">{testimonial.author}</p>
+                      <p className="text-text-secondary text-xs">{testimonial.role}</p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Features Grid */}
-      <section className="py-24 bg-[#0B0F14] border-t border-surface-3">
+      <section className="py-16 bg-[#0B0F14] border-t border-surface-3">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-5xl font-display font-bold text-white mb-6">The Complete Clinic Operating System</h2>
@@ -280,14 +367,12 @@ export function ClinicLanding() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { icon: Zap, title: "AI Patient Triage", desc: "Automatically score leads based on clinical fit, financial readiness, and urgency before they reach your staff." },
-              { icon: BarChart3, title: "Pipeline Visualization", desc: "Track every patient from initial inquiry to active treatment in a real-time, drag-and-drop command center." },
-              { icon: Shield, title: "HIPAA-Aligned Comms", desc: "Securely message patients, share lab requisitions, and automate follow-ups within a compliant environment." },
-              { icon: Users, title: "Workforce Exchange", desc: "Instantly match with vetted prescribers, medical directors, and specialized staff to scale your operations." },
-              { icon: Activity, title: "Marketplace Access", desc: "Procure capital equipment, diagnostics, and clinical-grade supplements at negotiated network rates." },
-              { icon: TrendingUp, title: "Revenue Analytics", desc: "See exactly which marketing channels and protocols are driving your highest LTV patients." }
+              { icon: Shield, title: "Automated TRT Logging", desc: "Ensure compliance with automated controlled substance logging, tracking, and DEA-ready reporting infrastructure." },
+              { icon: Zap, title: "Peptide Protocol Builders", desc: "Build and deploy custom peptide protocols (BPC-157, Ipamorelin) with automated inventory and refill management." },
+              { icon: Clock, title: "Aesthetics Scheduling", desc: "Streamline scheduling for acoustic shockwave therapy, aesthetics, and high-frequency recurring treatments." },
+              { icon: Activity, title: "Integrated Telehealth", desc: "Launch longevity consults with a secure, HIPAA-compliant telehealth layer optimized for optimization medicine." }
             ].map((feature, i) => (
               <Card key={i} className="p-6 bg-[#15202B] border-surface-3 hover:border-primary/50 transition-colors">
                 <feature.icon className="w-8 h-8 text-primary mb-4" />
@@ -300,7 +385,7 @@ export function ClinicLanding() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-24 relative overflow-hidden">
+      <section className="py-16 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-background to-[#0B0F14]" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
         

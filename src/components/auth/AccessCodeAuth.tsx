@@ -40,7 +40,7 @@ export function AccessCodeAuth({
   emailPlaceholder = 'you@company.com',
   modeLabel,
   helperText,
-  providers = ['google'],
+  providers = ['google', 'linkedin'],
   onError,
 }: AccessCodeAuthProps) {
   const { requestEmailAccessCode, verifyEmailAccessCode, signInWithGoogle, signInWithLinkedIn } = useAuth();
@@ -245,7 +245,7 @@ export function AccessCodeAuth({
         <>
           <div className="flex items-center gap-3 py-1">
             <div className="h-px flex-1 bg-surface-3" />
-            <span className="text-xs font-medium uppercase tracking-[0.24em] text-text-secondary">Or continue with</span>
+            <span className="text-xs font-medium tracking-[0.24em] text-text-secondary">Or continue with</span>
             <div className="h-px flex-1 bg-surface-3" />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">

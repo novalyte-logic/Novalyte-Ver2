@@ -50,7 +50,7 @@ export function AdminLogin() {
               </div>
               <div>
                 <p className="font-display text-2xl font-bold tracking-tight text-white">Novalyte Admin</p>
-                <p className="text-sm text-text-secondary uppercase tracking-[0.24em]">Internal control surface</p>
+                <p className="text-sm text-text-secondary tracking-[0.24em]">Internal control surface</p>
               </div>
             </div>
 
@@ -60,7 +60,7 @@ export function AdminLogin() {
               transition={{ duration: 0.45 }}
               className="mt-16 max-w-2xl"
             >
-              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-xs uppercase tracking-[0.3em] text-primary">
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-xs tracking-[0.3em] text-primary">
                 <ShieldCheck className="w-4 h-4" />
                 Dedicated admin entry
               </div>
@@ -75,12 +75,12 @@ export function AdminLogin() {
 
           <div className="mt-12 grid gap-4 sm:grid-cols-2">
             <Card className="bg-[#0B1622]/90 border-primary/15 p-5">
-              <p className="text-xs uppercase tracking-[0.24em] text-text-secondary">Access policy</p>
+              <p className="text-xs tracking-[0.24em] text-text-secondary">Access policy</p>
               <p className="mt-3 text-2xl font-display font-semibold text-white">Server enforced</p>
               <p className="mt-2 text-sm text-text-secondary">Protected admin routes now rely on authenticated admin identity instead of client-side access flags.</p>
             </Card>
             <Card className="bg-[#120C1C]/90 border-secondary/15 p-5">
-              <p className="text-xs uppercase tracking-[0.24em] text-text-secondary">Destination</p>
+              <p className="text-xs tracking-[0.24em] text-text-secondary">Destination</p>
               <p className="mt-3 text-2xl font-display font-semibold text-white">Command Center</p>
               <p className="mt-2 text-sm text-text-secondary">Successful login redirects to the admin console and preserves deep links like `/admin/crm`.</p>
             </Card>
@@ -97,7 +97,7 @@ export function AdminLogin() {
             <Card className="bg-[#0E141D]/90 border-surface-3 p-8 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm uppercase tracking-[0.24em] text-text-secondary">Admin login</p>
+                  <p className="text-sm tracking-[0.24em] text-text-secondary">Admin login</p>
                   <h2 className="mt-2 text-3xl font-display font-bold text-white">Authenticate admin account</h2>
                 </div>
                 <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
@@ -135,7 +135,7 @@ export function AdminLogin() {
                     className="w-full group font-semibold"
                     onClick={() => logout()}
                   >
-                    Switch Admin Account
+                    Switch admin account
                     <ArrowRight className="ml-2 w-5 h-5 transition-transform group-hover:translate-x-1" />
                   </Button>
                 ) : (

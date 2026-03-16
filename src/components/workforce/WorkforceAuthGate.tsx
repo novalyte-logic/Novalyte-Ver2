@@ -66,7 +66,7 @@ export function WorkforceAuthGate({
           </div>
           <Link to="/workforce" className="flex-1">
             <Button variant="outline" className="w-full border-surface-3 text-white hover:bg-surface-2">
-              Back to Workforce
+              Back to workforce
             </Button>
           </Link>
         </div>

@@ -43,9 +43,13 @@ const initialData: AssessmentData = {
 
 const symptomsByGoal: Record<string, string[]> = {
   'Hormone Optimization': ['Low Energy / Fatigue', 'Decreased Libido', 'Brain Fog', 'Loss of Muscle Mass', 'Stubborn Body Fat', 'Mood Swings'],
-  'Cognitive Performance': ['Brain Fog', 'Poor Focus', 'Memory Issues', 'Afternoon Crashes', 'Anxiety', 'Poor Sleep Quality'],
-  'Longevity & Aging': ['Joint Pain', 'Slow Recovery', 'Poor Sleep Quality', 'Decreased Stamina', 'Skin Aging', 'Metabolic Slowdown'],
+  'Peptide Therapy': ['Slow Recovery', 'Joint Pain', 'Muscle Wasting', 'Injury Rehabilitation', 'Inflammation', 'Decreased Vitality'],
   'Weight Management': ['Stubborn Body Fat', 'Cravings', 'Slow Metabolism', 'Low Energy / Fatigue', 'Joint Pain', 'Poor Sleep Quality'],
+  'Sexual Health': ['Decreased Libido', 'Performance Anxiety', 'Vascular Issues', 'Low Stamina', 'Hormonal Imbalance', 'Mood Swings'],
+  'Longevity & Aging': ['Joint Pain', 'Slow Recovery', 'Poor Sleep Quality', 'Decreased Stamina', 'Skin Aging', 'Metabolic Slowdown'],
+  'Hair & Aesthetics': ['Thinning Hair', 'Receding Hairline', 'Skin Elasticity', 'Sun Damage', 'Volume Loss', 'Premature Aging'],
+  'Physical Performance': ['Low Stamina', 'Slow Recovery', 'Strength Plateau', 'Muscle Soreness', 'High Heart Rate', 'Decreased VO2 Max'],
+  'Cognitive Performance': ['Brain Fog', 'Poor Focus', 'Memory Issues', 'Afternoon Crashes', 'Anxiety', 'Poor Sleep Quality'],
   'General Wellness': ['Low Energy / Fatigue', 'Poor Sleep Quality', 'Stress / Anxiety', 'Frequent Illness', 'Digestive Issues', 'Brain Fog']
 };
 
