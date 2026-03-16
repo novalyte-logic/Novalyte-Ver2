@@ -10,7 +10,7 @@ export function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { setCommandOpen, setCopilotOpen } = useShell();
-  const { hasAdminAccess, revokeAdminAccess } = useAuth();
+  const { user, logout } = useAuth();
 
   const navItems = [
     { path: '/admin/command-center', icon: Activity, label: 'Command Center' },
@@ -21,8 +21,8 @@ export function AdminLayout() {
     { path: '/admin/mcp', icon: Server, label: 'MCP Control' },
   ];
 
-  const handleLockAdmin = () => {
-    revokeAdminAccess();
+  const handleSignOut = async () => {
+    await logout();
     navigate('/admin', { replace: true });
   };
 
@@ -59,20 +59,20 @@ export function AdminLayout() {
               <span className="text-xs font-bold">AD</span>
             </div>
             <div className="text-sm">
-              <p className="font-medium">Admin User</p>
-              <p className="text-xs text-text-secondary">System Operator</p>
+              <p className="font-medium">{user?.displayName || 'Admin User'}</p>
+              <p className="text-xs text-text-secondary">{user?.email || 'System Operator'}</p>
             </div>
           </div>
-          {hasAdminAccess ? (
-            <button
-              type="button"
-              onClick={handleLockAdmin}
-              className="mt-4 w-full flex items-center justify-center gap-2 rounded-lg border border-surface-3 px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              Lock Admin Access
-            </button>
-          ) : null}
+          <button
+            type="button"
+            onClick={() => {
+              void handleSignOut();
+            }}
+            className="mt-4 w-full flex items-center justify-center gap-2 rounded-lg border border-surface-3 px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </button>
         </div>
       </aside>
 
@@ -115,18 +115,18 @@ export function AdminLayout() {
                   );
                 })}
               </nav>
-              {hasAdminAccess ? (
-                <div className="p-4 border-t border-surface-3">
-                  <button
-                    type="button"
-                    onClick={handleLockAdmin}
-                    className="w-full flex items-center justify-center gap-2 rounded-lg border border-surface-3 px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Lock Admin Access
-                  </button>
-                </div>
-              ) : null}
+              <div className="p-4 border-t border-surface-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleSignOut();
+                  }}
+                  className="w-full flex items-center justify-center gap-2 rounded-lg border border-surface-3 px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sign Out
+                </button>
+              </div>
             </div>
             <div className="flex-grow bg-background/80 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
           </motion.div>
@@ -149,7 +149,7 @@ export function AdminLayout() {
               <Search className="w-4 h-4 absolute left-3 text-text-secondary group-hover:text-primary transition-colors" />
               <div className="pl-9 pr-4 py-1.5 bg-surface-2 border border-surface-3 rounded-md text-sm text-text-secondary group-hover:border-primary/50 w-64 text-left transition-all flex justify-between items-center">
                 <span>Command search...</span>
-                <span className="text-xs font-mono bg-surface-3 px-1.5 rounded">âŒ˜K</span>
+                <span className="text-xs font-mono bg-surface-3 px-1.5 rounded">Cmd K</span>
               </div>
             </button>
           </div>

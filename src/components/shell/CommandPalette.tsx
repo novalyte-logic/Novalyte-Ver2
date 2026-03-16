@@ -1,14 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Activity, Users, Settings, FileText, ArrowRight, Command } from 'lucide-react';
+import { Search, Activity, Users, Settings, FileText, ArrowRight, Command, Sparkles, LifeBuoy, Briefcase } from 'lucide-react';
 import { useShell } from './ShellContext';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/src/lib/auth/AuthContext';
 
 export function CommandPalette() {
-  const { isCommandOpen, setCommandOpen, openEntity } = useShell();
+  const { isCommandOpen, setCommandOpen, setCopilotOpen } = useShell();
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { role, isAdminUser } = useAuth();
+  const isClinicUser = role === 'clinic' || role === 'clinic_admin';
 
   useEffect(() => {
     if (isCommandOpen && inputRef.current) {
@@ -26,14 +30,124 @@ export function CommandPalette() {
   };
 
   const results = [
-    { type: 'Patient', title: 'Michael T.', subtitle: 'Hormone Optimization', icon: Users, action: () => openEntity('patient', '1') },
-    { type: 'Patient', title: 'David R.', subtitle: 'Peptide Therapy', icon: Users, action: () => openEntity('patient', '2') },
-    { type: 'Clinic', title: 'Apex Longevity', subtitle: 'Miami, FL', icon: Activity, action: () => openEntity('clinic', '1') },
-    { type: 'Navigation', title: 'Go to CRM', subtitle: 'Admin Dashboard', icon: ArrowRight, action: () => navigate('/admin/crm') },
-    { type: 'Navigation', title: 'Go to Pipeline', subtitle: 'Clinic Dashboard', icon: ArrowRight, action: () => navigate('/dashboard') },
-    { type: 'Navigation', title: 'Open Command Center', subtitle: 'Admin Dashboard', icon: ArrowRight, action: () => navigate('/admin/command-center') },
-    { type: 'Action', title: 'Create New Campaign', subtitle: 'Outreacher', icon: FileText, action: () => navigate('/admin/outreacher') },
-  ].filter(r => r.title.toLowerCase().includes(query.toLowerCase()) || r.subtitle.toLowerCase().includes(query.toLowerCase()));
+    {
+      type: 'Navigation',
+      title: 'Open Homepage',
+      subtitle: 'Public site',
+      icon: ArrowRight,
+      action: () => navigate('/'),
+    },
+    {
+      type: 'Navigation',
+      title: 'Browse Marketplace',
+      subtitle: 'Equipment, diagnostics, and software',
+      icon: Activity,
+      action: () => navigate('/marketplace'),
+    },
+    {
+      type: 'Navigation',
+      title: 'Browse Directory',
+      subtitle: 'Clinic discovery',
+      icon: Users,
+      action: () => navigate('/directory'),
+    },
+    {
+      type: 'Action',
+      title: 'Open AI Copilot',
+      subtitle: 'Assistant panel',
+      icon: Sparkles,
+      action: () => setCopilotOpen(true),
+    },
+    {
+      type: 'Navigation',
+      title: 'Open Support',
+      subtitle: 'Help and contact',
+      icon: LifeBuoy,
+      action: () => navigate(isClinicUser ? '/dashboard/help' : '/contact'),
+    },
+    ...(isClinicUser
+      ? [
+          {
+            type: 'Dashboard',
+            title: 'Go to Clinic Overview',
+            subtitle: 'Clinic dashboard',
+            icon: ArrowRight,
+            action: () => navigate('/dashboard'),
+          },
+          {
+            type: 'Dashboard',
+            title: 'Open Lead Queue',
+            subtitle: 'Manage qualified leads',
+            icon: Users,
+            action: () => navigate('/dashboard/leads'),
+          },
+          {
+            type: 'Dashboard',
+            title: 'Open Pipeline',
+            subtitle: 'Patient progression board',
+            icon: Activity,
+            action: () => navigate('/dashboard/pipeline'),
+          },
+          {
+            type: 'Dashboard',
+            title: 'Open Workforce',
+            subtitle: 'Hiring and staffing',
+            icon: Briefcase,
+            action: () => navigate('/dashboard/workforce'),
+          },
+          {
+            type: 'Dashboard',
+            title: 'Open Settings',
+            subtitle: 'Clinic profile and integrations',
+            icon: Settings,
+            action: () => navigate('/dashboard/settings'),
+          },
+        ]
+      : []),
+    ...(isAdminUser
+      ? [
+          {
+            type: 'Admin',
+            title: 'Open Command Center',
+            subtitle: 'Admin dashboard',
+            icon: Activity,
+            action: () => navigate('/admin/command-center'),
+          },
+          {
+            type: 'Admin',
+            title: 'Go to CRM',
+            subtitle: 'Lead operations',
+            icon: Users,
+            action: () => navigate('/admin/crm'),
+          },
+          {
+            type: 'Admin',
+            title: 'Open Directory Manager',
+            subtitle: 'Clinic records',
+            icon: Settings,
+            action: () => navigate('/admin/directory'),
+          },
+          {
+            type: 'Admin',
+            title: 'Create New Campaign',
+            subtitle: 'Outreacher queue',
+            icon: FileText,
+            action: () => navigate('/admin/outreacher'),
+          },
+        ]
+      : []),
+    {
+      type: 'Context',
+      title: 'Refresh Current Context',
+      subtitle: location.pathname,
+      icon: ArrowRight,
+      action: () => navigate(`${location.pathname}${location.search}${location.hash}`),
+    },
+  ].filter(
+    (result) =>
+      result.title.toLowerCase().includes(query.toLowerCase()) ||
+      result.subtitle.toLowerCase().includes(query.toLowerCase()),
+  );
 
   return (
     <AnimatePresence>
@@ -98,8 +212,8 @@ export function CommandPalette() {
           
           <div className="p-3 border-t border-surface-3 bg-surface-2/50 flex justify-between items-center text-xs text-text-secondary">
             <div className="flex gap-4">
-              <span><kbd className="font-mono bg-surface-3 px-1 rounded">â†‘â†“</kbd> to navigate</span>
-              <span><kbd className="font-mono bg-surface-3 px-1 rounded">â†µ</kbd> to select</span>
+              <span><kbd className="font-mono bg-surface-3 px-1 rounded">up/down</kbd> to navigate</span>
+              <span><kbd className="font-mono bg-surface-3 px-1 rounded">enter</kbd> to select</span>
             </div>
             <span><kbd className="font-mono bg-surface-3 px-1 rounded">esc</kbd> to close</span>
           </div>

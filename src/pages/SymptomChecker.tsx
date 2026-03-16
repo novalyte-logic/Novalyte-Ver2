@@ -3,10 +3,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
-import { AIService } from '@/src/services/ai';
+import { AIService, AIServiceError } from '@/src/services/ai';
 import { Activity, ArrowRight, ChevronLeft, Shield, AlertTriangle, CheckCircle2, Bot, Brain, ActivitySquare, Stethoscope, Clock } from 'lucide-react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/src/firebase';
+import { AnalyticsEngine } from '@/src/lib/analytics/events';
+import { buildPatientAssessmentPath } from '@/src/lib/patientJourney';
 
 const SYMPTOMS = [
   'Chronic Fatigue',
@@ -39,6 +39,7 @@ export function SymptomChecker() {
   const [severity, setSeverity] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [analysisText, setAnalysisText] = useState('');
+  const [analysisError, setAnalysisError] = useState('');
   const navigate = useNavigate();
 
   const toggleSymptom = (symptom: string) => {
@@ -51,35 +52,49 @@ export function SymptomChecker() {
 
   const [aiResult, setAiResult] = useState<any>(null);
 
+  const runAnalysis = async () => {
+    setIsProcessing(true);
+    setAnalysisError('');
+    setStep(4);
+    
+    try {
+      const patientData = {
+        symptoms: selectedSymptoms,
+        duration,
+        severity,
+        demographics: {},
+        healthProfile: { primaryGoals: [] }
+      };
+      const data = await AIService.generatePatientInsights(patientData as any);
+      setAiResult(data);
+
+      AnalyticsEngine.track('assessment_complete', {
+        source: 'symptom_checker',
+        symptoms: selectedSymptoms,
+        duration,
+        severity,
+        aiInsights: data.recommendedProtocols || [],
+        matchScore: data.score || 0,
+      });
+    } catch (error) {
+      console.error('AI Triage error:', error);
+      setAiResult(null);
+      setAnalysisError(
+        error instanceof AIServiceError && error.status === 504
+          ? 'AI clinical scoring timed out. You can retry now or continue to the full assessment.'
+          : error instanceof Error
+            ? error.message
+            : 'AI clinical scoring is unavailable right now.',
+      );
+    } finally {
+      setIsProcessing(false);
+      setStep(5);
+    }
+  };
+
   const handleNext = async () => {
     if (step === 3) {
-      setIsProcessing(true);
-      setStep(4);
-      
-      try {
-        const patientData = {
-          symptoms: selectedSymptoms,
-          duration,
-          severity,
-          demographics: {},
-          healthProfile: { primaryGoals: [] }
-        };
-        const data = await AIService.generatePatientInsights(patientData as any);
-        setAiResult(data);
-
-        // Persist symptom check to Supabase
-        await addDoc(collection(db, 'symptom_checks'), {
-          symptoms: selectedSymptoms,
-          duration,
-          severity,
-          aiInsights: data.recommendedProtocols || [],
-          matchScore: data.score || 85,
-          timestamp: serverTimestamp(),
-          status: 'completed'
-        });
-      } catch (error) {
-        console.error('AI Triage error:', error);
-      }
+      await runAnalysis();
     } else {
       setStep(prev => prev + 1);
     }
@@ -89,7 +104,7 @@ export function SymptomChecker() {
     if (step > 0) setStep(prev => prev - 1);
   };
 
-  // Simulated AI Processing
+  // Live AI Processing
   useEffect(() => {
     if (isProcessing) {
       const texts = [
@@ -103,32 +118,28 @@ export function SymptomChecker() {
       setAnalysisText(texts[0]);
       
       const interval = setInterval(() => {
-        i++;
-        if (i < texts.length) {
-          setAnalysisText(texts[i]);
-        } else {
-          clearInterval(interval);
-          setTimeout(() => {
-            setIsProcessing(false);
-            setStep(5); // Results step
-          }, 800);
-        }
+        i = (i + 1) % texts.length;
+        setAnalysisText(texts[i]);
       }, 800);
       
       return () => clearInterval(interval);
     }
   }, [isProcessing]);
 
-  // Calculate a mock "Clinical Match Score" based on inputs
   const calculateScore = () => {
-    if (aiResult?.score) return aiResult.score;
-    let score = 40; // Base score
-    score += selectedSymptoms.length * 5;
-    if (duration === 'months' || duration === 'years') score += 10;
-    if (severity === 'moderate') score += 10;
-    if (severity === 'severe') score += 20;
-    return Math.min(score, 98); // Cap at 98%
+    return typeof aiResult?.score === 'number' ? aiResult.score : null;
   };
+
+  const assessmentPath = buildPatientAssessmentPath({
+    entryPoint: 'symptom_checker',
+    symptoms: selectedSymptoms,
+    urgency:
+      severity === 'severe'
+        ? 'Immediately (Within 48 hours)'
+        : severity === 'moderate'
+          ? 'This week'
+          : 'Within a month',
+  });
 
   return (
     <div className="min-h-screen bg-[#05070A] text-text-primary pt-24 pb-20 flex flex-col relative overflow-hidden">
@@ -391,20 +402,32 @@ export function SymptomChecker() {
                     <div className="flex-shrink-0 w-full md:w-48 bg-surface-1 border border-surface-3 rounded-2xl p-6 text-center flex flex-col justify-center items-center">
                       <span className="text-sm font-bold text-text-secondary uppercase tracking-wider mb-2">Clinical Match</span>
                       <div className="text-5xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-br from-primary to-secondary">
-                        {calculateScore()}%
+                        {calculateScore() !== null ? `${calculateScore()}%` : 'Manual'}
                       </div>
-                      <span className="text-xs text-text-secondary mt-2">Optimization Potential</span>
+                      <span className="text-xs text-text-secondary mt-2">
+                        {calculateScore() !== null ? 'Optimization Potential' : 'Review Required'}
+                      </span>
                     </div>
                     
                     {/* Insights */}
                     <div className="flex-grow flex flex-col justify-center">
-                      <h2 className="text-2xl font-display font-bold text-white mb-3">Symptom Profile Generated</h2>
+                      <h2 className="text-2xl font-display font-bold text-white mb-3">
+                        {analysisError ? 'AI Review Unavailable' : 'Symptom Profile Generated'}
+                      </h2>
+                      {analysisError ? (
+                        <div className="rounded-xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger mb-4">
+                          {analysisError}
+                        </div>
+                      ) : null}
                       <p className="text-text-secondary leading-relaxed mb-4">
-                        Your reported cluster of <strong className="text-white">{selectedSymptoms.length} symptoms</strong> lasting for <strong className="text-white">{DURATIONS.find(d => d.id === duration)?.label.toLowerCase()}</strong> indicates a high probability of underlying endocrine or metabolic friction.
+                        {analysisError
+                          ? 'We could not complete automated clinical scoring right now. You can still continue to the full assessment or browse clinics directly.'
+                          : aiResult?.summary ||
+                            `Your reported cluster of ${selectedSymptoms.length} symptoms lasting for ${DURATIONS.find(d => d.id === duration)?.label.toLowerCase()} indicates potential endocrine or metabolic friction.`}
                       </p>
                       <div className="flex items-center gap-2 text-sm font-medium text-primary bg-primary/10 px-3 py-1.5 rounded-lg w-fit">
                         <Stethoscope className="w-4 h-4" />
-                        Clinical intervention is highly recommended.
+                        {analysisError ? 'Manual clinical follow-up recommended.' : 'Clinical intervention is highly recommended.'}
                       </div>
                     </div>
                   </div>
@@ -418,15 +441,23 @@ export function SymptomChecker() {
                         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mb-3">
                           <span className="text-primary font-bold">1</span>
                         </div>
-                        <h4 className="font-bold text-white mb-1">Comprehensive Blood Panel</h4>
-                        <p className="text-sm text-text-secondary">Testosterone, Free T, Estradiol, and Thyroid markers to establish a baseline.</p>
+                        <h4 className="font-bold text-white mb-1">
+                          {aiResult?.recommendedProtocols?.[0] || 'Comprehensive Blood Panel'}
+                        </h4>
+                        <p className="text-sm text-text-secondary">
+                          Establish a baseline for endocrine, metabolic, and recovery markers before intervention.
+                        </p>
                       </div>
                       <div className="bg-surface-1 border border-surface-3 p-4 rounded-xl">
                         <div className="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center mb-3">
                           <span className="text-secondary font-bold">2</span>
                         </div>
-                        <h4 className="font-bold text-white mb-1">Specialist Consultation</h4>
-                        <p className="text-sm text-text-secondary">Review your biomarkers with a certified hormone optimization provider.</p>
+                        <h4 className="font-bold text-white mb-1">
+                          {aiResult?.recommendedProtocols?.[1] || 'Specialist Consultation'}
+                        </h4>
+                        <p className="text-sm text-text-secondary">
+                          Review your biomarkers and symptom history with a qualified clinical team.
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -435,7 +466,14 @@ export function SymptomChecker() {
                     <Button 
                       size="lg" 
                       className="flex-grow h-14 text-lg"
-                      onClick={() => navigate('/patient/assessment')}
+                      onClick={() => {
+                        AnalyticsEngine.track('assessment_start', {
+                          source: 'symptom_checker',
+                          symptoms: selectedSymptoms,
+                          severity,
+                        });
+                        navigate(assessmentPath);
+                      }}
                     >
                       Start Full Clinical Assessment
                     </Button>
@@ -448,6 +486,18 @@ export function SymptomChecker() {
                       Browse Clinic Directory
                     </Button>
                   </div>
+
+                  {analysisError ? (
+                    <Button
+                      variant="ghost"
+                      className="mt-4 w-full"
+                      onClick={() => {
+                        void runAnalysis();
+                      }}
+                    >
+                      Retry AI Review
+                    </Button>
+                  ) : null}
                   
                   <p className="text-xs text-text-secondary text-center mt-6">
                     Disclaimer: This pre-assessment provides informational guidance only and is not a substitute for professional medical advice, diagnosis, or treatment.

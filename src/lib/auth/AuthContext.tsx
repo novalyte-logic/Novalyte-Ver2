@@ -1,24 +1,17 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db, supabase } from '../../firebase';
+import { normalizeAppRole } from '../../../shared/authRoles';
+import { auth, supabase } from '../../firebase';
 import type { AuthUser } from '../supabase/client';
-
-const ADMIN_ACCESS_STORAGE_KEY = 'novalyte_admin_access';
-const ADMIN_EMAIL = 'admin@novalyte.io';
-
-function isAdminIdentity(user: AuthUser | null, role: string | null) {
-  return role === 'admin' || Boolean(user?.email === ADMIN_EMAIL && user.emailVerified);
-}
 
 interface AuthContextType {
   user: AuthUser | null;
   role: string | null;
   loading: boolean;
-  hasAdminAccess: boolean;
   isAdminUser: boolean;
+  requestEmailAccessCode: (email: string) => Promise<void>;
+  verifyEmailAccessCode: (email: string, code: string) => Promise<void>;
+  signInWithLinkedIn: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
-  grantAdminAccess: () => void;
-  revokeAdminAccess: () => void;
   logout: () => Promise<void>;
 }
 
@@ -26,52 +19,53 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   role: null,
   loading: true,
-  hasAdminAccess: false,
   isAdminUser: false,
+  requestEmailAccessCode: async () => {},
+  verifyEmailAccessCode: async () => {},
+  signInWithLinkedIn: async () => {},
   signInWithGoogle: async () => {},
-  grantAdminAccess: () => {},
-  revokeAdminAccess: () => {},
   logout: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
 
-async function syncRoleForUser(currentUser: AuthUser | null) {
+async function fetchAuthenticatedSession(currentUser: AuthUser | null) {
   if (!currentUser) {
     return null;
   }
 
-  const userDocRef = doc(db, 'users', currentUser.uid);
-  const userDoc = await getDoc(userDocRef);
-  const nextRole = currentUser.email === ADMIN_EMAIL && currentUser.emailVerified ? 'admin' : 'patient';
-
-  if (userDoc.exists()) {
-    const userData = userDoc.data() ?? {};
-    return typeof userData.role === 'string' ? userData.role : nextRole;
-  }
-
-  await setDoc(userDocRef, {
-    uid: currentUser.uid,
-    email: currentUser.email,
-    name: currentUser.displayName || '',
-    role: nextRole,
-    createdAt: serverTimestamp(),
+  const token = await currentUser.getIdToken();
+  const response = await fetch('/api/auth/session', {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
   });
 
-  return nextRole;
+  if (!response.ok) {
+    let message = 'Unable to validate your session.';
+    try {
+      const payload = (await response.json()) as { error?: string };
+      if (payload.error) {
+        message = payload.error;
+      }
+    } catch {
+      // Ignore malformed error payloads.
+    }
+
+    throw new Error(message);
+  }
+
+  const payload = (await response.json()) as {
+    role?: string | null;
+  };
+
+  return normalizeAppRole(payload.role) || 'patient';
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(auth.currentUser);
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [hasAdminAccess, setHasAdminAccess] = useState(() => {
-    if (typeof window === 'undefined') {
-      return false;
-    }
-
-    return window.localStorage.getItem(ADMIN_ACCESS_STORAGE_KEY) === 'true';
-  });
 
   useEffect(() => {
     let isMounted = true;
@@ -84,7 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         setUser(currentUser);
-        const nextRole = await syncRoleForUser(currentUser);
+        const nextRole = await fetchAuthenticatedSession(currentUser);
         if (isMounted) {
           setRole(nextRole);
         }
@@ -114,10 +108,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const signInWithGoogle = async () => {
+  const signInWithOAuthProvider = async (provider: 'google' | 'linkedin_oidc') => {
     const redirectTo = typeof window !== 'undefined' ? window.location.href : undefined;
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
+      provider,
       options: {
         redirectTo,
       },
@@ -128,14 +122,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const grantAdminAccess = () => {
-    setHasAdminAccess(true);
-    window.localStorage.setItem(ADMIN_ACCESS_STORAGE_KEY, 'true');
+  const requestEmailAccessCode = async (email: string) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const { error } = await supabase.auth.signInWithOtp({
+      email: normalizedEmail,
+      options: {
+        shouldCreateUser: true,
+      },
+    });
+
+    if (error) {
+      throw error;
+    }
   };
 
-  const revokeAdminAccess = () => {
-    setHasAdminAccess(false);
-    window.localStorage.removeItem(ADMIN_ACCESS_STORAGE_KEY);
+  const verifyEmailAccessCode = async (email: string, code: string) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const token = code.replace(/\D/g, '').slice(0, 6);
+    const { error } = await supabase.auth.verifyOtp({
+      email: normalizedEmail,
+      token,
+      type: 'email',
+    });
+
+    if (error) {
+      throw error;
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    await signInWithOAuthProvider('google');
+  };
+
+  const signInWithLinkedIn = async () => {
+    await signInWithOAuthProvider('linkedin_oidc');
   };
 
   const logout = async () => {
@@ -151,11 +171,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         role,
         loading,
-        hasAdminAccess,
-        isAdminUser: isAdminIdentity(user, role),
+        isAdminUser: role === 'admin' || role === 'system_admin',
+        requestEmailAccessCode,
+        verifyEmailAccessCode,
+        signInWithLinkedIn,
         signInWithGoogle,
-        grantAdminAccess,
-        revokeAdminAccess,
         logout,
       }}
     >

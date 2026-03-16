@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Send, Bot, Zap, Clock, Shield, CheckCircle2, AlertCircle, ArrowRight, Building2, User, Stethoscope, Package } from 'lucide-react';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
+import { PublicService, type ContactSubmissionResponse } from '@/src/services/public';
 
 type Role = 'patient' | 'clinic' | 'vendor' | 'other';
 type Intent = 'support' | 'partnership' | 'billing' | 'technical' | 'general' | 'analyzing';
 type Urgency = 'low' | 'medium' | 'high' | 'analyzing';
 
 export function Contact() {
+  const [searchParams] = useSearchParams();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<Role>('patient');
@@ -21,6 +23,29 @@ export function Contact() {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [submission, setSubmission] = useState<ContactSubmissionResponse | null>(null);
+
+  useEffect(() => {
+    const roleParam = searchParams.get('role');
+    const topicParam = searchParams.get('topic');
+    const productParam = searchParams.get('product');
+
+    if (roleParam && ['patient', 'clinic', 'vendor', 'other'].includes(roleParam)) {
+      setRole(roleParam as Role);
+    }
+
+    if (!message && (topicParam || productParam)) {
+      const nextMessage = [
+        topicParam ? `Topic: ${topicParam}` : '',
+        productParam ? `Product / Context: ${productParam}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n');
+
+      setMessage(nextMessage);
+    }
+  }, [message, searchParams]);
 
   // Simulated AI analysis effect
   useEffect(() => {
@@ -64,18 +89,34 @@ export function Contact() {
     }
   }, [message]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
-    // Simulate API call
-    setTimeout(() => {
+    setSubmitError('');
+
+    try {
+      const response = await PublicService.submitContact({
+        name,
+        email,
+        role,
+        message,
+      });
+
+      setSubmission(response);
+      setIntent(response.intent);
+      setUrgency(response.urgency);
       setIsSubmitting(false);
       setIsSubmitted(true);
-    }, 1500);
+    } catch (error) {
+      setIsSubmitting(false);
+      setSubmitError(error instanceof Error ? error.message : 'Unable to submit your message right now.');
+    }
   };
 
   const getRoutingDestination = () => {
+    if (submission?.routingDestination) {
+      return submission.routingDestination;
+    }
     if (role === 'patient') return 'Patient Success Team';
     if (role === 'clinic') return 'Clinical Operations';
     if (role === 'vendor') return 'Marketplace Partnerships';
@@ -83,9 +124,23 @@ export function Contact() {
   };
 
   const getExpectedResponseTime = () => {
+    if (submission?.expectedResponseTime) {
+      return submission.expectedResponseTime;
+    }
     if (urgency === 'high') return '< 2 Hours';
     if (urgency === 'medium') return '< 12 Hours';
     return '24-48 Hours';
+  };
+
+  const resetForm = () => {
+    setIsSubmitted(false);
+    setSubmitError('');
+    setSubmission(null);
+    setName('');
+    setEmail('');
+    setMessage('');
+    setIntent('general');
+    setUrgency('low');
   };
 
   return (
@@ -218,10 +273,16 @@ export function Contact() {
                         />
                       </div>
 
+                      {submitError && (
+                        <div className="rounded-lg border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger">
+                          {submitError}
+                        </div>
+                      )}
+
                       <Button 
                         type="submit" 
                         className="w-full h-12 text-lg font-bold"
-                        disabled={isSubmitting || !name || !email || !message}
+                        disabled={isSubmitting || !name || !email || message.trim().length < 20}
                       >
                         {isSubmitting ? (
                           <span className="flex items-center gap-2">
@@ -255,7 +316,7 @@ export function Contact() {
                     <div className="bg-surface-1 rounded-xl p-6 text-left space-y-4 mb-8">
                       <div className="flex justify-between items-center border-b border-surface-3 pb-4">
                         <span className="text-text-secondary text-sm">Tracking ID</span>
-                        <span className="text-white font-mono text-sm">NVL-{Math.random().toString(36).substring(2, 10).toUpperCase()}</span>
+                        <span className="text-white font-mono text-sm">{submission?.trackingId || 'Pending'}</span>
                       </div>
                       <div className="flex justify-between items-center border-b border-surface-3 pb-4">
                         <span className="text-text-secondary text-sm">Priority Level</span>
@@ -266,7 +327,7 @@ export function Contact() {
                         <span className="text-primary font-bold">{getExpectedResponseTime()}</span>
                       </div>
                     </div>
-                    <Button variant="outline" onClick={() => setIsSubmitted(false)}>
+                    <Button variant="outline" onClick={resetForm}>
                       Send Another Message
                     </Button>
                   </Card>

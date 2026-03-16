@@ -1,5 +1,14 @@
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
+function parseNumber(value: string | undefined, fallback: number) {
+  if (!value) {
+    return fallback;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 function parseBoolean(value: string | undefined, fallback = false) {
   if (value === undefined) {
     return fallback;
@@ -36,6 +45,24 @@ export const serverEnv = {
   clientErrorEndpointEnabled: parseBoolean(process.env.ENABLE_CLIENT_ERROR_INGEST, true),
   analyticsEndpointEnabled: parseBoolean(process.env.ENABLE_ANALYTICS_INGEST, true),
   releaseVersion: process.env.RELEASE_VERSION || process.env.RENDER_GIT_COMMIT || '',
+  adminActionConfirmationCode: process.env.ADMIN_ACTION_CONFIRMATION_CODE || '1750',
+  adminAllowedEmails: parseList(process.env.ADMIN_ALLOWED_EMAILS),
+  adminEmail: process.env.ADMIN_EMAIL || '',
+  geminiApiKey: process.env.GEMINI_API_KEY || '',
+  geminiFastModel: process.env.GEMINI_FAST_MODEL || 'gemini-3-flash-preview',
+  geminiResearchModel: process.env.GEMINI_RESEARCH_MODEL || 'gemini-3.1-pro-preview',
+  aiRequestTimeoutMs: parseNumber(process.env.AI_REQUEST_TIMEOUT_MS, 15000),
+  aiMaxRetries: parseNumber(process.env.AI_MAX_RETRIES, 2),
+  slackWebhookUrl: process.env.SLACK_WEBHOOK_URL || '',
+  notificationTimeoutMs: parseNumber(process.env.NOTIFICATION_TIMEOUT_MS, 4000),
+  notificationMaxRetries: parseNumber(process.env.NOTIFICATION_MAX_RETRIES, 2),
+  emailFromAddress: process.env.EMAIL_FROM_ADDRESS || '',
+  emailSmtpHost: process.env.EMAIL_SMTP_HOST || '',
+  emailSmtpPort: parseNumber(process.env.EMAIL_SMTP_PORT, 587),
+  emailSmtpSecure: parseBoolean(process.env.EMAIL_SMTP_SECURE, false),
+  emailSmtpUser: process.env.EMAIL_SMTP_USER || '',
+  emailSmtpPassword: process.env.EMAIL_SMTP_PASSWORD || '',
+  emailConnectionTimeoutMs: parseNumber(process.env.EMAIL_CONNECTION_TIMEOUT_MS, 5000),
   supabaseUrl: process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '',
   supabasePublishableKey:
     process.env.SUPABASE_PUBLISHABLE_KEY ||

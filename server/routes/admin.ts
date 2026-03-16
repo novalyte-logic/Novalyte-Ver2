@@ -1,7 +1,11 @@
 import express from 'express';
 import { randomUUID } from 'crypto';
 import type { Request, Response } from 'express';
-import { FieldValue, adminAuth, adminDb } from '../lib/supabaseAdmin';
+import { isAdminRole } from '../../shared/authRoles';
+import { aiService } from '../lib/aiService';
+import { resolveAuthenticatedActor, readBearerToken } from '../lib/authSession';
+import { serverEnv } from '../lib/env';
+import { FieldValue, adminDb } from '../lib/supabaseAdmin';
 import type {
   AdminPermission,
   AdminSession,
@@ -85,7 +89,7 @@ const DIRECTORY_RELATIONSHIP_STATUSES: DirectoryRelationshipStatus[] = [
 const QUEUE_STATES: OutreachQueueState[] = ['pending', 'review', 'ready', 'sending', 'sent', 'failed', 'paused'];
 const PERSONALIZATION_STATES: PersonalizationState[] = ['drafted', 'review_required', 'missing_data', 'sent'];
 const VERIFIED_CLINIC_STATUSES = new Set(['verified', 'active']);
-const ADMIN_CONFIRMATION_CODE = process.env.ADMIN_ACTION_CONFIRMATION_CODE || '1750';
+const ADMIN_CONFIRMATION_CODE = serverEnv.adminActionConfirmationCode;
 
 type AdminActor = AdminSession;
 
@@ -151,15 +155,6 @@ function asyncHandler(handler: (req: AuthenticatedRequest, res: Response) => Pro
       res.status(status).json({ error: message });
     }
   };
-}
-
-function readBearerToken(req: Request) {
-  const header = req.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) {
-    return null;
-  }
-
-  return header.slice('Bearer '.length).trim();
 }
 
 function sanitizeString(value: unknown) {
@@ -282,10 +277,6 @@ function buildAdminPath(entityType: string, entityId: string) {
     default:
       return '/admin/command-center';
   }
-}
-
-function isAdminRole(role: string | null | undefined) {
-  return role === 'admin' || role === 'system_admin';
 }
 
 function estimateLeadValue(budget: unknown, lead: DocRecord) {
@@ -440,14 +431,6 @@ function getToneForSeverity(severity: AlertSeverity): MetricTone {
   return 'primary';
 }
 
-function buildBaseUrl(req: Request) {
-  if (process.env.APP_URL) {
-    return process.env.APP_URL.replace(/\/$/, '');
-  }
-
-  return `${req.protocol}://${req.get('host')}`;
-}
-
 async function getActor(req: AuthenticatedRequest, required = true): Promise<AdminActor | null> {
   if (req.actor !== undefined) {
     return req.actor;
@@ -463,14 +446,10 @@ async function getActor(req: AuthenticatedRequest, required = true): Promise<Adm
     throw new AdminHttpError(401, 'Authentication required.');
   }
 
-  const decodedToken = await adminAuth.verifyIdToken(token);
-  const userDoc = await adminDb.collection(COLLECTIONS.users).doc(decodedToken.uid).get();
+  const resolvedActor = await resolveAuthenticatedActor(token);
+  const userDoc = await adminDb.collection(COLLECTIONS.users).doc(resolvedActor.uid).get();
   const userData = userDoc.exists ? (userDoc.data() ?? {}) : {};
-  const inferredRole =
-    decodedToken.email === 'admin@novalyte.io' && decodedToken.email_verified
-      ? 'admin'
-      : null;
-  const role = sanitizeString(userData.role) || inferredRole || 'patient';
+  const role = resolvedActor.role;
   const rawPermissions = sanitizeStringArray((userData.adminPermissions ?? userData.permissions) as unknown);
   const permissions =
     rawPermissions.filter((permission): permission is AdminPermission =>
@@ -482,13 +461,9 @@ async function getActor(req: AuthenticatedRequest, required = true): Promise<Adm
   }
 
   const actor: AdminActor = {
-    uid: decodedToken.uid,
-    email: decodedToken.email ?? 'unknown@novalyte.ai',
-    name:
-      sanitizeString(userData.name) ||
-      sanitizeString(decodedToken.name) ||
-      sanitizeString(decodedToken.email) ||
-      'Novalyte Admin',
+    uid: resolvedActor.uid,
+    email: resolvedActor.email ?? 'unknown@novalyte.ai',
+    name: sanitizeString(userData.name) || resolvedActor.name || 'Novalyte Admin',
     role,
     permissions: permissions.length > 0 ? permissions : [...ADMIN_PERMISSIONS],
     lastVerifiedAt: new Date().toISOString(),
@@ -688,29 +663,12 @@ async function writeSystemEvent(
 }
 
 async function generateOutreachDraft(
-  req: Request,
   recipientName: string,
   intent: string,
   context: string,
 ) {
   try {
-    const response = await fetch(`${buildBaseUrl(req)}/api/ai/outreach`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        patientName: recipientName,
-        intent,
-        context,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`AI outreach failed with ${response.status}`);
-    }
-
-    const payload = (await response.json()) as { message?: string };
+    const payload = await aiService.generateOutreach(recipientName, intent, context);
     return sanitizeString(payload.message) || `Hi ${recipientName}, Novalyte has an update regarding ${intent}.`;
   } catch (error) {
     console.error('Admin outreach draft generation failed:', error);
@@ -1003,7 +961,6 @@ async function createQueueItemForLead(
   const draftPreview = missingDeliveryTarget
     ? 'Recipient is missing a required delivery field. Manual review required before send.'
     : await generateOutreachDraft(
-        req,
         lead.name,
         lead.intent,
         `Lead score ${lead.score}/100. Current CRM stage ${lead.status}. Estimated value ${lead.formattedEstimatedValue}.`,
@@ -1166,7 +1123,6 @@ async function personalizeQueueItem(req: Request, queueItemId: string, actor: Ad
   const recipientName = sanitizeString(queueItem.recipientName) || 'Novalyte Network Contact';
   const intent = sanitizeString(queueItem.intent) || 'General Optimization';
   const draftPreview = await generateOutreachDraft(
-    req,
     recipientName,
     intent,
     `Campaign ${sanitizeString(queueItem.campaignName)}. Queue state ${deriveQueueState(queueItem.state)}.`,
@@ -2310,6 +2266,8 @@ router.get(
       readCollection(COLLECTIONS.events),
     ]);
 
+    const aiHealth = aiService.getHealthStatus();
+
     const services = [
       {
         id: 'api-gateway',
@@ -2322,10 +2280,10 @@ router.get(
       {
         id: 'ai-inference',
         name: 'AI Inference',
-        status: process.env.GEMINI_API_KEY ? 'Active' : 'Degraded',
-        latencyMs: process.env.GEMINI_API_KEY ? 850 : undefined,
+        status: aiHealth.configured ? 'Active' : 'Degraded',
+        latencyMs: aiHealth.configured ? Math.min(1800, aiHealth.timeoutMs) : undefined,
         loadPercent: Math.min(100, 40 + queue.filter((item) => item.personalizationStatus !== 'sent').length * 4),
-        tone: process.env.GEMINI_API_KEY ? 'secondary' : 'warning',
+        tone: aiHealth.configured ? 'secondary' : 'warning',
       },
       {
         id: 'primary-db',

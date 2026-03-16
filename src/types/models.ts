@@ -1,4 +1,6 @@
-export type Role = 'patient' | 'clinic_admin' | 'practitioner' | 'vendor' | 'system_admin';
+import type { AppRole } from '../../shared/authRoles';
+
+export type Role = AppRole;
 
 export interface User {
   id: string;
@@ -33,7 +35,7 @@ export interface Patient extends User {
 }
 
 export interface Clinic extends User {
-  role: 'clinic_admin';
+  role: 'clinic' | 'clinic_admin';
   clinicDetails: {
     name: string;
     npi: string;

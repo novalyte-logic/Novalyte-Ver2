@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Novalyte AI">
+  <defs>
+    <linearGradient id="bg" x1="10" y1="8" x2="54" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0d1724" />
+      <stop offset="1" stop-color="#05070a" />
+    </linearGradient>
+    <linearGradient id="accent" x1="18" y1="16" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#35d4ff" />
+      <stop offset="1" stop-color="#86f7ff" />
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="url(#bg)" />
+  <path d="M22 17h6v11h8V17h6v30h-6V34h-8v13h-6V17Z" fill="url(#accent)" />
+  <circle cx="48" cy="18" r="4" fill="#35d4ff" fill-opacity=".8" />
+</svg>

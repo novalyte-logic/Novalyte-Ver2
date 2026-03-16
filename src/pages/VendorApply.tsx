@@ -7,11 +7,15 @@ import {
 } from 'lucide-react';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
+import { PublicService } from '@/src/services/public';
 
 export function VendorApply() {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [applicationId, setApplicationId] = useState('');
+  const [reviewEtaDays, setReviewEtaDays] = useState<number | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -41,8 +45,38 @@ export function VendorApply() {
     setFormData(prev => ({ ...prev, [key]: value }));
   };
 
+  const isStepValid = () => {
+    switch (step) {
+      case 1:
+        return Boolean(
+          formData.companyName &&
+          formData.website &&
+          formData.contactName &&
+          formData.contactEmail &&
+          formData.contactRole,
+        );
+      case 2:
+        return Boolean(
+          formData.category &&
+          formData.description &&
+          formData.targetAudience &&
+          formData.pricingModel,
+        );
+      case 3:
+        return Boolean(
+          formData.apiAvailability &&
+          formData.emrCompatibility &&
+          formData.dataExport,
+        );
+      case 4:
+        return Boolean(formData.hipaa && formData.soc2 && formData.supportSLA);
+      default:
+        return false;
+    }
+  };
+
   const handleNext = () => {
-    if (step < 4) setStep(step + 1);
+    if (step < 4 && isStepValid()) setStep(step + 1);
   };
 
   const handleBack = () => {
@@ -51,10 +85,18 @@ export function VendorApply() {
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
-    // Simulate API call to /api/vendors/apply
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsSubmitting(false);
-    setIsSuccess(true);
+    setSubmitError('');
+
+    try {
+      const response = await PublicService.submitVendorApplication(formData);
+      setApplicationId(response.applicationId);
+      setReviewEtaDays(response.reviewEtaDays);
+      setIsSuccess(true);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Unable to submit your application right now.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isSuccess) {
@@ -72,6 +114,10 @@ export function VendorApply() {
           <p className="text-text-secondary mb-8 text-lg">
             Your partnership application has been submitted to the Novalyte ecosystem team. We review all vendor applications to ensure clinical and operational alignment.
           </p>
+          <div className="mb-8 rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-left text-sm text-primary">
+            Reference: <span className="font-mono text-white">{applicationId}</span>
+            {reviewEtaDays ? ` • Estimated review: ${reviewEtaDays}-${reviewEtaDays + 2} business days` : ''}
+          </div>
           
           <div className="bg-[#0B0F14] rounded-xl p-6 border border-surface-3 mb-8 text-left space-y-4">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
@@ -446,30 +492,36 @@ export function VendorApply() {
             </AnimatePresence>
           </div>
 
-          {/* Footer Controls */}
-          <div className="p-6 bg-[#0B0F14] border-t border-surface-3 flex items-center justify-between">
-            <Button 
-              variant="outline" 
-              onClick={handleBack}
+	          {/* Footer Controls */}
+	          <div className="p-6 bg-[#0B0F14] border-t border-surface-3 flex items-center justify-between">
+            {submitError && (
+              <div className="mr-4 max-w-md rounded-lg border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger">
+                {submitError}
+              </div>
+            )}
+	            <Button 
+	              variant="outline" 
+	              onClick={handleBack}
               disabled={step === 1 || isSubmitting}
               className="border-surface-3 bg-surface-1 text-white hover:bg-surface-2 disabled:opacity-50"
             >
               <ChevronLeft className="w-4 h-4 mr-2" /> Back
             </Button>
             
-            {step < 4 ? (
-              <Button 
-                onClick={handleNext}
-                className="bg-primary hover:bg-primary/90 text-black font-bold"
-              >
+	            {step < 4 ? (
+	              <Button 
+	                onClick={handleNext}
+	                disabled={!isStepValid() || isSubmitting}
+	                className="bg-primary hover:bg-primary/90 text-black font-bold"
+	              >
                 Continue <ChevronRight className="w-4 h-4 ml-2" />
               </Button>
             ) : (
-              <Button 
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="bg-primary hover:bg-primary/90 text-black font-bold min-w-[160px]"
-              >
+	              <Button 
+	                onClick={handleSubmit}
+	                disabled={isSubmitting || !isStepValid()}
+	                className="bg-primary hover:bg-primary/90 text-black font-bold min-w-[160px]"
+	              >
                 {isSubmitting ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />

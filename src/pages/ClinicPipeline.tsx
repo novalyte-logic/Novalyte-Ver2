@@ -7,28 +7,11 @@ import {
   FileText, Phone, Mail, User, Sparkles, ShieldCheck, X,
   Plus, ArrowRight, CheckCircle2
 } from 'lucide-react';
-import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, getDoc } from 'firebase/firestore';
-import { db } from '@/src/firebase';
-import { useAuth } from '@/src/lib/auth/AuthContext';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
+import { ClinicApiError, ClinicService, type ClinicLead } from '@/src/services/clinic';
 
-type Patient = {
-  id: string;
-  name: string;
-  intent: string;
-  score: number;
-  time: string;
-  stage: 'intake' | 'triage' | 'consult' | 'treating';
-  risk: 'high' | 'medium' | 'low';
-  riskReason?: string;
-  intentSignal?: string;
-  budget: string;
-  urgency: string;
-  aiSummary: string;
-  notes: { id: string; text: string; date: string }[];
-  nextAppointment?: string;
-};
+type Patient = ClinicLead;
 
 const stages = [
   { id: 'intake', label: 'Intake / New', color: 'bg-primary' },
@@ -38,84 +21,76 @@ const stages = [
 ] as const;
 
 export function ClinicPipeline() {
-  const { user, role } = useAuth();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'notes' | 'schedule'>('overview');
   const [newNote, setNewNote] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showHighRiskOnly, setShowHighRiskOnly] = useState(false);
+  const [actionFeedback, setActionFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
-    if (!user) return;
+    let isActive = true;
 
-    let q = query(collection(db, 'leads'));
-    if (role === 'clinic') {
-      q = query(collection(db, 'leads'), where('clinicId', '==', user.uid));
-    }
-
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const leadsData = await Promise.all(snapshot.docs.map(async (leadDoc) => {
-        const lead = leadDoc.data();
-        let patientData: any = {};
-        
-        if (lead.patientId) {
-          const patientSnap = await getDoc(doc(db, 'patients', lead.patientId));
-          if (patientSnap.exists()) patientData = patientSnap.data();
+    const loadPipeline = async (silent = false) => {
+      if (!silent) {
+        setLoading(true);
+      }
+      try {
+        const response = await ClinicService.getLeads();
+        if (isActive) {
+          setPatients(response.leads);
         }
+      } catch (error) {
+        console.error('Error fetching leads:', error);
+        if (isActive) {
+          setActionFeedback({
+            type: 'error',
+            message: error instanceof ClinicApiError ? error.message : 'Unable to load pipeline right now.',
+          });
+        }
+      } finally {
+        if (isActive) {
+          setLoading(false);
+        }
+      }
+    };
 
-        const statusToStage = (status: string): Patient['stage'] => {
-          if (status === 'new') return 'intake';
-          if (status === 'contacted') return 'triage';
-          if (status === 'scheduled') return 'consult';
-          if (status === 'treating') return 'treating';
-          return 'intake';
-        };
+    void loadPipeline();
+    const interval = window.setInterval(() => {
+      void loadPipeline(true);
+    }, 30000);
 
-        return {
-          id: leadDoc.id,
-          name: patientData.firstName ? `${patientData.firstName} ${patientData.lastName?.charAt(0) || ''}.` : 'Unknown Patient',
-          intent: lead.treatmentInterest || 'General',
-          score: lead.score || 85,
-          time: lead.createdAt ? 'Active' : 'New',
-          stage: statusToStage(lead.status || 'new'),
-          risk: lead.score < 70 ? 'high' : lead.score < 85 ? 'medium' : 'low',
-          riskReason: lead.score < 70 ? 'Low AI qualification score' : undefined,
-          intentSignal: lead.intentSignal || 'Active engagement',
-          budget: lead.budget || 'Unknown',
-          urgency: lead.urgency || 'Unknown',
-          aiSummary: lead.aiSummary || 'Patient shows strong clinical fit. Recommend immediate follow-up for consultation scheduling.',
-          notes: lead.notes || []
-        } as Patient;
-      }));
-      
-      setPatients(leadsData);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching leads:", error);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [user, role]);
+    return () => {
+      isActive = false;
+      window.clearInterval(interval);
+    };
+  }, []);
 
   const handleAddNote = async () => {
     if (!newNote.trim() || !selectedPatient) return;
     
     try {
-      const leadRef = doc(db, 'leads', selectedPatient.id);
-      const newNoteObj = { 
-        id: Date.now().toString(), 
-        text: newNote, 
-        date: new Date().toLocaleString() 
-      };
-      
-      await updateDoc(leadRef, {
-        notes: [newNoteObj, ...(selectedPatient.notes || [])]
-      });
-      
+      const response = await ClinicService.addLeadNote(selectedPatient.id, newNote.trim());
+      setPatients((current) =>
+        current.map((patient) =>
+          patient.id === selectedPatient.id
+            ? { ...patient, notes: [response.note, ...patient.notes] }
+            : patient,
+        ),
+      );
       setNewNote('');
+      setActionFeedback({
+        type: 'success',
+        message: 'Note saved to this patient record.',
+      });
     } catch (error) {
       console.error("Error adding note:", error);
+      setActionFeedback({
+        type: 'error',
+        message: 'Unable to save that note right now.',
+      });
     }
   };
 
@@ -133,27 +108,89 @@ export function ClinicPipeline() {
     };
 
     try {
-      const leadRef = doc(db, 'leads', patientId);
-      await updateDoc(leadRef, { 
-        status: statusMap[nextStage],
-        updatedAt: serverTimestamp()
-      });
-
-      // Log audit event
-      await addDoc(collection(db, 'auditEvents'), {
-        clinicId: user?.uid,
-        action: `Stage Transition: ${currentStage} -> ${nextStage}`,
-        entityId: patientId,
-        entityName: patients.find(p => p.id === patientId)?.name || 'Patient',
-        timestamp: serverTimestamp(),
-        type: 'info'
+      await ClinicService.updateLead(patientId, { status: statusMap[nextStage] });
+      setPatients((current) =>
+        current.map((patient) =>
+          patient.id === patientId
+            ? { ...patient, status: statusMap[nextStage], stage: nextStage }
+            : patient,
+        ),
+      );
+      setActionFeedback({
+        type: 'success',
+        message: `Patient moved to ${nextStage}.`,
       });
     } catch (error) {
       console.error("Error moving stage:", error);
+      setActionFeedback({
+        type: 'error',
+        message: 'Unable to update the patient stage right now.',
+      });
     }
   };
 
   const selectedPatient = patients.find(p => p.id === selectedId);
+  const filteredPatients = patients.filter((patient) => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    const matchesSearch =
+      !normalizedQuery ||
+      patient.name.toLowerCase().includes(normalizedQuery) ||
+      patient.intent.toLowerCase().includes(normalizedQuery) ||
+      patient.email.toLowerCase().includes(normalizedQuery);
+    const matchesRisk = !showHighRiskOnly || patient.risk === 'high';
+    return matchesSearch && matchesRisk;
+  });
+
+  const handlePatientEmail = (subject: string, body: string) => {
+    if (!selectedPatient?.email) {
+      setActionFeedback({
+        type: 'error',
+        message: 'This patient record does not have an email address yet.',
+      });
+      return;
+    }
+
+    window.location.href = `mailto:${encodeURIComponent(selectedPatient.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    setActionFeedback({
+      type: 'success',
+      message: 'Your email client was opened with the patient communication draft.',
+    });
+  };
+
+  const handleCancelAppointment = async () => {
+    if (!selectedPatient?.nextAppointment) {
+      return;
+    }
+
+    try {
+      await ClinicService.cancelLeadAppointment(selectedPatient.id);
+      setPatients((current) =>
+        current.map((patient) =>
+          patient.id === selectedPatient.id
+            ? { ...patient, nextAppointment: '' }
+            : patient,
+        ),
+      );
+      setActionFeedback({
+        type: 'success',
+        message: 'Appointment cancelled and cleared from the pipeline.',
+      });
+    } catch (error) {
+      console.error('Error clearing appointment:', error);
+      setActionFeedback({
+        type: 'error',
+        message: 'Unable to clear the appointment right now.',
+      });
+    }
+  };
+
+  if (loading && !patients.length) {
+    return (
+      <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="h-auto min-h-[calc(100vh-8rem)] md:h-[calc(100vh-8rem)] flex flex-col animate-in fade-in duration-500">
@@ -163,6 +200,15 @@ export function ClinicPipeline() {
         <div>
           <h1 className="text-3xl font-display font-bold text-white">Patient Pipeline</h1>
           <p className="text-text-secondary mt-1">Manage patient flow, intent signals, and operational stages.</p>
+          {actionFeedback ? (
+            <div className={`mt-4 rounded-lg border px-4 py-3 text-sm ${
+              actionFeedback.type === 'success'
+                ? 'border-success/20 bg-success/10 text-success'
+                : 'border-danger/20 bg-danger/10 text-danger'
+            }`}>
+              {actionFeedback.message}
+            </div>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           <div className="relative w-full sm:w-64">
@@ -170,10 +216,16 @@ export function ClinicPipeline() {
             <input 
               type="text" 
               placeholder="Search patients..." 
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
               className="w-full pl-9 pr-4 py-2 bg-surface-2 border border-surface-3 rounded-lg text-sm text-white focus:outline-none focus:border-primary/50 transition-all placeholder:text-text-secondary/50"
             />
           </div>
-          <Button variant="outline" className="border-surface-3 text-white hover:bg-surface-2 hidden sm:flex">
+          <Button
+            variant="outline"
+            className={`border-surface-3 text-white hover:bg-surface-2 hidden sm:flex ${showHighRiskOnly ? 'border-warning/40 text-warning' : ''}`}
+            onClick={() => setShowHighRiskOnly((current) => !current)}
+          >
             <Filter className="w-4 h-4 mr-2" /> Filter
           </Button>
           <Link to="/dashboard/leads" className="w-full sm:w-auto">
@@ -190,7 +242,7 @@ export function ClinicPipeline() {
         {/* Kanban Board */}
         <div className="flex-grow overflow-x-auto hide-scrollbar flex gap-6 pb-4">
           {stages.map(stage => {
-            const stagePatients = patients.filter(p => p.stage === stage.id);
+            const stagePatients = filteredPatients.filter(p => p.stage === stage.id);
             
             return (
               <div key={stage.id} className="w-80 flex-shrink-0 flex flex-col">
@@ -248,7 +300,7 @@ export function ClinicPipeline() {
 
                       <div className="flex justify-between items-center text-xs text-text-secondary pt-2 border-t border-surface-3">
                         <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> {patient.time}
+                          <Clock className="w-3 h-3" /> {patient.timeLabel}
                         </span>
                         <ChevronRight className={`w-4 h-4 transition-transform ${selectedId === patient.id ? 'text-primary translate-x-1' : ''}`} />
                       </div>
@@ -295,10 +347,34 @@ export function ClinicPipeline() {
                 </div>
                 
                 <div className="flex gap-2">
-                  <Button size="sm" className="flex-1 bg-primary hover:bg-primary/90 text-black font-bold">
+                  <Button
+                    size="sm"
+                    className="flex-1 bg-primary hover:bg-primary/90 text-black font-bold"
+                    onClick={() =>
+                      handlePatientEmail(
+                        'Novalyte clinic follow-up',
+                        `Hello ${selectedPatient.name},\n\nOur clinic team is following up on your Novalyte intake. Reply here and we will coordinate next steps.`,
+                      )
+                    }
+                  >
                     <MessageSquare className="w-4 h-4 mr-2" /> Message
                   </Button>
-                  <Button size="sm" variant="outline" className="flex-1 border-surface-3 text-white hover:bg-surface-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 border-surface-3 text-white hover:bg-surface-2"
+                    onClick={() => {
+                      if (!selectedPatient.phone) {
+                        setActionFeedback({
+                          type: 'error',
+                          message: 'This patient record does not have a phone number yet.',
+                        });
+                        return;
+                      }
+
+                      window.location.href = `tel:${selectedPatient.phone.replace(/[^\d+]/g, '')}`;
+                    }}
+                  >
                     <Phone className="w-4 h-4 mr-2" /> Call
                   </Button>
                 </div>
@@ -404,7 +480,16 @@ export function ClinicPipeline() {
                       >
                         Move to Next Stage <ArrowRight className="w-4 h-4" />
                       </Button>
-                      <Button variant="outline" className="w-full border-surface-3 text-white hover:bg-surface-2 justify-between">
+                      <Button
+                        variant="outline"
+                        className="w-full border-surface-3 text-white hover:bg-surface-2 justify-between"
+                        onClick={() =>
+                          handlePatientEmail(
+                            'Complete your Novalyte intake forms',
+                            `Hello ${selectedPatient.name},\n\nPlease complete your intake forms so we can keep your care plan moving:\n${window.location.origin}/patient/assessment`,
+                          )
+                        }
+                      >
                         Send Intake Forms <Mail className="w-4 h-4" />
                       </Button>
                     </div>
@@ -436,7 +521,9 @@ export function ClinicPipeline() {
                           {selectedPatient.notes.map(note => (
                             <div key={note.id} className="p-3 rounded-lg bg-surface-1 border border-surface-3">
                               <p className="text-sm text-white mb-2">{note.text}</p>
-                              <span className="text-xs text-text-secondary font-mono">{note.date}</span>
+                              <span className="text-xs text-text-secondary font-mono">
+                                {new Date(note.createdAt).toLocaleString()}
+                              </span>
                             </div>
                           ))}
                         </div>
@@ -455,8 +542,27 @@ export function ClinicPipeline() {
                         <h3 className="text-sm font-bold text-text-secondary uppercase tracking-wider mb-1">Next Appointment</h3>
                         <p className="text-lg font-bold text-white">{selectedPatient.nextAppointment}</p>
                         <div className="mt-4 flex gap-2">
-                          <Button size="sm" variant="outline" className="flex-1 border-surface-3 text-white hover:bg-surface-2">Reschedule</Button>
-                          <Button size="sm" variant="outline" className="flex-1 border-danger/30 text-danger hover:bg-danger/10">Cancel</Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 border-surface-3 text-white hover:bg-surface-2"
+                            onClick={() =>
+                              handlePatientEmail(
+                                'Consultation reschedule request',
+                                `Hello ${selectedPatient.name},\n\nWe need to coordinate a new time for your consultation. Please reply with your preferred availability and our team will confirm a new slot.`,
+                              )
+                            }
+                          >
+                            Reschedule
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 border-danger/30 text-danger hover:bg-danger/10"
+                            onClick={() => void handleCancelAppointment()}
+                          >
+                            Cancel
+                          </Button>
                         </div>
                       </div>
                     ) : (
@@ -464,7 +570,15 @@ export function ClinicPipeline() {
                         <Calendar className="w-8 h-8 text-text-secondary mx-auto mb-3 opacity-50" />
                         <h3 className="text-sm font-bold text-white mb-1">No Upcoming Appointments</h3>
                         <p className="text-xs text-text-secondary mb-4">Schedule a consult or follow-up.</p>
-                        <Button className="w-full bg-primary hover:bg-primary/90 text-black font-bold">
+                        <Button
+                          className="w-full bg-primary hover:bg-primary/90 text-black font-bold"
+                          onClick={() =>
+                            handlePatientEmail(
+                              'Schedule your Novalyte consultation',
+                              `Hello ${selectedPatient.name},\n\nWe are ready to schedule your consultation. Reply with a few time windows that work for you and our team will confirm the appointment.`,
+                            )
+                          }
+                        >
                           Schedule Now
                         </Button>
                       </div>
@@ -486,4 +600,3 @@ export function ClinicPipeline() {
     </div>
   );
 }
-

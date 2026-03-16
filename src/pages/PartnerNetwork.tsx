@@ -9,6 +9,56 @@ import { Button } from '@/src/components/ui/Button';
 import { Link } from 'react-router-dom';
 
 export function PartnerNetwork() {
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [verifiedOnly, setVerifiedOnly] = React.useState(false);
+
+  const categories = [
+    { title: 'Clinical Equipment', icon: Box, count: 45, color: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/20', link: '/marketplace/equipment' },
+    { title: 'Diagnostics & Labs', icon: Activity, count: 28, color: 'text-secondary', bg: 'bg-secondary/10', border: 'border-secondary/20', link: '/marketplace/diagnostics' },
+    { title: 'Digital Health SaaS', icon: Code2, count: 52, color: 'text-success', bg: 'bg-success/10', border: 'border-success/20', link: '/marketplace/digital-health' },
+    { title: 'Supplements', icon: ShieldCheck, count: 17, color: 'text-warning', bg: 'bg-warning/10', border: 'border-warning/20', link: '/marketplace/supplements' },
+  ];
+
+  const featuredPartners = [
+    {
+      name: "Apex Diagnostics",
+      category: "Diagnostics & Labs",
+      desc: "Next-generation hormone panels with direct API integration to the Novalyte CRM.",
+      tags: ["HL7 Ready", "SOC 2", "API"],
+      status: "Verified"
+    },
+    {
+      name: "Titan Medical Systems",
+      category: "Clinical Equipment",
+      desc: "Acoustic wave therapy devices with pre-negotiated leasing rates for network clinics.",
+      tags: ["Hardware", "Financing", "Training"],
+      status: "Verified"
+    },
+    {
+      name: "NeuroSync Health",
+      category: "Digital Health SaaS",
+      desc: "Cognitive assessment platform that feeds directly into the patient qualification engine.",
+      tags: ["SaaS", "HIPAA", "API"],
+      status: "Verified"
+    }
+  ];
+
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredCategories = categories.filter((category) =>
+    !normalizedQuery || category.title.toLowerCase().includes(normalizedQuery),
+  );
+  const filteredPartners = featuredPartners.filter((partner) => {
+    const matchesQuery =
+      !normalizedQuery ||
+      partner.name.toLowerCase().includes(normalizedQuery) ||
+      partner.category.toLowerCase().includes(normalizedQuery) ||
+      partner.desc.toLowerCase().includes(normalizedQuery) ||
+      partner.tags.some((tag) => tag.toLowerCase().includes(normalizedQuery));
+
+    const matchesVerification = !verifiedOnly || partner.status === 'Verified';
+    return matchesQuery && matchesVerification;
+  });
+
   return (
     <div className="min-h-screen bg-[#05070A] pt-24 pb-20 font-sans">
       {/* Hero Section */}
@@ -49,9 +99,11 @@ export function PartnerNetwork() {
             transition={{ delay: 0.3 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
-            <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-black font-bold h-12 px-8 text-lg">
-              Browse Catalog
-            </Button>
+            <Link to="/marketplace" className="w-full sm:w-auto">
+              <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-black font-bold h-12 px-8 text-lg">
+                Browse Catalog
+              </Button>
+            </Link>
             <Link to="/vendors/apply" className="w-full sm:w-auto">
               <Button variant="outline" className="w-full border-surface-3 bg-surface-1 text-white hover:bg-surface-2 h-12 px-8 text-lg">
                 Apply as Vendor
@@ -88,22 +140,24 @@ export function PartnerNetwork() {
               <input 
                 type="text" 
                 placeholder="Search network..." 
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
                 className="pl-9 pr-4 py-2 bg-surface-1 border border-surface-3 rounded-lg text-sm text-white focus:outline-none focus:border-primary/50 w-64"
               />
             </div>
-            <Button variant="outline" size="sm" className="h-9 border-surface-3 bg-surface-1 text-white">
+            <Button
+              variant="outline"
+              size="sm"
+              className={`h-9 border-surface-3 bg-surface-1 text-white ${verifiedOnly ? 'border-primary/40 text-primary' : ''}`}
+              onClick={() => setVerifiedOnly((current) => !current)}
+            >
               <Filter className="w-4 h-4" />
             </Button>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[
-            { title: 'Clinical Equipment', icon: Box, count: 45, color: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/20', link: '/marketplace/equipment' },
-            { title: 'Diagnostics & Labs', icon: Activity, count: 28, color: 'text-secondary', bg: 'bg-secondary/10', border: 'border-secondary/20', link: '/marketplace/diagnostics' },
-            { title: 'Digital Health SaaS', icon: Code2, count: 52, color: 'text-success', bg: 'bg-success/10', border: 'border-success/20', link: '/marketplace/digital-health' },
-            { title: 'Supplements', icon: ShieldCheck, count: 17, color: 'text-warning', bg: 'bg-warning/10', border: 'border-warning/20', link: '/marketplace/supplements' },
-          ].map((cat, i) => {
+          {filteredCategories.map((cat, i) => {
             const Icon = cat.icon;
             return (
               <Link key={i} to={cat.link}>
@@ -120,6 +174,11 @@ export function PartnerNetwork() {
               </Link>
             );
           })}
+          {!filteredCategories.length ? (
+            <div className="md:col-span-2 lg:col-span-4 rounded-2xl border border-dashed border-surface-3 bg-surface-1/30 p-8 text-center text-text-secondary">
+              No procurement categories matched that search.
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -127,29 +186,7 @@ export function PartnerNetwork() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-24">
         <h2 className="text-2xl font-bold text-white mb-8">Featured Ecosystem Partners</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[
-            { 
-              name: "Apex Diagnostics", 
-              category: "Diagnostics & Labs", 
-              desc: "Next-generation hormone panels with direct API integration to the Novalyte CRM.",
-              tags: ["HL7 Ready", "SOC 2", "API"],
-              status: "Verified"
-            },
-            { 
-              name: "Titan Medical Systems", 
-              category: "Clinical Equipment", 
-              desc: "Acoustic wave therapy devices with pre-negotiated leasing rates for network clinics.",
-              tags: ["Hardware", "Financing", "Training"],
-              status: "Verified"
-            },
-            { 
-              name: "NeuroSync Health", 
-              category: "Digital Health SaaS", 
-              desc: "Cognitive assessment platform that feeds directly into the patient qualification engine.",
-              tags: ["SaaS", "HIPAA", "API"],
-              status: "Verified"
-            }
-          ].map((partner, i) => (
+          {filteredPartners.map((partner, i) => (
             <Card key={i} className="bg-surface-1 border-surface-3 p-6 flex flex-col">
               <div className="flex justify-between items-start mb-4">
                 <div className="w-12 h-12 bg-surface-2 rounded-lg border border-surface-3 flex items-center justify-center">
@@ -171,11 +208,18 @@ export function PartnerNetwork() {
                 ))}
               </div>
               
-              <Button variant="outline" className="w-full border-surface-3 bg-[#0B0F14] text-white hover:bg-surface-2">
-                View Profile
-              </Button>
+              <Link to={`/contact?role=vendor&topic=partner_profile&product=${encodeURIComponent(partner.name)}`}>
+                <Button variant="outline" className="w-full border-surface-3 bg-[#0B0F14] text-white hover:bg-surface-2">
+                  View Profile
+                </Button>
+              </Link>
             </Card>
           ))}
+          {!filteredPartners.length ? (
+            <div className="md:col-span-3 rounded-2xl border border-dashed border-surface-3 bg-surface-1/30 p-8 text-center text-text-secondary">
+              No featured partners matched your current search.
+            </div>
+          ) : null}
         </div>
       </div>
 

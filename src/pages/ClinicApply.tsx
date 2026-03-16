@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/src/firebase';
 import { Activity, ArrowRight, CheckCircle2, Building2, Users, Stethoscope, DollarSign, Shield, AlertCircle, XCircle, ChevronLeft, Brain, Zap } from 'lucide-react';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
+import { PublicService } from '@/src/services/public';
 
 type ApplicationData = {
   clinicName: string;
@@ -24,6 +23,8 @@ export function ClinicApply() {
   const [step, setStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<'approved' | 'manual_review' | 'rejected' | null>(null);
+  const [applicationId, setApplicationId] = useState('');
+  const [submitError, setSubmitError] = useState('');
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState<ApplicationData>({
@@ -60,46 +61,15 @@ export function ClinicApply() {
 
   const processApplication = async () => {
     setIsProcessing(true);
+    setSubmitError('');
     
     try {
-      // Hard Disqualifiers
-      let finalResult: 'approved' | 'manual_review' | 'rejected' = 'approved';
-      
-      if (
-        formData.monthlyVolume === 'Under 50' ||
-        formData.frontDeskStaff === '0' ||
-        formData.emr === 'Paper / None' ||
-        formData.investment === 'No'
-      ) {
-        finalResult = 'rejected';
-      } else if (
-        formData.isFranchise === 'Yes' ||
-        formData.monthlyVolume === '50 - 100' ||
-        formData.emr === 'Other / Custom'
-      ) {
-        finalResult = 'manual_review';
-      }
-
-      await addDoc(collection(db, 'clinics'), {
-        name: formData.clinicName,
-        website: formData.website,
-        npi: formData.npi,
-        isFranchise: formData.isFranchise,
-        monthlyVolume: formData.monthlyVolume,
-        frontDeskStaff: formData.frontDeskStaff,
-        emr: formData.emr,
-        telehealth: formData.telehealth,
-        avgLtv: formData.avgLtv,
-        investment: formData.investment,
-        status: finalResult === 'approved' ? 'Verified' : finalResult === 'manual_review' ? 'Pending Review' : 'Suspended',
-        outreachStatus: 'Onboarding',
-        createdAt: serverTimestamp(),
-      });
-
-      setResult(finalResult);
+      const response = await PublicService.submitClinicApplication(formData);
+      setApplicationId(response.applicationId);
+      setResult(response.result);
     } catch (error) {
       console.error("Error saving clinic application:", error);
-      setResult('manual_review');
+      setSubmitError(error instanceof Error ? error.message : 'Unable to submit your clinic application right now.');
     } finally {
       setIsProcessing(false);
     }
@@ -177,6 +147,9 @@ export function ClinicApply() {
               <p className="text-text-secondary mb-8">
                 Your clinic meets the operational requirements for Novalyte OS. You have been fast-tracked for onboarding.
               </p>
+              <div className="mb-6 rounded-lg border border-success/20 bg-success/10 px-4 py-3 text-left text-sm text-success">
+                Reference: <span className="font-mono text-white">{applicationId}</span>
+              </div>
               <div className="bg-[#15202B] p-4 rounded-lg border border-surface-3 mb-8 text-left">
                 <h4 className="text-white font-bold mb-2 flex items-center gap-2">
                   <Zap className="w-4 h-4 text-primary" /> Next Steps
@@ -205,6 +178,9 @@ export function ClinicApply() {
               <p className="text-text-secondary mb-8">
                 Your application has been received and flagged for manual review by our network operations team.
               </p>
+              <div className="mb-6 rounded-lg border border-warning/20 bg-warning/10 px-4 py-3 text-left text-sm text-warning">
+                Reference: <span className="font-mono text-white">{applicationId}</span>
+              </div>
               <div className="bg-[#15202B] p-4 rounded-lg border border-surface-3 mb-8 text-left text-sm text-text-secondary">
                 Because of your specific operational structure (e.g., franchise model or custom EMR), we need to manually verify integration capabilities before granting platform access. Our team will reach out within 24-48 hours.
               </div>
@@ -226,6 +202,9 @@ export function ClinicApply() {
               <p className="text-text-secondary mb-8">
                 Thank you for your interest. At this time, your clinic does not meet the minimum infrastructure requirements for the Novalyte network.
               </p>
+              <div className="mb-6 rounded-lg border border-danger/20 bg-danger/10 px-4 py-3 text-left text-sm text-danger">
+                Reference: <span className="font-mono text-white">{applicationId}</span>
+              </div>
               <div className="bg-[#15202B] p-4 rounded-lg border border-surface-3 mb-8 text-left text-sm text-text-secondary">
                 <p className="mb-2"><strong className="text-white">Common reasons for decline:</strong></p>
                 <ul className="list-disc pl-5 space-y-1">
@@ -498,6 +477,11 @@ export function ClinicApply() {
           </AnimatePresence>
 
           <div className="mt-8 flex justify-between items-center border-t border-surface-3 pt-6">
+            {submitError && (
+              <div className="rounded-lg border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger">
+                {submitError}
+              </div>
+            )}
             {step > 1 ? (
               <Button variant="ghost" onClick={() => setStep(step - 1)} className="text-text-secondary hover:text-white">
                 <ChevronLeft className="w-4 h-4 mr-2" /> Back

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useShell } from './ShellContext';
 import { X, Sparkles, Send, Activity, FileText, Zap } from 'lucide-react';
-import { AIService } from '@/src/services/ai';
+import { AIService, AIServiceError } from '@/src/services/ai';
 
 export function AICopilot() {
   const { isCopilotOpen, setCopilotOpen } = useShell();
@@ -10,18 +10,22 @@ export function AICopilot() {
     { role: 'assistant', content: 'I am your Novalyte AI Copilot. I can analyze patient dossiers, draft outreach campaigns, or query system metrics. How can I assist you today?' }
   ]);
   const [input, setInput] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-    
-    const userMessage = { role: 'user', content: input };
+  const sendMessage = async (prompt: string) => {
+    const trimmedPrompt = prompt.trim();
+    if (!trimmedPrompt || isSending) return;
+
+    const userMessage = { role: 'user', content: trimmedPrompt };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
-    
+    setError('');
+    setIsSending(true);
+
     try {
-      const chatHistory = messages.map(m => ({ role: m.role, content: m.content }));
-      const response = await AIService.chat(input, chatHistory);
+      const chatHistory = [...messages, userMessage].map(m => ({ role: m.role, content: m.content }));
+      const response = await AIService.chat(trimmedPrompt, chatHistory);
       
       setMessages(prev => [...prev, { 
         role: 'assistant', 
@@ -29,12 +33,32 @@ export function AICopilot() {
       }]);
     } catch (error) {
       console.error('Copilot error:', error);
+      setError(
+        error instanceof AIServiceError && error.status === 503
+          ? 'Copilot is temporarily unavailable. Please try again in a moment.'
+          : error instanceof AIServiceError && error.status === 504
+            ? 'Copilot timed out while waiting for the AI provider. Please retry.'
+            : 'Copilot is unavailable right now. Please try again in a moment.',
+      );
       setMessages(prev => [...prev, { 
         role: 'assistant', 
-        content: 'I encountered an error connecting to the intelligence server.' 
+        content: error instanceof Error ? error.message : 'I encountered an error connecting to the intelligence server.' 
       }]);
+    } finally {
+      setIsSending(false);
     }
   };
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await sendMessage(input);
+  };
+
+  const suggestions = [
+    { icon: Activity, label: 'Analyze Pipeline', prompt: 'Analyze my current patient pipeline and tell me what needs immediate attention.' },
+    { icon: FileText, label: 'Draft Outreach', prompt: 'Draft a concise outreach sequence for newly qualified hormone optimization leads.' },
+    { icon: Zap, label: 'System Health', prompt: 'Summarize the current platform health and any operational risks I should know about.' },
+  ];
 
   return (
     <AnimatePresence>
@@ -80,20 +104,34 @@ export function AICopilot() {
                   </div>
                 </div>
               ))}
+              {isSending ? (
+                <div className="flex justify-start">
+                  <div className="max-w-[85%] rounded-2xl px-4 py-3 bg-surface-2 border border-surface-3 text-text-primary rounded-tl-sm">
+                    <p className="text-sm leading-relaxed">Thinking…</p>
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             {/* Suggestions */}
             <div className="p-4 border-t border-surface-3 bg-surface-2/30">
+              {error ? (
+                <div className="mb-3 rounded-lg border border-danger/20 bg-danger/10 px-3 py-2 text-xs text-danger">
+                  {error}
+                </div>
+              ) : null}
               <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-2">
-                <button className="flex-shrink-0 px-3 py-1.5 rounded-full bg-surface-3 border border-surface-3 text-xs text-text-secondary hover:text-text-primary hover:border-primary/50 transition-colors flex items-center gap-1">
-                  <Activity className="w-3 h-3" /> Analyze Pipeline
-                </button>
-                <button className="flex-shrink-0 px-3 py-1.5 rounded-full bg-surface-3 border border-surface-3 text-xs text-text-secondary hover:text-text-primary hover:border-primary/50 transition-colors flex items-center gap-1">
-                  <FileText className="w-3 h-3" /> Draft Outreach
-                </button>
-                <button className="flex-shrink-0 px-3 py-1.5 rounded-full bg-surface-3 border border-surface-3 text-xs text-text-secondary hover:text-text-primary hover:border-primary/50 transition-colors flex items-center gap-1">
-                  <Zap className="w-3 h-3" /> System Health
-                </button>
+                {suggestions.map((suggestion) => (
+                  <button
+                    key={suggestion.label}
+                    type="button"
+                    disabled={isSending}
+                    onClick={() => void sendMessage(suggestion.prompt)}
+                    className="flex-shrink-0 px-3 py-1.5 rounded-full bg-surface-3 border border-surface-3 text-xs text-text-secondary hover:text-text-primary hover:border-primary/50 transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <suggestion.icon className="w-3 h-3" /> {suggestion.label}
+                  </button>
+                ))}
               </div>
               
               {/* Input */}
@@ -103,11 +141,12 @@ export function AICopilot() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Ask Copilot..."
+                  disabled={isSending}
                   className="w-full pl-4 pr-12 py-3 bg-surface-1 border border-surface-3 rounded-xl text-sm focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all"
                 />
                 <button 
                   type="submit"
-                  disabled={!input.trim()}
+                  disabled={!input.trim() || isSending}
                   className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary hover:text-background transition-colors"
                 >
                   <Send className="w-4 h-4" />

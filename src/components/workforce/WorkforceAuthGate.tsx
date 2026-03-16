@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Activity, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/src/lib/auth/AuthContext';
+import { AccessCodeAuth } from '@/src/components/auth/AccessCodeAuth';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 
@@ -16,23 +17,8 @@ export function WorkforceAuthGate({
   title,
   description,
 }: WorkforceAuthGateProps) {
-  const { loading, user, signInWithGoogle } = useAuth();
-  const [isSigningIn, setIsSigningIn] = React.useState(false);
+  const { loading, user } = useAuth();
   const [error, setError] = React.useState('');
-
-  const handleSignIn = async () => {
-    setIsSigningIn(true);
-    setError('');
-
-    try {
-      await signInWithGoogle();
-    } catch (signInError) {
-      console.error('Workforce sign-in failed:', signInError);
-      setError('Google sign-in failed. Verify Supabase Google Auth and redirect URLs, then try again.');
-    } finally {
-      setIsSigningIn(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -59,7 +45,7 @@ export function WorkforceAuthGate({
           <div className="flex items-start gap-3">
             <ShieldCheck className="w-5 h-5 text-secondary mt-0.5 shrink-0" />
             <p className="text-sm text-text-secondary">
-              Workforce profiles, applications, interviews, and offers are now persisted server-side and require an authenticated account.
+              Workforce profiles, applications, interviews, and offers are now persisted server-side. Use an email access code as the primary path, or continue with Google or LinkedIn.
             </p>
           </div>
         </div>
@@ -71,10 +57,13 @@ export function WorkforceAuthGate({
         ) : null}
 
         <div className="mt-8 flex flex-col sm:flex-row gap-3">
-          <Button onClick={handleSignIn} className="flex-1 bg-secondary hover:bg-secondary/90 text-white font-semibold" disabled={isSigningIn}>
-            {isSigningIn ? 'Opening Google sign-in...' : 'Sign In with Google'}
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
+          <div className="flex-1">
+            <AccessCodeAuth
+              modeLabel="Practitioner and workforce access"
+              helperText="Request a secure access code to the email tied to your profile, or continue with a configured Google or LinkedIn account."
+              providers={['google', 'linkedin']}
+            />
+          </div>
           <Link to="/workforce" className="flex-1">
             <Button variant="outline" className="w-full border-surface-3 text-white hover:bg-surface-2">
               Back to Workforce

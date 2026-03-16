@@ -5,24 +5,26 @@ import {
   Building2, MapPin, Phone, Mail, CheckCircle2, AlertCircle,
   Plus, X, Users, Activity, Lock, CreditCard
 } from 'lucide-react';
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/src/firebase';
-import { useAuth } from '@/src/lib/auth/AuthContext';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/src/lib/auth/AuthContext';
+import { ClinicApiError, ClinicService } from '@/src/services/clinic';
 
 type TabId = 'profile' | 'specialties' | 'directory' | 'notifications' | 'integrations' | 'permissions';
 
 export function ClinicSettings() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>('profile');
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [saveError, setSaveError] = useState('');
 
   // Form State
-  const [formData, setFormData] = useState({
+  const defaultFormData = {
     clinicName: "",
     npiNumber: "",
     email: "",
@@ -37,48 +39,54 @@ export function ClinicSettings() {
     notifyNewLeads: true,
     notifyMessages: true,
     notifySystem: false
-  });
+  };
+  const [formData, setFormData] = useState(defaultFormData);
+  const [initialFormData, setInitialFormData] = useState(defaultFormData);
 
   const [newSpecialty, setNewSpecialty] = useState('');
 
   useEffect(() => {
     const fetchClinicData = async () => {
-      if (!user) return;
       try {
-        const clinicSnap = await getDoc(doc(db, 'clinics', user.uid));
-        if (clinicSnap.exists()) {
-          const data = clinicSnap.data();
-          setFormData({
-            clinicName: data.name || "",
-            npiNumber: data.npiNumber || "",
-            email: data.email || "",
-            phone: data.phone || "",
-            address: data.address || "",
-            city: data.city || "",
-            state: data.state || "",
-            zip: data.zip || "",
-            specialties: data.specialties || [],
-            isPublic: data.isPublic ?? true,
-            acceptsNewPatients: data.acceptsNewPatients ?? true,
-            notifyNewLeads: data.notifyNewLeads ?? true,
-            notifyMessages: data.notifyMessages ?? true,
-            notifySystem: data.notifySystem ?? false
-          });
-        }
+        const response = await ClinicService.getProfile();
+        const nextData = {
+          clinicName: response.clinic.clinicName || "",
+          npiNumber: response.clinic.npiNumber || "",
+          email: response.clinic.email || "",
+          phone: response.clinic.phone || "",
+          address: response.clinic.address || "",
+          city: response.clinic.city || "",
+          state: response.clinic.state || "",
+          zip: response.clinic.zip || "",
+          specialties: response.clinic.specialties || [],
+          isPublic: response.clinic.isPublic ?? true,
+          acceptsNewPatients: response.clinic.acceptsNewPatients ?? true,
+          notifyNewLeads: response.clinic.notifyNewLeads ?? true,
+          notifyMessages: response.clinic.notifyMessages ?? true,
+          notifySystem: response.clinic.notifySystem ?? false
+        };
+        setFormData(nextData);
+        setInitialFormData(nextData);
       } catch (error) {
         console.error("Error fetching clinic data:", error);
+        setSaveError(
+          error instanceof ClinicApiError
+            ? error.message
+            : 'Unable to load clinic settings right now.',
+        );
       } finally {
         setLoading(false);
       }
     };
 
     fetchClinicData();
-  }, [user]);
+  }, []);
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setHasUnsavedChanges(true);
     setShowSuccess(false);
+    setSaveError('');
   };
 
   const handleAddSpecialty = (e: React.KeyboardEvent | React.MouseEvent) => {
@@ -95,35 +103,33 @@ export function ClinicSettings() {
   };
 
   const handleSave = async () => {
-    if (!user) return;
     setIsSaving(true);
+    setSaveError('');
     try {
-      await updateDoc(doc(db, 'clinics', user.uid), {
-        name: formData.clinicName,
-        npiNumber: formData.npiNumber,
-        email: formData.email,
-        phone: formData.phone,
-        address: formData.address,
-        city: formData.city,
-        state: formData.state,
-        zip: formData.zip,
-        specialties: formData.specialties,
-        isPublic: formData.isPublic,
-        acceptsNewPatients: formData.acceptsNewPatients,
-        notifyNewLeads: formData.notifyNewLeads,
-        notifyMessages: formData.notifyMessages,
-        notifySystem: formData.notifySystem,
-        updatedAt: serverTimestamp()
-      });
+      await ClinicService.saveProfile(formData);
       
       setHasUnsavedChanges(false);
+      setInitialFormData(formData);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (error) {
       console.error("Error saving clinic data:", error);
+      setSaveError(
+        error instanceof ClinicApiError
+          ? error.message
+          : 'Unable to save changes right now. Please try again.',
+      );
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleDiscard = () => {
+    setFormData(initialFormData);
+    setHasUnsavedChanges(false);
+    setShowSuccess(false);
+    setSaveError('');
+    setNewSpecialty('');
   };
 
   const tabs: { id: TabId; label: string; icon: any }[] = [
@@ -151,6 +157,11 @@ export function ClinicSettings() {
         <div>
           <h1 className="text-3xl font-display font-bold text-white">Settings</h1>
           <p className="text-text-secondary mt-1">Configure your clinic profile, preferences, and system integrations.</p>
+          {saveError ? (
+            <div className="mt-4 rounded-lg border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger">
+              {saveError}
+            </div>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           <AnimatePresence>
@@ -170,9 +181,7 @@ export function ClinicSettings() {
             variant="outline" 
             className="border-surface-3 text-white hover:bg-surface-2 flex-grow sm:flex-grow-0"
             disabled={!hasUnsavedChanges || isSaving}
-            onClick={() => {
-              window.location.reload();
-            }}
+            onClick={handleDiscard}
           >
             Discard
           </Button>
@@ -495,7 +504,12 @@ export function ClinicSettings() {
                           </p>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm" className="border-surface-3 text-white hover:bg-surface-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-surface-3 text-white hover:bg-surface-2"
+                        onClick={() => navigate('/support/clinic')}
+                      >
                         Configure
                       </Button>
                     </div>
@@ -510,7 +524,10 @@ export function ClinicSettings() {
                           <p className="text-sm text-text-secondary mt-0.5">Not connected</p>
                         </div>
                       </div>
-                      <Button className="bg-white text-black hover:bg-white/90 font-bold">
+                      <Button
+                        className="bg-white text-black hover:bg-white/90 font-bold"
+                        onClick={() => navigate('/contact?role=clinic&topic=stripe_connection')}
+                      >
                         Connect
                       </Button>
                     </div>
@@ -526,7 +543,10 @@ export function ClinicSettings() {
                       <h2 className="text-xl font-bold text-white">User Access</h2>
                       <p className="text-sm text-text-secondary mt-1">Manage team members and their roles.</p>
                     </div>
-                    <Button className="bg-white text-black hover:bg-white/90 font-bold text-sm">
+                    <Button
+                      className="bg-white text-black hover:bg-white/90 font-bold text-sm"
+                      onClick={() => navigate('/contact?role=clinic&topic=team_access')}
+                    >
                       <Plus className="w-4 h-4 mr-2" /> Invite User
                     </Button>
                   </div>

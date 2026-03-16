@@ -1,6 +1,9 @@
 import express from 'express';
 import type { Request, Response } from 'express';
-import { FieldValue, adminAuth, adminDb } from '../lib/supabaseAdmin';
+import { isAdminRole as isSharedAdminRole, normalizeAppRole } from '../../shared/authRoles';
+import { FieldValue, adminDb } from '../lib/supabaseAdmin';
+import { readBearerToken, resolveAuthenticatedActor } from '../lib/authSession';
+import { deliverSubmissionAlert, maskEmail, maskName, truncateText } from '../lib/correspondence';
 import {
   calculateProfileStrength,
   scorePractitionerForRequest,
@@ -146,20 +149,11 @@ function asyncHandler(
 }
 
 function isAdminRole(role: string | null | undefined) {
-  return role === 'admin' || role === 'system_admin';
+  return isSharedAdminRole(role);
 }
 
 function isClinicRole(role: string | null | undefined) {
   return role === 'clinic' || role === 'clinic_admin' || isAdminRole(role);
-}
-
-function readBearerToken(req: Request) {
-  const header = req.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) {
-    return null;
-  }
-
-  return header.slice('Bearer '.length).trim();
 }
 
 function toIso(value: unknown) {
@@ -293,23 +287,16 @@ async function getActor(
     throw new WorkforceHttpError(401, 'Authentication required.');
   }
 
-  const decodedToken = await adminAuth.verifyIdToken(token);
-  const userDoc = await adminDb.collection(COLLECTIONS.users).doc(decodedToken.uid).get();
+  const resolvedActor = await resolveAuthenticatedActor(token);
+  const userDoc = await adminDb.collection(COLLECTIONS.users).doc(resolvedActor.uid).get();
   const userData = userDoc.exists ? userDoc.data() ?? {} : {};
-  const inferredRole =
-    decodedToken.email === 'admin@novalyte.io' && decodedToken.email_verified
-      ? 'admin'
-      : null;
+  const storedRole = normalizeAppRole(userData.role);
 
   const actor: Actor = {
-    uid: decodedToken.uid,
-    email: decodedToken.email ?? null,
-    name:
-      sanitizeString(userData.name) ||
-      sanitizeString(decodedToken.name) ||
-      sanitizeString(decodedToken.email) ||
-      'Unknown User',
-    role: sanitizeString(userData.role) || inferredRole,
+    uid: resolvedActor.uid,
+    email: resolvedActor.email ?? null,
+    name: sanitizeString(userData.name) || resolvedActor.name || 'Unknown User',
+    role: storedRole || resolvedActor.role,
   };
 
   req.actor = actor;
@@ -572,6 +559,14 @@ async function createNotification(
     status: notification.status || 'unread',
     createdAt: FieldValue.serverTimestamp(),
   });
+}
+
+async function notifySubmission(input: Parameters<typeof deliverSubmissionAlert>[0]) {
+  try {
+    await deliverSubmissionAlert(input);
+  } catch (error) {
+    console.error('Workforce submission alert failed:', error);
+  }
 }
 
 async function countPotentialMatches(request: StaffingRequest) {
@@ -858,6 +853,37 @@ router.put(
       link: '/practitioners/profile',
     });
 
+    await notifySubmission({
+      category: 'practitioner_onboarding',
+      title: existingProfile ? 'Practitioner profile updated' : 'New practitioner onboarding',
+      entityType: 'practitionerProfile',
+      entityId: actor.uid,
+      summary: `${payload.firstName} ${payload.lastName}`.trim() || actor.name,
+      route: '/api/workforce/practitioner-profile/me',
+      replyTo: payload.email || actor.email,
+      adminPath: '/admin/command-center',
+      emailFields: [
+        { label: 'Practitioner ID', value: actor.uid },
+        { label: 'Name', value: `${payload.firstName} ${payload.lastName}`.trim() || actor.name },
+        { label: 'Email', value: payload.email || actor.email || '' },
+        { label: 'Role', value: payload.role },
+        { label: 'Location', value: payload.location.label },
+        { label: 'Protocols', value: payload.protocols.join(', ') || 'None listed' },
+        { label: 'Profile Strength', value: `${payload.profileStrength}%` },
+      ],
+      slackFields: [
+        { label: 'Practitioner', value: maskName(`${payload.firstName} ${payload.lastName}`.trim()) || actor.uid },
+        { label: 'Email', value: maskEmail(payload.email || actor.email || '') },
+        { label: 'Role', value: payload.role },
+        { label: 'Profile', value: existingProfile ? 'updated' : 'new' },
+      ],
+      metadata: {
+        practitionerId: actor.uid,
+        profileStrength: payload.profileStrength,
+        created: !existingProfile,
+      },
+    });
+
     res.json({ profile });
   }),
 );
@@ -1044,6 +1070,38 @@ router.post(
       link: '/dashboard/workforce?tab=requisitions',
     });
 
+    await notifySubmission({
+      category: 'staffing_request',
+      title: 'New staffing request opened',
+      entityType: 'staffingRequest',
+      entityId: request.id,
+      summary: `${request.clinicName} opened a ${request.role} requisition for the workforce exchange.`,
+      route: '/api/workforce/staffing-requests',
+      replyTo: actor.email,
+      adminPath: '/admin/command-center',
+      emailFields: [
+        { label: 'Request ID', value: request.id },
+        { label: 'Clinic', value: request.clinicName },
+        { label: 'Title', value: request.title },
+        { label: 'Role', value: request.role },
+        { label: 'Work Mode', value: request.workMode },
+        { label: 'Urgency', value: request.urgency },
+        { label: 'Compensation', value: request.compensation },
+        { label: 'Description', value: truncateText(request.description, 800) },
+      ],
+      slackFields: [
+        { label: 'Request ID', value: request.id },
+        { label: 'Clinic', value: request.clinicName },
+        { label: 'Role', value: request.role },
+        { label: 'Urgency', value: request.urgency },
+      ],
+      metadata: {
+        clinicId: request.clinicId,
+        requestId: request.id,
+        matchCount,
+      },
+    });
+
     res.status(201).json({
       request: {
         ...request,
@@ -1170,6 +1228,38 @@ router.post(
       entityId: application.id,
       entityType: 'application',
       link: `/dashboard/workforce?tab=pipeline&requestId=${request.id}`,
+    });
+
+    await notifySubmission({
+      category: 'workforce_application',
+      title: 'New workforce application',
+      entityType: 'workforceApplication',
+      entityId: application.id,
+      summary: `${application.practitionerName} applied to ${request.title} at ${request.clinicName}.`,
+      route: '/api/workforce/applications',
+      replyTo: actor.email,
+      adminPath: '/admin/command-center',
+      emailFields: [
+        { label: 'Application ID', value: application.id },
+        { label: 'Practitioner', value: application.practitionerName },
+        { label: 'Practitioner Email', value: actor.email || '' },
+        { label: 'Clinic', value: request.clinicName },
+        { label: 'Request', value: request.title },
+        { label: 'Match Score', value: `${application.match.score}%` },
+        { label: 'Cover Note', value: truncateText(application.coverNote, 600) || 'None provided' },
+      ],
+      slackFields: [
+        { label: 'Application ID', value: application.id },
+        { label: 'Practitioner', value: maskName(application.practitionerName) },
+        { label: 'Practitioner Email', value: maskEmail(actor.email || '') },
+        { label: 'Clinic', value: request.clinicName },
+        { label: 'Match', value: `${application.match.score}%` },
+      ],
+      metadata: {
+        requestId: request.id,
+        clinicId: request.clinicId,
+        practitionerId: actor.uid,
+      },
     });
 
     res.status(201).json({ application });

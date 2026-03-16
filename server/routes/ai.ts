@@ -1,337 +1,249 @@
 import express from 'express';
-import { GoogleGenAI, Type, Schema } from '@google/genai';
+import { AIIntegrationError, aiService } from '../lib/aiService';
 
 const router = express.Router();
+type RouteOperation =
+  | 'triage'
+  | 'recommendations'
+  | 'clinic-insights'
+  | 'outreach'
+  | 'chat'
+  | 'research'
+  | 'workflow-suggestions';
 
-// Initialize Gemini client gracefully
-let ai: GoogleGenAI | null = null;
-try {
-  if (process.env.GEMINI_API_KEY) {
-    ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  } else {
-    console.warn('GEMINI_API_KEY is not set. AI endpoints will degrade gracefully.');
-  }
-} catch (error) {
-  console.error('Failed to initialize GoogleGenAI:', error);
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
-// Helper for retries and timeouts
-async function callGeminiWithRetry(model: string, contents: any, config: any, retries = 2, timeoutMs = 15000) {
-  if (!ai) {
-    throw new Error('AI service is not configured.');
+function getRequestId(res: express.Response) {
+  return typeof res.locals.requestId === 'string' ? res.locals.requestId : undefined;
+}
+
+function getRequiredString(
+  payload: Record<string, unknown>,
+  field: string,
+  operation: RouteOperation,
+  maxLength = 4000,
+) {
+  const raw = payload[field];
+  if (typeof raw !== 'string') {
+    throw new AIIntegrationError(400, 'invalid_request', normalizeOperation(operation), `${field} is required.`);
   }
 
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      let timeoutId: any;
-      const timeoutPromise = new Promise((_, reject) => {
-        timeoutId = setTimeout(() => reject(new Error('Request timed out')), timeoutMs);
-      });
+  const value = raw.trim().slice(0, maxLength);
+  if (!value) {
+    throw new AIIntegrationError(400, 'invalid_request', normalizeOperation(operation), `${field} is required.`);
+  }
 
-      const response = await Promise.race([
-        ai.models.generateContent({ model, contents, config }),
-        timeoutPromise
-      ]) as any;
-      
-      clearTimeout(timeoutId);
-      return response;
-    } catch (error: any) {
-      console.error(`Gemini API attempt ${attempt} failed:`, error);
-      if (attempt === retries) throw error;
-      // Exponential backoff
-      await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
-    }
+  return value;
+}
+
+function getOptionalString(payload: Record<string, unknown>, field: string, maxLength = 4000) {
+  const raw = payload[field];
+  if (typeof raw !== 'string') {
+    return '';
+  }
+  return raw.trim().slice(0, maxLength);
+}
+
+function getHistory(payload: Record<string, unknown>) {
+  const raw = payload.history;
+  if (!Array.isArray(raw)) {
+    return [] as Array<{ role: string; content: string }>;
+  }
+
+  return raw
+    .filter((entry): entry is Record<string, unknown> => isPlainObject(entry))
+    .map((entry) => ({
+      role: typeof entry.role === 'string' ? entry.role : 'user',
+      content: typeof entry.content === 'string' ? entry.content.trim().slice(0, 1200) : '',
+    }))
+    .filter((entry) => entry.content)
+    .slice(-10);
+}
+
+function normalizeOperation(operation: RouteOperation) {
+  switch (operation) {
+    case 'clinic-insights':
+      return 'clinic_insights' as const;
+    case 'workflow-suggestions':
+      return 'workflow_suggestions' as const;
+    default:
+      return operation.replace(/-/g, '_') as
+        | 'triage'
+        | 'recommendations'
+        | 'outreach'
+        | 'chat'
+        | 'research';
   }
 }
 
-// 1. Assessment Triage
+function getJsonObject(
+  payload: Record<string, unknown>,
+  field: string,
+  operation: RouteOperation,
+) {
+  const value = payload[field];
+  if (!isPlainObject(value)) {
+    throw new AIIntegrationError(
+      400,
+      'invalid_request',
+      normalizeOperation(operation),
+      `${field} must be an object.`,
+    );
+  }
+  return value;
+}
+
+function handleAiError(res: express.Response, operation: RouteOperation, error: unknown) {
+  if (error instanceof AIIntegrationError) {
+    return res.status(error.status).json({
+      error: error.message,
+      code: error.code,
+      operation,
+      requestId: getRequestId(res) || null,
+    });
+  }
+
+  console.error(
+    JSON.stringify({
+      level: 'error',
+      source: 'ai_routes',
+      message: 'unhandled_ai_route_error',
+      operation,
+      requestId: getRequestId(res) || null,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }),
+  );
+
+  return res.status(500).json({
+    error: 'AI service is unavailable right now. Please try again later.',
+    code: 'ai_route_failure',
+    operation,
+    requestId: getRequestId(res) || null,
+  });
+}
+
 router.post('/triage', async (req, res) => {
+  const operation = 'triage';
+
   try {
-    const { patientData } = req.body;
-    
-    if (!ai) {
-      // Graceful degradation
-      return res.json({
-        score: 75,
-        riskLevel: 'medium',
-        rationale: 'Fallback analysis due to AI service unavailability.',
-        confidenceScore: 0.5,
-        nextBestAction: 'Schedule standard consultation.'
-      });
+    if (!isPlainObject(req.body)) {
+      throw new AIIntegrationError(400, 'invalid_request', 'triage', 'Invalid request payload.');
     }
 
-    const response = await callGeminiWithRetry('gemini-3-flash-preview', 
-      `Analyze this patient data and provide triage scoring: ${JSON.stringify(patientData)}`,
-      {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            score: { type: Type.NUMBER, description: 'Triage score from 0 to 100' },
-            riskLevel: { type: Type.STRING, description: 'low, medium, or high' },
-            rationale: { type: Type.STRING, description: 'Explanation for the score and risk level' },
-            confidenceScore: { type: Type.NUMBER, description: 'Confidence from 0.0 to 1.0' },
-            nextBestAction: { type: Type.STRING, description: 'Recommended next step in the workflow' }
-          },
-          required: ['score', 'riskLevel', 'rationale', 'confidenceScore', 'nextBestAction']
-        }
-      }
-    );
-
-    const result = JSON.parse(response.text);
-    res.json(result);
-  } catch (error: any) {
-    console.error('Triage error:', error);
-    res.status(500).json({ error: 'Failed to process triage' });
+    const patientData = getJsonObject(req.body, 'patientData', operation);
+    const result = await aiService.generateTriage(patientData, getRequestId(res));
+    return res.json(result);
+  } catch (error) {
+    return handleAiError(res, operation, error);
   }
 });
 
-// 2. Recommendations
 router.post('/recommendations', async (req, res) => {
+  const operation = 'recommendations';
+
   try {
-    const { profile, context } = req.body;
-    
-    if (!ai) {
-      return res.json({
-        recommendations: ['Standard Protocol'],
-        rationale: 'Fallback recommendations.',
-        confidenceScore: 0.5,
-        nextBestAction: 'Review manually.'
-      });
+    if (!isPlainObject(req.body)) {
+      throw new AIIntegrationError(400, 'invalid_request', 'recommendations', 'Invalid request payload.');
     }
 
-    const response = await callGeminiWithRetry('gemini-3-flash-preview', 
-      `Generate clinical or product recommendations for this profile: ${JSON.stringify(profile)}. Context: ${context}`,
-      {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            recommendations: { 
-              type: Type.ARRAY, 
-              items: { type: Type.STRING } 
-            },
-            rationale: { type: Type.STRING },
-            confidenceScore: { type: Type.NUMBER },
-            nextBestAction: { type: Type.STRING }
-          },
-          required: ['recommendations', 'rationale', 'confidenceScore', 'nextBestAction']
-        }
-      }
-    );
-
-    const result = JSON.parse(response.text);
-    res.json(result);
-  } catch (error: any) {
-    console.error('Recommendations error:', error);
-    res.status(500).json({ error: 'Failed to generate recommendations' });
+    const profile = getJsonObject(req.body, 'profile', operation);
+    const context = getOptionalString(req.body, 'context', 1500);
+    const result = await aiService.generateRecommendations(profile, context, getRequestId(res));
+    return res.json(result);
+  } catch (error) {
+    return handleAiError(res, operation, error);
   }
 });
 
-// 3. Clinic Insights
 router.post('/clinic-insights', async (req, res) => {
+  const operation = 'clinic-insights';
+
   try {
-    const { clinicData, metrics } = req.body;
-    
-    if (!ai) {
-      return res.json({
-        insights: ['Performance is stable.'],
-        rationale: 'Fallback insights.',
-        confidenceScore: 0.5,
-        nextBestAction: 'Continue current operations.'
-      });
+    if (!isPlainObject(req.body)) {
+      throw new AIIntegrationError(400, 'invalid_request', 'clinic_insights', 'Invalid request payload.');
     }
 
-    const response = await callGeminiWithRetry('gemini-3-flash-preview', 
-      `Analyze clinic performance and generate insights. Data: ${JSON.stringify(clinicData)}, Metrics: ${JSON.stringify(metrics)}`,
-      {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            insights: { type: Type.ARRAY, items: { type: Type.STRING } },
-            rationale: { type: Type.STRING },
-            confidenceScore: { type: Type.NUMBER },
-            nextBestAction: { type: Type.STRING }
-          },
-          required: ['insights', 'rationale', 'confidenceScore', 'nextBestAction']
-        }
-      }
-    );
-
-    const result = JSON.parse(response.text);
-    res.json(result);
-  } catch (error: any) {
-    console.error('Clinic insights error:', error);
-    res.status(500).json({ error: 'Failed to generate clinic insights' });
+    const clinicData = getJsonObject(req.body, 'clinicData', operation);
+    const metrics = getJsonObject(req.body, 'metrics', operation);
+    const result = await aiService.generateClinicInsights(clinicData, metrics, getRequestId(res));
+    return res.json(result);
+  } catch (error) {
+    return handleAiError(res, operation, error);
   }
 });
 
-// 4. Outreach Generation
 router.post('/outreach', async (req, res) => {
+  const operation = 'outreach';
+
   try {
-    const { patientName, intent, context } = req.body;
-    
-    if (!ai) {
-      return res.json({
-        message: `Hi ${patientName}, based on your interest in ${intent}, we have a few clinics that match your profile perfectly. Would you like to schedule a consultation?`,
-        rationale: 'Fallback template.',
-        confidenceScore: 0.8,
-        nextBestAction: 'Send message.'
-      });
+    if (!isPlainObject(req.body)) {
+      throw new AIIntegrationError(400, 'invalid_request', 'outreach', 'Invalid request payload.');
     }
 
-    const response = await callGeminiWithRetry('gemini-3-flash-preview', 
-      `Draft a personalized outreach message for ${patientName} who is interested in ${intent}. Context: ${context}`,
-      {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            message: { type: Type.STRING },
-            rationale: { type: Type.STRING },
-            confidenceScore: { type: Type.NUMBER },
-            nextBestAction: { type: Type.STRING }
-          },
-          required: ['message', 'rationale', 'confidenceScore', 'nextBestAction']
-        }
-      }
-    );
-
-    const result = JSON.parse(response.text);
-    res.json(result);
-  } catch (error: any) {
-    console.error('Outreach error:', error);
-    res.status(500).json({ error: 'Failed to generate outreach message' });
+    const patientName = getRequiredString(req.body, 'patientName', operation, 120);
+    const intent = getRequiredString(req.body, 'intent', operation, 250);
+    const context = getOptionalString(req.body, 'context', 1500);
+    const result = await aiService.generateOutreach(patientName, intent, context, getRequestId(res));
+    return res.json(result);
+  } catch (error) {
+    return handleAiError(res, operation, error);
   }
 });
 
-// 5. Chatbot Responses
 router.post('/chat', async (req, res) => {
+  const operation = 'chat';
+
   try {
-    const { message, history } = req.body;
-    
-    if (!ai) {
-      return res.json({
-        response: 'I am currently operating in offline mode. Please contact support for assistance.',
-        rationale: 'AI service unavailable.',
-        confidenceScore: 1.0,
-        nextBestAction: 'Contact human support.',
-        suggestedActions: []
-      });
+    if (!isPlainObject(req.body)) {
+      throw new AIIntegrationError(400, 'invalid_request', 'chat', 'Invalid request payload.');
     }
 
-    const response = await callGeminiWithRetry('gemini-3-flash-preview', 
-      `User message: ${message}. Chat history: ${JSON.stringify(history)}. Provide a helpful, medically safe response.`,
-      {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            response: { type: Type.STRING },
-            rationale: { type: Type.STRING },
-            confidenceScore: { type: Type.NUMBER },
-            nextBestAction: { type: Type.STRING },
-            suggestedActions: { 
-              type: Type.ARRAY, 
-              items: { 
-                type: Type.OBJECT,
-                properties: {
-                  label: { type: Type.STRING },
-                  path: { type: Type.STRING }
-                },
-                required: ['label', 'path']
-              } 
-            }
-          },
-          required: ['response', 'rationale', 'confidenceScore', 'nextBestAction', 'suggestedActions']
-        }
-      }
-    );
-
-    const result = JSON.parse(response.text);
-    res.json(result);
-  } catch (error: any) {
-    console.error('Chat error:', error);
-    res.status(500).json({ error: 'Failed to generate chat response' });
+    const message = getRequiredString(req.body, 'message', operation, 2000);
+    const history = getHistory(req.body);
+    const result = await aiService.generateChatResponse(message, history, getRequestId(res));
+    return res.json(result);
+  } catch (error) {
+    return handleAiError(res, operation, error);
   }
 });
 
-// 6. Research Tasks
 router.post('/research', async (req, res) => {
+  const operation = 'research';
+
   try {
-    const { query } = req.body;
-    
-    if (!ai) {
-      return res.json({
-        findings: 'Research unavailable in offline mode.',
-        rationale: 'AI service unavailable.',
-        confidenceScore: 0.0,
-        nextBestAction: 'Try again later.'
-      });
+    if (!isPlainObject(req.body)) {
+      throw new AIIntegrationError(400, 'invalid_request', 'research', 'Invalid request payload.');
     }
 
-    const response = await callGeminiWithRetry('gemini-3.1-pro-preview', 
-      `Conduct medical/clinical research on the following query: ${query}`,
-      {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            findings: { type: Type.STRING },
-            rationale: { type: Type.STRING },
-            confidenceScore: { type: Type.NUMBER },
-            nextBestAction: { type: Type.STRING }
-          },
-          required: ['findings', 'rationale', 'confidenceScore', 'nextBestAction']
-        }
-      }
-    );
-
-    const result = JSON.parse(response.text);
-    res.json(result);
-  } catch (error: any) {
-    console.error('Research error:', error);
-    res.status(500).json({ error: 'Failed to perform research' });
+    const query = getRequiredString(req.body, 'query', operation, 3000);
+    const result = await aiService.performResearch(query, getRequestId(res));
+    return res.json(result);
+  } catch (error) {
+    return handleAiError(res, operation, error);
   }
 });
 
-// 7. Workflow Suggestions
 router.post('/workflow-suggestions', async (req, res) => {
+  const operation = 'workflow-suggestions';
+
   try {
-    const { currentState, role } = req.body;
-    
-    if (!ai) {
-      return res.json({
-        suggestions: ['Review pending tasks.'],
-        rationale: 'Fallback suggestions.',
-        confidenceScore: 0.5,
-        nextBestAction: 'Manual review.'
-      });
+    if (!isPlainObject(req.body)) {
+      throw new AIIntegrationError(
+        400,
+        'invalid_request',
+        'workflow_suggestions',
+        'Invalid request payload.',
+      );
     }
 
-    const response = await callGeminiWithRetry('gemini-3-flash-preview', 
-      `Based on the current state: ${JSON.stringify(currentState)} and role: ${role}, suggest the next best workflow actions.`,
-      {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            suggestions: { type: Type.ARRAY, items: { type: Type.STRING } },
-            rationale: { type: Type.STRING },
-            confidenceScore: { type: Type.NUMBER },
-            nextBestAction: { type: Type.STRING }
-          },
-          required: ['suggestions', 'rationale', 'confidenceScore', 'nextBestAction']
-        }
-      }
-    );
-
-    const result = JSON.parse(response.text);
-    res.json(result);
-  } catch (error: any) {
-    console.error('Workflow suggestions error:', error);
-    res.status(500).json({ error: 'Failed to generate workflow suggestions' });
+    const currentState = getJsonObject(req.body, 'currentState', operation);
+    const role = getRequiredString(req.body, 'role', operation, 120);
+    const result = await aiService.generateWorkflowSuggestions(currentState, role, getRequestId(res));
+    return res.json(result);
+  } catch (error) {
+    return handleAiError(res, operation, error);
   }
 });
 

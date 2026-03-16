@@ -7,11 +7,14 @@ import {
 } from 'lucide-react';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
+import { PublicService } from '@/src/services/public';
 
 export function ClinicICP() {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [profileId, setProfileId] = useState('');
 
   // Form State
   const [formData, setFormData] = useState({
@@ -43,6 +46,23 @@ export function ClinicICP() {
     setFormData(prev => ({ ...prev, [key]: value }));
   };
 
+  const isStepValid = () => {
+    switch (step) {
+      case 1:
+        return Boolean(formData.clinicName && formData.website && formData.contactName && formData.contactEmail);
+      case 2:
+        return Boolean(formData.primaryService);
+      case 3:
+        return Boolean(formData.targetAgeRange && formData.targetGender && (formData.geographyType === 'national' || formData.radius || formData.states));
+      case 4:
+        return Boolean(formData.minBudget && formData.urgencyLevel && formData.monthlyCapacity && formData.targetCPA);
+      case 5:
+        return true;
+      default:
+        return false;
+    }
+  };
+
   const toggleService = (service: string) => {
     setFormData(prev => {
       const current = prev.secondaryServices;
@@ -55,7 +75,7 @@ export function ClinicICP() {
   };
 
   const handleNext = () => {
-    if (step < 5) setStep(step + 1);
+    if (step < 5 && isStepValid()) setStep(step + 1);
   };
 
   const handleBack = () => {
@@ -64,10 +84,17 @@ export function ClinicICP() {
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
-    // Simulate API call to /api/clinic-icp
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsSubmitting(false);
-    setIsSuccess(true);
+    setSubmitError('');
+
+    try {
+      const response = await PublicService.submitClinicIcp(formData);
+      setProfileId(response.profileId);
+      setIsSuccess(true);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Unable to save your ICP profile right now.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isSuccess) {
@@ -85,6 +112,9 @@ export function ClinicICP() {
           <p className="text-text-secondary mb-8 text-lg">
             Your Ideal Patient Profile has been locked into the routing engine. We are now configuring custom lead funnels based on your exact parameters.
           </p>
+          <div className="mb-8 rounded-xl border border-secondary/20 bg-secondary/10 px-4 py-3 text-left text-sm text-secondary">
+            Profile reference: <span className="font-mono text-white">{profileId}</span>
+          </div>
           
           <div className="bg-[#0B0F14] rounded-xl p-6 border border-surface-3 mb-8 text-left space-y-4">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
@@ -492,30 +522,36 @@ export function ClinicICP() {
             </AnimatePresence>
           </div>
 
-          {/* Footer Controls */}
-          <div className="p-6 bg-[#0B0F14] border-t border-surface-3 flex items-center justify-between">
-            <Button 
-              variant="outline" 
-              onClick={handleBack}
+	          {/* Footer Controls */}
+	          <div className="p-6 bg-[#0B0F14] border-t border-surface-3 flex items-center justify-between">
+            {submitError && (
+              <div className="mr-4 max-w-md rounded-lg border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger">
+                {submitError}
+              </div>
+            )}
+	            <Button 
+	              variant="outline" 
+	              onClick={handleBack}
               disabled={step === 1 || isSubmitting}
               className="border-surface-3 bg-surface-1 text-white hover:bg-surface-2 disabled:opacity-50"
             >
               <ChevronLeft className="w-4 h-4 mr-2" /> Back
             </Button>
             
-            {step < 5 ? (
-              <Button 
-                onClick={handleNext}
-                className="bg-secondary hover:bg-secondary/90 text-white font-bold"
-              >
+	            {step < 5 ? (
+	              <Button 
+	                onClick={handleNext}
+	                disabled={!isStepValid() || isSubmitting}
+	                className="bg-secondary hover:bg-secondary/90 text-white font-bold"
+	              >
                 Continue <ChevronRight className="w-4 h-4 ml-2" />
               </Button>
             ) : (
-              <Button 
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="bg-secondary hover:bg-secondary/90 text-white font-bold min-w-[160px]"
-              >
+	              <Button 
+	                onClick={handleSubmit}
+	                disabled={isSubmitting || !isStepValid()}
+	                className="bg-secondary hover:bg-secondary/90 text-white font-bold min-w-[160px]"
+	              >
                 {isSubmitting ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

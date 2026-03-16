@@ -1,101 +1,95 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { 
   Search, Filter, MoreVertical, CheckCircle2, XCircle, 
-  Clock, ArrowRight, TrendingUp, Users, DollarSign, 
+  Clock, ArrowRight, TrendingUp, Users, 
   Target, ShieldCheck, Zap, BarChart3, ChevronDown, Activity
 } from 'lucide-react';
-import { collection, query, where, onSnapshot, doc, getDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/src/firebase';
-import { useAuth } from '@/src/lib/auth/AuthContext';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 import { useShell } from '../components/shell/ShellContext';
-
-import { AIService } from '../services/ai';
+import { ClinicApiError, ClinicService, type ClinicLead } from '../services/clinic';
 
 export function ClinicLeads() {
-  const { user, role } = useAuth();
   const { openEntity } = useShell();
   const [filter, setFilter] = useState('all');
   const [expandedLead, setExpandedLead] = useState<string | null>(null);
-  const [leads, setLeads] = useState<any[]>([]);
+  const [leads, setLeads] = useState<ClinicLead[]>([]);
   const [loading, setLoading] = useState(true);
   const [scoringLeadId, setScoringLeadId] = useState<string | null>(null);
+  const [actionFeedback, setActionFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   React.useEffect(() => {
-    if (!user) return;
+    let isActive = true;
 
-    let q = query(collection(db, 'leads'));
-    if (role === 'clinic') {
-      q = query(collection(db, 'leads'), where('clinicId', '==', user.uid));
-    }
-
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const leadsData = await Promise.all(snapshot.docs.map(async (leadDoc) => {
-        const lead = leadDoc.data();
-        let patientData: any = {};
-        
-        if (lead.patientId) {
-          const patientSnap = await getDoc(doc(db, 'patients', lead.patientId));
-          if (patientSnap.exists()) patientData = patientSnap.data();
+    const loadLeads = async (silent = false) => {
+      if (!silent) {
+        setLoading(true);
+      }
+      try {
+        const response = await ClinicService.getLeads();
+        if (isActive) {
+          setLeads(response.leads);
         }
+      } catch (error) {
+        console.error('Error fetching leads:', error);
+        if (isActive) {
+          setActionFeedback({
+            type: 'error',
+            message: error instanceof ClinicApiError ? error.message : 'Unable to load clinic leads right now.',
+          });
+        }
+      } finally {
+        if (isActive) {
+          setLoading(false);
+        }
+      }
+    };
 
-        return {
-          id: leadDoc.id,
-          patientId: lead.patientId,
-          name: patientData.firstName ? `${patientData.firstName} ${patientData.lastName?.charAt(0) || ''}.` : 'Unknown Patient',
-          intent: lead.treatmentInterest || 'General',
-          score: lead.score || 0,
-          status: lead.status || 'new',
-          time: lead.createdAt ? 'Active' : 'New',
-          email: patientData.email || 'N/A',
-          phone: patientData.phone || 'N/A',
-          source: lead.source || 'Organic Search',
-          budget: lead.budget || 'Unknown',
-          urgency: lead.urgency || 'Unknown',
-          aiReasoning: lead.aiReasoning || 'Awaiting AI analysis...',
-          patientRaw: patientData
-        };
-      }));
-      
-      setLeads(leadsData);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching leads:", error);
-      setLoading(false);
-    });
+    void loadLeads();
+    const interval = window.setInterval(() => {
+      void loadLeads(true);
+    }, 30000);
 
-    return () => unsubscribe();
-  }, [user, role]);
+    return () => {
+      isActive = false;
+      window.clearInterval(interval);
+    };
+  }, []);
 
   const handleRunScoring = async (leadId: string) => {
     setScoringLeadId(leadId);
     try {
-      const lead = leads.find(l => l.id === leadId);
-      if (!lead || !lead.patientRaw) return;
+      const lead = leads.find((entry) => entry.id === leadId);
+      if (!lead) {
+        return;
+      }
 
-      const insights = await AIService.generatePatientInsights(lead.patientRaw);
-      
-      const leadRef = doc(db, 'leads', leadId);
-      await updateDoc(leadRef, {
-        score: insights.score || insights.confidenceScore * 100 || 85,
-        aiReasoning: insights.summary,
-        updatedAt: serverTimestamp()
-      });
-
-      // Log audit event
-      await addDoc(collection(db, 'auditEvents'), {
-        clinicId: user?.uid,
-        action: `AI Scoring Completed`,
-        entityId: leadId,
-        entityName: lead.name,
-        timestamp: serverTimestamp(),
-        type: 'info'
+      const result = await ClinicService.scoreLead(leadId);
+      setLeads((current) =>
+        current.map((entry) =>
+          entry.id === leadId
+            ? {
+                ...entry,
+                score: result.score,
+                aiSummary: result.summary,
+                intentSignal: result.nextBestAction || entry.intentSignal,
+              }
+            : entry,
+        ),
+      );
+      setActionFeedback({
+        type: 'success',
+        message: `AI scoring refreshed for ${lead.name}.`,
       });
     } catch (error) {
       console.error("Error running AI scoring:", error);
+      setActionFeedback({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Unable to run AI scoring right now.',
+      });
     } finally {
       setScoringLeadId(null);
     }
@@ -103,27 +97,83 @@ export function ClinicLeads() {
 
   const handleStatusUpdate = async (leadId: string, newStatus: string) => {
     try {
-      const leadRef = doc(db, 'leads', leadId);
-      await updateDoc(leadRef, { 
-        status: newStatus,
-        updatedAt: serverTimestamp()
-      });
-
-      // Log audit event
-      await addDoc(collection(db, 'auditEvents'), {
-        clinicId: user?.uid,
-        action: `Lead ${newStatus}`,
-        entityId: leadId,
-        entityName: leads.find(l => l.id === leadId)?.name || 'Lead',
-        timestamp: serverTimestamp(),
-        type: newStatus === 'qualified' ? 'success' : 'warning'
+      await ClinicService.updateLead(leadId, { status: newStatus });
+      setLeads((current) =>
+        current.map((lead) => (lead.id === leadId ? { ...lead, status: newStatus } : lead)),
+      );
+      setActionFeedback({
+        type: 'success',
+        message: `Lead moved to ${newStatus}.`,
       });
     } catch (error) {
       console.error("Error updating lead status:", error);
+      setActionFeedback({
+        type: 'error',
+        message: 'Unable to update the lead status right now.',
+      });
     }
   };
 
-  const filteredLeads = filter === 'all' ? leads : leads.filter(l => l.status === filter);
+  const filteredLeads = leads.filter((lead) => {
+    const matchesFilter = filter === 'all' ? true : lead.status === filter;
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    const matchesQuery =
+      !normalizedQuery ||
+      [lead.name, lead.email, lead.intent, lead.source]
+        .join(' ')
+        .toLowerCase()
+        .includes(normalizedQuery);
+    return matchesFilter && matchesQuery;
+  });
+  const averageScore = useMemo(() => {
+    if (!leads.length) {
+      return 0;
+    }
+    return Math.round(leads.reduce((sum, lead) => sum + (lead.score || 0), 0) / leads.length);
+  }, [leads]);
+
+  const conversionRate = useMemo(() => {
+    if (!leads.length) {
+      return 0;
+    }
+    const converted = leads.filter((lead) =>
+      ['qualified', 'scheduled', 'treating'].includes(lead.status),
+    ).length;
+    return Math.round((converted / leads.length) * 100);
+  }, [leads]);
+
+  const sourceMetrics = useMemo(() => {
+    const metrics = new Map<string, { count: number; totalScore: number; converted: number }>();
+
+    leads.forEach((lead) => {
+      const key = lead.source || 'Direct Intake';
+      const current = metrics.get(key) || { count: 0, totalScore: 0, converted: 0 };
+      current.count += 1;
+      current.totalScore += lead.score || 0;
+      if (['qualified', 'scheduled', 'treating'].includes(lead.status)) {
+        current.converted += 1;
+      }
+      metrics.set(key, current);
+    });
+
+    return Array.from(metrics.entries())
+      .map(([source, value]) => ({
+        source,
+        volume: leads.length ? Math.round((value.count / leads.length) * 100) : 0,
+        score: value.count ? Math.round(value.totalScore / value.count) : 0,
+        conv: value.count ? Math.round((value.converted / value.count) * 100) : 0,
+      }))
+      .sort((left, right) => right.volume - left.volume)
+      .slice(0, 4);
+  }, [leads]);
+
+  if (loading && !leads.length) {
+    return (
+      <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -133,6 +183,15 @@ export function ClinicLeads() {
         <div>
           <h1 className="text-3xl font-display font-bold text-white">Lead Engine</h1>
           <p className="text-text-secondary mt-1">Acquisition metrics, quality control, and intake queue.</p>
+          {actionFeedback ? (
+            <div className={`mt-4 rounded-lg border px-4 py-3 text-sm ${
+              actionFeedback.type === 'success'
+                ? 'border-success/20 bg-success/10 text-success'
+                : 'border-danger/20 bg-danger/10 text-danger'
+            }`}>
+              {actionFeedback.message}
+            </div>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-2 border border-surface-3 flex-grow sm:flex-grow-0 justify-center">
@@ -147,19 +206,21 @@ export function ClinicLeads() {
               <Filter className="w-4 h-4 mr-2" /> Adjust Volume
             </Button>
           </Link>
-          <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-black font-bold">
-            <Zap className="w-4 h-4 mr-2" /> Buy Leads
-          </Button>
+          <Link to="/dashboard/marketplace" className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-black font-bold">
+              <Zap className="w-4 h-4 mr-2" /> Review Marketplace
+            </Button>
+          </Link>
         </div>
       </div>
 
       {/* Performance Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Lead Velocity', value: `${leads.length}/mo`, trend: '+2 vs last week', icon: Activity, color: 'text-primary', bg: 'bg-primary/10' },
-          { label: 'Avg AI Score', value: '84', trend: 'Top 10% network', icon: Target, color: 'text-secondary', bg: 'bg-secondary/10' },
-          { label: 'Cost Per Lead', value: '$45', trend: '-$5 vs target', icon: DollarSign, color: 'text-success', bg: 'bg-success/10' },
-          { label: 'Conversion Rate', value: '28%', trend: '+2.1% this mo', icon: TrendingUp, color: 'text-warning', bg: 'bg-warning/10' },
+          { label: 'Lead Velocity', value: `${leads.length}`, trend: 'Live intake count', icon: Activity, color: 'text-primary', bg: 'bg-primary/10' },
+          { label: 'Avg AI Score', value: averageScore ? String(averageScore) : '--', trend: 'Derived from live routed leads', icon: Target, color: 'text-secondary', bg: 'bg-secondary/10' },
+          { label: 'Qualified Pipeline', value: String(leads.filter((lead) => ['qualified', 'scheduled', 'treating'].includes(lead.status)).length), trend: 'Qualified, scheduled, or treating', icon: Users, color: 'text-success', bg: 'bg-success/10' },
+          { label: 'Conversion Rate', value: `${conversionRate}%`, trend: 'Qualified to active pipeline', icon: TrendingUp, color: 'text-warning', bg: 'bg-warning/10' },
         ].map((metric, i) => (
           <Card key={i} className="p-5 bg-[#0B0F14] border-surface-3">
             <div className="flex items-start justify-between mb-4">
@@ -185,26 +246,23 @@ export function ClinicLeads() {
           <Card className="p-6 bg-[#0B0F14] border-surface-3 h-full">
             <h2 className="text-lg font-bold text-white mb-6">Source Quality</h2>
             <div className="space-y-6">
-              {[
-                { source: 'Organic Search', volume: '45%', score: 88, conv: '32%' },
-                { source: 'Marketplace', volume: '30%', score: 92, conv: '38%' },
-                { source: 'Paid Social', volume: '15%', score: 72, conv: '18%' },
-                { source: 'Referral', volume: '10%', score: 85, conv: '45%' },
-              ].map((s, i) => (
-                <div key={i}>
+              {sourceMetrics.length ? sourceMetrics.map((s) => (
+                <div key={s.source}>
                   <div className="flex justify-between text-sm mb-2">
                     <span className="font-bold text-white">{s.source}</span>
-                    <span className="text-text-secondary">{s.volume}</span>
+                    <span className="text-text-secondary">{s.volume}%</span>
                   </div>
                   <div className="w-full h-2 bg-surface-2 rounded-full overflow-hidden mb-2">
-                    <div className="h-full bg-primary rounded-full" style={{ width: s.volume }} />
+                    <div className="h-full bg-primary rounded-full" style={{ width: `${s.volume}%` }} />
                   </div>
                   <div className="flex justify-between text-xs text-text-secondary">
                     <span>Avg Score: <span className="text-white">{s.score}</span></span>
-                    <span>Conv: <span className="text-success">{s.conv}</span></span>
+                    <span>Conv: <span className="text-success">{s.conv}%</span></span>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <p className="text-sm text-text-secondary">Lead source metrics will populate as routed leads arrive.</p>
+              )}
             </div>
             <Link to="/dashboard/intelligence">
               <Button variant="outline" className="w-full mt-8 border-surface-3 text-white hover:bg-surface-2">
@@ -240,6 +298,8 @@ export function ClinicLeads() {
                 <input 
                   type="text" 
                   placeholder="Search leads..." 
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
                   className="w-full pl-9 pr-4 py-1.5 bg-surface-2 border border-surface-3 rounded-lg text-sm text-white focus:outline-none focus:border-primary/50 transition-all placeholder:text-text-secondary/50"
                 />
               </div>
@@ -273,7 +333,7 @@ export function ClinicLeads() {
                         <div className="flex items-center gap-3 text-xs text-text-secondary">
                           <span className="truncate">{lead.intent}</span>
                           <span className="hidden sm:inline">•</span>
-                          <span className="hidden sm:flex items-center gap-1"><Clock className="w-3 h-3" /> {lead.time}</span>
+                          <span className="hidden sm:flex items-center gap-1"><Clock className="w-3 h-3" /> {lead.timeLabel}</span>
                         </div>
                       </div>
                     </div>
@@ -313,7 +373,7 @@ export function ClinicLeads() {
                             <div>
                               <h5 className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">AI Qualification Reasoning</h5>
                               <p className="text-sm text-white leading-relaxed p-3 rounded-lg bg-surface-2 border border-surface-3">
-                                {lead.aiReasoning}
+                                {lead.aiSummary}
                               </p>
                             </div>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -348,7 +408,7 @@ export function ClinicLeads() {
                                 </span>
                               )}
                             </Button>
-                            <Button className="bg-primary hover:bg-primary/90 text-black font-bold w-full md:w-auto" onClick={(e) => { e.stopPropagation(); openEntity('patient', lead.id); }}>
+                            <Button className="bg-primary hover:bg-primary/90 text-black font-bold w-full md:w-auto" onClick={(e) => { e.stopPropagation(); openEntity('patient', lead.patientId || lead.id); }}>
                               Open Dossier
                             </Button>
                             <Button 

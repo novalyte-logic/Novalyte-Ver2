@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
+import { AnalyticsEngine } from '@/src/lib/analytics/events';
+import { buildPatientAssessmentPath } from '@/src/lib/patientJourney';
 import { 
   Shield, Activity, Lock, ArrowRight, ChevronDown, CheckCircle2, 
   Stethoscope, Brain, Zap, Heart, TrendingUp, MapPin, Star, Quote 
@@ -12,22 +14,26 @@ const treatments = [
   {
     title: 'Hormone Optimization',
     description: 'Restore vitality, energy, and body composition with clinically managed TRT and hormone balancing.',
-    icon: Activity
+    icon: Activity,
+    path: buildPatientAssessmentPath({ entryPoint: 'patient_landing', goal: 'Hormone Optimization' }),
   },
   {
     title: 'Peptide Therapy',
     description: 'Accelerate recovery, enhance cognitive function, and promote cellular repair with targeted peptides.',
-    icon: Zap
+    icon: Zap,
+    path: buildPatientAssessmentPath({ entryPoint: 'patient_landing', goal: 'Longevity & Aging' }),
   },
   {
     title: 'Longevity Protocols',
     description: 'Extend healthspan through advanced diagnostics, metabolic interventions, and cellular health strategies.',
-    icon: Heart
+    icon: Heart,
+    path: buildPatientAssessmentPath({ entryPoint: 'patient_landing', goal: 'Longevity & Aging' }),
   },
   {
     title: 'Cognitive Enhancement',
     description: 'Sharpen focus, memory, and mental clarity with neuro-optimization and nootropic protocols.',
-    icon: Brain
+    icon: Brain,
+    path: buildPatientAssessmentPath({ entryPoint: 'patient_landing', goal: 'Cognitive Performance' }),
   }
 ];
 
@@ -74,6 +80,14 @@ const testimonials = [
 export function PatientLanding() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
+  const trackCta = (label: string, destination: string) => {
+    AnalyticsEngine.track('cta_click', {
+      source: 'patient_landing',
+      label,
+      destination,
+    });
+  };
+
   return (
     <div className="min-h-screen bg-[#05070A] flex flex-col">
       {/* Hero Section */}
@@ -103,13 +117,24 @@ export function PatientLanding() {
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link to="/patient/assessment" className="w-full sm:w-auto">
+              <Link
+                to={buildPatientAssessmentPath({ entryPoint: 'patient_landing' })}
+                className="w-full sm:w-auto"
+                onClick={() => {
+                  trackCta('hero_start_assessment', '/patient/assessment');
+                  AnalyticsEngine.track('assessment_start', { source: 'patient_landing' });
+                }}
+              >
                 <Button size="lg" className="w-full bg-secondary hover:bg-secondary-hover text-white border-none shadow-[0_0_30px_rgba(139,92,246,0.3)] group h-14 px-8 text-lg">
                   Start Private Assessment
                   <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
-              <Link to="/directory" className="w-full sm:w-auto">
+              <Link
+                to="/directory"
+                className="w-full sm:w-auto"
+                onClick={() => trackCta('hero_browse_directory', '/directory')}
+              >
                 <Button variant="outline" size="lg" className="w-full h-14 px-8 text-lg border-surface-3 hover:bg-surface-2 text-white">
                   Browse Clinic Directory
                 </Button>
@@ -181,7 +206,7 @@ export function PatientLanding() {
                 Discover clinical-grade treatments available through our elite network of optimization specialists.
               </p>
             </div>
-            <Link to="/directory">
+            <Link to="/directory" onClick={() => trackCta('explore_directory', '/directory')}>
               <Button variant="outline" className="border-surface-3 hover:bg-surface-2 text-white">
                 Explore Directory <ArrowRight className="ml-2 w-4 h-4" />
               </Button>
@@ -190,16 +215,28 @@ export function PatientLanding() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {treatments.map((treatment, i) => (
-              <Card key={i} className="p-6 bg-surface-1/80 backdrop-blur-sm border-surface-3 hover:border-primary/50 transition-all duration-300 group cursor-pointer">
-                <div className="w-12 h-12 rounded-xl bg-surface-2 flex items-center justify-center mb-6 group-hover:bg-primary/10 transition-colors">
-                  <treatment.icon className="w-6 h-6 text-text-secondary group-hover:text-primary transition-colors" />
-                </div>
-                <h3 className="text-lg font-bold text-white mb-3 group-hover:text-primary transition-colors">{treatment.title}</h3>
-                <p className="text-sm text-text-secondary mb-6 leading-relaxed">{treatment.description}</p>
-                <div className="mt-auto flex items-center text-sm font-medium text-text-secondary group-hover:text-primary transition-colors">
-                  Learn more <ArrowRight className="ml-1 w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-                </div>
-              </Card>
+              <Link
+                key={i}
+                to={treatment.path}
+                onClick={() => {
+                  trackCta(`treatment_${treatment.title.toLowerCase().replace(/\s+/g, '_')}`, treatment.path);
+                  AnalyticsEngine.track('assessment_start', {
+                    source: 'patient_landing_treatment',
+                    goal: treatment.title,
+                  });
+                }}
+              >
+                <Card className="p-6 bg-surface-1/80 backdrop-blur-sm border-surface-3 hover:border-primary/50 transition-all duration-300 group cursor-pointer h-full">
+                  <div className="w-12 h-12 rounded-xl bg-surface-2 flex items-center justify-center mb-6 group-hover:bg-primary/10 transition-colors">
+                    <treatment.icon className="w-6 h-6 text-text-secondary group-hover:text-primary transition-colors" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-3 group-hover:text-primary transition-colors">{treatment.title}</h3>
+                  <p className="text-sm text-text-secondary mb-6 leading-relaxed">{treatment.description}</p>
+                  <div className="mt-auto flex items-center text-sm font-medium text-text-secondary group-hover:text-primary transition-colors">
+                    Start intake <ArrowRight className="ml-1 w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                  </div>
+                </Card>
+              </Link>
             ))}
           </div>
         </div>
@@ -283,12 +320,23 @@ export function PatientLanding() {
             Take the 3-minute clinical assessment. Get matched with the right specialist. Start your protocol.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link to="/patient/assessment" className="w-full sm:w-auto">
+            <Link
+              to={buildPatientAssessmentPath({ entryPoint: 'patient_landing' })}
+              className="w-full sm:w-auto"
+              onClick={() => {
+                trackCta('footer_start_assessment', '/patient/assessment');
+                AnalyticsEngine.track('assessment_start', { source: 'patient_landing_footer' });
+              }}
+            >
               <Button size="lg" className="w-full bg-secondary hover:bg-secondary-hover text-white border-none shadow-[0_0_30px_rgba(139,92,246,0.3)] h-14 px-8 text-lg">
                 Start Private Assessment
               </Button>
             </Link>
-            <Link to="/directory" className="w-full sm:w-auto">
+            <Link
+              to="/directory"
+              className="w-full sm:w-auto"
+              onClick={() => trackCta('footer_browse_directory', '/directory')}
+            >
               <Button variant="outline" size="lg" className="w-full h-14 px-8 text-lg border-surface-3 hover:bg-surface-2 text-white">
                 <MapPin className="w-5 h-5 mr-2" /> Find a Clinic Near Me
               </Button>
@@ -299,4 +347,3 @@ export function PatientLanding() {
     </div>
   );
 }
-

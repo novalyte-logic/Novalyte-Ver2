@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Send, User, Sparkles, Activity, ArrowRight, ShieldAlert, Stethoscope, Search, BookOpen, ChevronRight } from 'lucide-react';
+import { Send, User, Sparkles, Activity, ShieldAlert, Stethoscope, Search, BookOpen, ChevronRight } from 'lucide-react';
 import { Button } from '@/src/components/ui/Button';
-import { Card } from '@/src/components/ui/Card';
-import { Link, useNavigate } from 'react-router-dom';
-import { AIService } from '@/src/services/ai';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/src/firebase';
+import { useNavigate } from 'react-router-dom';
+import { AIService, AIServiceError } from '@/src/services/ai';
+import { AnalyticsEngine } from '@/src/lib/analytics/events';
+import { normalizePatientRoutePath } from '@/src/lib/patientJourney';
 
 interface Action {
   label: string;
@@ -63,6 +62,16 @@ export function AskAI() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
+  const navigateToAction = (path: string, label: string) => {
+    const normalizedPath = normalizePatientRoutePath(path);
+    AnalyticsEngine.track('cta_click', {
+      source: 'ask_ai',
+      label,
+      destination: normalizedPath,
+    });
+    navigate(normalizedPath);
+  };
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -88,23 +97,22 @@ export function AskAI() {
     try {
       const chatHistory = messages.map(m => ({ role: m.role, content: m.content }));
       const response = await AIService.chat(textToSend, chatHistory);
-      
-      // Persist interaction to Supabase
-      await addDoc(collection(db, 'ai_interactions'), {
-        userQuery: textToSend,
-        aiResponse: response.response,
-        timestamp: serverTimestamp(),
-        type: 'ask_ai'
+
+      AnalyticsEngine.track('ai_query', {
+        source: 'ask_ai',
+        promptLength: textToSend.length,
+        hasSuggestedActions: Boolean(response.suggestedActions?.length),
       });
 
       let actions: Action[] = [];
       if (response.suggestedActions) {
         actions = response.suggestedActions.map((a: any) => {
           let icon = Search;
-          if (a.path.includes('assessment')) icon = Activity;
-          if (a.path.includes('directory')) icon = Stethoscope;
-          if (a.path.includes('blog')) icon = BookOpen;
-          return { ...a, icon };
+          const normalizedPath = normalizePatientRoutePath(a.path);
+          if (normalizedPath.includes('assessment')) icon = Activity;
+          if (normalizedPath.includes('directory')) icon = Stethoscope;
+          if (normalizedPath.includes('blog')) icon = BookOpen;
+          return { ...a, path: normalizedPath, icon };
         });
       }
 
@@ -117,11 +125,22 @@ export function AskAI() {
       }]);
     } catch (error) {
       console.error('Chat error:', error);
+      const message =
+        error instanceof AIServiceError && error.status === 503
+          ? 'The health intelligence service is temporarily unavailable. Please try again shortly.'
+          : error instanceof AIServiceError && error.status === 504
+            ? 'The health intelligence service timed out. Please try your question again.'
+            : "I'm sorry, I'm having trouble connecting to the intelligence server right now. Please try again later.";
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'ai',
-        content: "I'm sorry, I'm having trouble connecting to the intelligence server right now. Please try again later.",
-        disclaimer: "Connection error",
+        content: message,
+        disclaimer: error instanceof Error ? error.message : 'Connection error',
+        actions: [
+          { label: 'Start Assessment', path: '/patient/assessment', icon: Activity, primary: true },
+          { label: 'Browse Clinics', path: '/directory', icon: Stethoscope },
+          { label: 'Run Symptom Checker', path: '/symptom-checker', icon: Search },
+        ],
       }]);
     } finally {
       setIsTyping(false);
@@ -207,7 +226,7 @@ export function AskAI() {
                           return (
                             <button
                               key={i}
-                              onClick={() => navigate(action.path)}
+                              onClick={() => navigateToAction(action.path, action.label)}
                               className={`flex items-center justify-between p-3 rounded-xl border transition-all group text-left ${
                                 action.primary 
                                   ? 'bg-primary/10 border-primary/30 hover:border-primary hover:bg-primary/20' 

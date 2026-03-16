@@ -7,7 +7,7 @@ interface AdminRouteProps {
 }
 
 export const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
-  const { loading, hasAdminAccess, isAdminUser } = useAuth();
+  const { loading, isAdminUser } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -18,7 +18,7 @@ export const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     );
   }
 
-  if (!hasAdminAccess || !isAdminUser) {
+  if (!isAdminUser) {
     return <Navigate to="/admin" state={{ from: location }} replace />;
   }
 

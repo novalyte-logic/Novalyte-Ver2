@@ -3,13 +3,18 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build",
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "vite build",
+    "build:server": "tsup server.ts --format esm --platform node --target node20 --out-dir server-dist --clean --sourcemap",
     "preview": "vite preview",
-    "clean": "rm -rf dist",
+    "clean": "rm -rf dist server-dist",
     "lint": "tsc --noEmit",
-    "start": "node server.ts"
+    "start": "NODE_ENV=production node server-dist/server.js"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
@@ -24,6 +29,7 @@
     "helmet": "^8.1.0",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
+    "nodemailer": "^7.0.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.13.1",

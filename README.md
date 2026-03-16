@@ -18,6 +18,14 @@ This app now uses Supabase for auth, data storage, and realtime subscriptions.
 5. Run the app:
    `npm run dev`
 
+## Production runtime
+
+- `npm run build` now produces:
+  - frontend assets in `dist/`
+  - compiled Express server in `server-dist/`
+- `npm run start` runs the compiled server in production mode.
+- Public intake forms, telemetry, and client error reporting now flow through Express endpoints instead of simulated client-only handlers.
+
 ## MCP
 
 - Workspace MCP config is in [.vscode/mcp.json](/Users/jamilyakasai/Novalyte-Ver2/.vscode/mcp.json).
@@ -28,7 +36,21 @@ This app now uses Supabase for auth, data storage, and realtime subscriptions.
 - Browser auth uses Supabase Auth with Google OAuth.
 - Browser reads and writes use a Firestore-compatible document layer backed by the `public.documents` table.
 - Express API routes use a server-only Supabase secret key for privileged admin and workforce operations.
+- Public forms and patient assessment use server-side validation plus server-side persistence via `/api/public/*`.
+- Analytics and browser error reports ingest through `/api/telemetry/*`.
 - Realtime updates use Supabase Realtime on the `documents` table.
+
+## Deployment
+
+- Render Blueprint is in [render.yaml](/Users/jamilyakasai/Novalyte-Ver2/render.yaml).
+- Set the Render env vars from `.env.example`, especially:
+  - `APP_URL`
+  - `ALLOWED_ORIGINS`
+  - `SUPABASE_URL`
+  - `SUPABASE_SECRET_KEY`
+  - `VITE_SUPABASE_URL`
+  - `VITE_SUPABASE_PUBLISHABLE_KEY`
+  - `GEMINI_API_KEY`
 
 ## Notes
 

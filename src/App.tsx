@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ShellRoot } from './components/shell/ShellRoot';
+import { RouteAnalytics } from './components/system/RouteAnalytics';
 import { AuthProvider } from './lib/auth/AuthContext';
 import { ProtectedRoute } from './lib/auth/ProtectedRoute';
 import { AdminRoute } from './lib/auth/AdminRoute';
@@ -74,6 +75,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <RouteAnalytics />
         <ShellRoot>
         <Routes>
           {/* Public Routes with Navbar/Footer */}
@@ -134,7 +136,7 @@ export default function App() {
           <Route path="/clinic/activate" element={<Navigate to="/dashboard/activate" replace />} />
 
           {/* Clinic Routes with ClinicLayout */}
-          <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['clinic', 'admin']}><ClinicLayout /></ProtectedRoute>}>
+          <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['clinic', 'clinic_admin']}><ClinicLayout /></ProtectedRoute>}>
             <Route index element={<ClinicOverview />} />
             <Route path="activate" element={<ClinicActivate />} />
             <Route path="leads" element={<ClinicLeads />} />
@@ -162,6 +164,4 @@ export default function App() {
     </AuthProvider>
   );
 }
-
-
 

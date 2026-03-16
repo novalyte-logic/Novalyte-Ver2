@@ -5,31 +5,17 @@ import {
   AlertCircle, Clock, CheckCircle2, Terminal, Sparkles, 
   DollarSign, Phone, ChevronRight, BarChart3, ShieldCheck
 } from 'lucide-react';
-import { collection, query, where, onSnapshot, orderBy, limit, Timestamp } from 'firebase/firestore';
-import { db } from '@/src/firebase';
-import { useAuth } from '@/src/lib/auth/AuthContext';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { ClinicApiError, ClinicService, type ClinicOverviewResponse } from '@/src/services/clinic';
 
 export function ClinicOverview() {
-  const { user, role } = useAuth();
+  const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [metrics, setMetrics] = useState({
-    activePipeline: 0,
-    consultsToday: 0,
-    showRate: '84%',
-    estRevenue: '$0'
-  });
-  const [priorityLeads, setPriorityLeads] = useState<any[]>([]);
-  const [schedule, setSchedule] = useState<any[]>([]);
-  const [liveActivity, setLiveActivity] = useState<any[]>([]);
-  const [funnelData, setFunnelData] = useState([
-    { stage: 'Intake', count: 0, color: 'border-surface-3 text-text-secondary' },
-    { stage: 'Triage', count: 0, color: 'border-warning/50 text-warning' },
-    { stage: 'Consult', count: 0, color: 'border-primary/50 text-primary' },
-    { stage: 'Treating', count: 0, color: 'border-success/50 text-success' },
-  ]);
+  const [data, setData] = useState<ClinicOverviewResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -37,110 +23,45 @@ export function ClinicOverview() {
   }, []);
 
   useEffect(() => {
-    if (!user || role !== 'clinic') return;
+    let isActive = true;
 
-    // 1. Leads & Pipeline Metrics
-    const leadsQuery = query(collection(db, 'leads'), where('clinicId', '==', user.uid));
-    const unsubscribeLeads = onSnapshot(leadsQuery, (snapshot) => {
-      const leads = snapshot.docs.map(doc => doc.data());
-      
-      const active = leads.filter(l => l.status !== 'disqualified' && l.status !== 'treating').length;
-      const intake = leads.filter(l => l.status === 'new').length;
-      const triage = leads.filter(l => l.status === 'contacted').length;
-      const consult = leads.filter(l => l.status === 'scheduled').length;
-      const treating = leads.filter(l => l.status === 'treating').length;
+    const loadOverview = async (silent = false) => {
+      if (!silent) {
+        setLoading(true);
+      }
 
-      setMetrics(prev => ({
-        ...prev,
-        activePipeline: active,
-        estRevenue: `$${(active * 1200 / 1000).toFixed(1)}k` // Mock calculation: $1200 per active lead
-      }));
+      try {
+        const nextData = await ClinicService.getOverview();
+        if (isActive) {
+          setData(nextData);
+          setError('');
+        }
+      } catch (loadError) {
+        console.error('Failed to load clinic overview:', loadError);
+        if (isActive) {
+          setError(
+            loadError instanceof ClinicApiError
+              ? loadError.message
+              : 'Unable to load clinic operations right now.',
+          );
+        }
+      } finally {
+        if (isActive) {
+          setLoading(false);
+        }
+      }
+    };
 
-      setFunnelData([
-        { stage: 'Intake', count: intake, color: 'border-surface-3 text-text-secondary' },
-        { stage: 'Triage', count: triage, color: 'border-warning/50 text-warning' },
-        { stage: 'Consult', count: consult, color: 'border-primary/50 text-primary' },
-        { stage: 'Treating', count: treating, color: 'border-success/50 text-success' },
-      ]);
-
-      // Priority Leads (High Score + High Budget)
-      const priority = leads
-        .filter(l => (l.score || 0) >= 85 && l.status === 'new')
-        .slice(0, 3);
-      setPriorityLeads(priority);
-    });
-
-    // 2. Bookings (Consults Today)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const bookingsQuery = query(
-      collection(db, 'bookings'),
-      where('clinicId', '==', user.uid),
-      where('startTime', '>=', Timestamp.fromDate(today)),
-      where('startTime', '<', Timestamp.fromDate(tomorrow)),
-      orderBy('startTime', 'asc')
-    );
-
-    const unsubscribeBookings = onSnapshot(bookingsQuery, (snapshot) => {
-      const bookings = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setMetrics(prev => ({ ...prev, consultsToday: bookings.length }));
-      setSchedule(bookings);
-    });
-
-    // 3. Live Activity (Audit Events)
-    const auditQuery = query(
-      collection(db, 'auditEvents'),
-      where('clinicId', '==', user.uid),
-      orderBy('timestamp', 'desc'),
-      limit(10)
-    );
-
-    const unsubscribeAudit = onSnapshot(auditQuery, (snapshot) => {
-      const events = snapshot.docs.map(doc => {
-        const data = doc.data();
-        const diff = Math.floor((new Date().getTime() - data.timestamp?.toDate().getTime()) / 60000);
-        let timeStr = 'Just now';
-        if (diff > 0 && diff < 60) timeStr = `${diff}m ago`;
-        else if (diff >= 60) timeStr = `${Math.floor(diff / 60)}h ago`;
-
-        return {
-          time: timeStr,
-          event: data.action || 'System Event',
-          entity: data.entityName || 'Unknown',
-          type: data.type || 'info'
-        };
-      });
-      setLiveActivity(events);
-    });
-
-    // 4. Intelligence Insights (Copilot)
-    const insightsQuery = query(
-      collection(db, 'intelligenceInsights'),
-      where('clinicId', '==', user.uid),
-      orderBy('createdAt', 'desc'),
-      limit(2)
-    );
-
-    const unsubscribeInsights = onSnapshot(insightsQuery, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setCopilotInsights(data);
-    });
+    void loadOverview();
+    const interval = window.setInterval(() => {
+      void loadOverview(true);
+    }, 30000);
 
     return () => {
-      unsubscribeLeads();
-      unsubscribeBookings();
-      unsubscribeAudit();
-      unsubscribeInsights();
+      isActive = false;
+      window.clearInterval(interval);
     };
-  }, [user, role]);
-
-  const [copilotInsights, setCopilotInsights] = useState<any[]>([]);
+  }, []);
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('en-US', { 
@@ -158,6 +79,51 @@ export function ClinicOverview() {
     }).format(date);
   };
 
+  const handleScheduleJoin = (item: ClinicOverviewResponse['schedule'][number]) => {
+    if (typeof item?.meetingLink === 'string' && item.meetingLink.trim()) {
+      window.open(item.meetingLink, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    navigate('/dashboard/pipeline');
+  };
+
+  const handleInsightAction = (action: string | undefined) => {
+    const normalized = action?.toLowerCase() || '';
+
+    if (normalized.includes('marketplace')) {
+      navigate('/dashboard/marketplace');
+      return;
+    }
+
+    if (normalized.includes('requisition') || normalized.includes('capacity')) {
+      navigate('/dashboard/workforce?tab=demand');
+      return;
+    }
+
+    navigate('/dashboard/intelligence');
+  };
+
+  const metrics = data?.metrics;
+  const priorityLeads = data?.priorityLeads || [];
+  const schedule = data?.schedule || [];
+  const liveActivity = data?.activity || [];
+  const copilotInsights = data?.insights || [];
+  const funnelData = [
+    { stage: 'Intake', count: data?.funnel.intake || 0, color: 'border-surface-3 text-text-secondary' },
+    { stage: 'Triage', count: data?.funnel.triage || 0, color: 'border-warning/50 text-warning' },
+    { stage: 'Consult', count: data?.funnel.consult || 0, color: 'border-primary/50 text-primary' },
+    { stage: 'Treating', count: data?.funnel.treating || 0, color: 'border-success/50 text-success' },
+  ];
+
+  if (loading && !data) {
+    return (
+      <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       
@@ -173,6 +139,11 @@ export function ClinicOverview() {
           </div>
           <h1 className="text-3xl font-display font-bold text-white">Command Overview</h1>
           <p className="text-text-secondary mt-1">Real-time pulse of your clinic operations and patient pipeline.</p>
+          {error ? (
+            <div className="mt-4 rounded-lg border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger">
+              {error}
+            </div>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-3 w-full md:w-auto">
           <Link to="/dashboard/pipeline" className="w-full sm:w-auto">
@@ -182,7 +153,7 @@ export function ClinicOverview() {
           </Link>
           <Link to="/dashboard/leads" className="w-full sm:w-auto">
             <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-black font-bold">
-              <Users className="w-4 h-4 mr-2" /> New Patient
+              <Users className="w-4 h-4 mr-2" /> Review Leads
             </Button>
           </Link>
         </div>
@@ -218,10 +189,10 @@ export function ClinicOverview() {
       {/* Top Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Active Pipeline", value: metrics.activePipeline, change: "+8 this week", icon: Activity, color: "text-primary", bg: "bg-primary/10" },
-          { label: "Consults Today", value: metrics.consultsToday, change: "Real-time sync", icon: Calendar, color: "text-secondary", bg: "bg-secondary/10" },
-          { label: "Show Rate (30d)", value: metrics.showRate, change: "+2.4% vs last mo", icon: TrendingUp, color: "text-success", bg: "bg-success/10" },
-          { label: "Est. Revenue", value: metrics.estRevenue, change: "Based on active pipeline", icon: DollarSign, color: "text-white", bg: "bg-surface-3" },
+          { label: "Active Pipeline", value: metrics?.activePipeline ?? 0, change: "Live routed leads", icon: Activity, color: "text-primary", bg: "bg-primary/10" },
+          { label: "Consults Today", value: metrics?.consultsToday ?? 0, change: "Booked consult load", icon: Calendar, color: "text-secondary", bg: "bg-secondary/10" },
+          { label: "Show Rate (30d)", value: metrics?.showRate != null ? `${metrics.showRate}%` : '--', change: "Finalized consult outcomes", icon: TrendingUp, color: "text-success", bg: "bg-success/10" },
+          { label: "Est. Revenue", value: metrics?.estimatedRevenueLabel ?? '$0', change: "Derived from active lead value", icon: DollarSign, color: "text-white", bg: "bg-surface-3" },
         ].map((metric, i) => (
           <motion.div
             key={i}
@@ -297,7 +268,7 @@ export function ClinicOverview() {
                 }`}>
                   <div className="w-16 shrink-0 pt-0.5">
                     <span className="text-xs font-mono font-bold text-text-secondary">
-                      {item.startTime?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(item.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                   
@@ -312,7 +283,11 @@ export function ClinicOverview() {
                     {item.status === 'completed' ? (
                       <CheckCircle2 className="w-5 h-5 text-success" />
                     ) : (
-                      <Button size="sm" className="bg-primary/10 text-primary hover:bg-primary/20 font-bold px-3 py-1 h-auto text-xs">
+                      <Button
+                        size="sm"
+                        className="bg-primary/10 text-primary hover:bg-primary/20 font-bold px-3 py-1 h-auto text-xs"
+                        onClick={() => handleScheduleJoin(item)}
+                      >
                         Join
                       </Button>
                     )}
@@ -349,7 +324,13 @@ export function ClinicOverview() {
                     <p className="text-xs text-text-secondary leading-relaxed">
                       {insight.description}
                     </p>
-                    <button className="text-xs font-bold text-secondary mt-2 hover:underline">{insight.action}</button>
+                    <button
+                      type="button"
+                      onClick={() => handleInsightAction(insight.action)}
+                      className="text-xs font-bold text-secondary mt-2 hover:underline"
+                    >
+                      {insight.action || 'Open insight'}
+                    </button>
                   </div>
                 )) : (
                   <>
@@ -358,7 +339,13 @@ export function ClinicOverview() {
                       <p className="text-xs text-text-secondary leading-relaxed">
                         24% of leads are stalling at the "Lab Work Required" stage. Consider offering an at-home testing kit via the marketplace to reduce friction.
                       </p>
-                      <button className="text-xs font-bold text-secondary mt-2 hover:underline">View Marketplace Solutions</button>
+                      <button
+                        type="button"
+                        onClick={() => handleInsightAction('View Marketplace Solutions')}
+                        className="text-xs font-bold text-secondary mt-2 hover:underline"
+                      >
+                        View Marketplace Solutions
+                      </button>
                     </div>
                     
                     <div className="p-3 rounded-lg bg-[#0B0F14]/80 border border-secondary/10 backdrop-blur-sm">
@@ -366,7 +353,13 @@ export function ClinicOverview() {
                       <p className="text-xs text-text-secondary leading-relaxed">
                         Consult volume is projected to exceed provider capacity by next Thursday. Consider opening a temporary staffing requisition.
                       </p>
-                      <button className="text-xs font-bold text-secondary mt-2 hover:underline">Draft Requisition</button>
+                      <button
+                        type="button"
+                        onClick={() => handleInsightAction('Draft Requisition')}
+                        className="text-xs font-bold text-secondary mt-2 hover:underline"
+                      >
+                        Draft Requisition
+                      </button>
                     </div>
                   </>
                 )}
@@ -393,7 +386,7 @@ export function ClinicOverview() {
             <div className="flex-grow overflow-y-auto p-4 space-y-4 font-mono text-xs">
               {liveActivity.length > 0 ? liveActivity.map((log, i) => (
                 <div key={i} className="flex gap-3 items-start">
-                  <span className="text-text-secondary/50 shrink-0 w-12">{log.time}</span>
+                  <span className="text-text-secondary/50 shrink-0 w-12">{log.timeLabel}</span>
                   <div>
                     <span className={`
                       ${log.type === 'success' ? 'text-success' : ''}

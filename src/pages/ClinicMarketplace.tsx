@@ -1,299 +1,322 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Search, Filter, Package, Zap, TrendingUp, CheckCircle2, 
-  AlertTriangle, Sparkles, DollarSign, Users, Activity,
-  ChevronRight, ShieldCheck, ArrowUpRight
+import {
+  ArrowUpRight,
+  CheckCircle2,
+  Filter,
+  Package,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  TrendingUp,
 } from 'lucide-react';
-import { collection, query, where, onSnapshot, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/src/firebase';
-import { useAuth } from '@/src/lib/auth/AuthContext';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
+import { ClinicApiError, ClinicService } from '@/src/services/clinic';
+import { PublicApiError, PublicService, type PublicMarketplaceProduct } from '@/src/services/public';
 
-interface MarketplaceService {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  category: string;
-  provider: string;
-  status: 'active' | 'inactive';
-  roi?: {
-    payback: string;
-    estRevenue: string;
-    margin: string;
-  };
-  compatibility?: {
-    status: 'perfect' | 'high' | 'medium';
-    message: string;
-  };
-  demand?: {
-    level: string;
-    signal: string;
-  };
-  image?: string;
-}
+const CATEGORIES = [
+  { id: 'all', label: 'All Infrastructure' },
+  { id: 'equipment', label: 'Capital Equipment' },
+  { id: 'diagnostics', label: 'Diagnostics & Labs' },
+  { id: 'digital-health', label: 'Digital Health' },
+  { id: 'health-tech', label: 'Health Tech' },
+  { id: 'home-gym', label: 'Home Gym & Recovery' },
+];
 
 export function ClinicMarketplace() {
-  const { user } = useAuth();
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [services, setServices] = useState<MarketplaceService[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = React.useState('all');
+  const [products, setProducts] = React.useState<PublicMarketplaceProduct[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [orderingProductId, setOrderingProductId] = React.useState<string | null>(null);
+  const [verifiedOnly, setVerifiedOnly] = React.useState(true);
+  const [error, setError] = React.useState('');
+  const [orderFeedback, setOrderFeedback] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const categories = [
-    { id: 'all', label: 'All Infrastructure' },
-    { id: 'equipment', label: 'Capital Equipment' },
-    { id: 'diagnostics', label: 'Diagnostics & Labs' },
-    { id: 'protocols', label: 'Clinical Protocols' },
-    { id: 'software', label: 'Digital Health' },
-  ];
+  React.useEffect(() => {
+    let isActive = true;
 
-  useEffect(() => {
-    const q = query(
-      collection(db, 'marketplaceServices'),
-      where('status', '==', 'active')
-    );
+    const loadProducts = async () => {
+      setLoading(true);
+      setError('');
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as MarketplaceService[];
-      setServices(data);
-      setLoading(false);
+      try {
+        const response = await PublicService.getMarketplaceProducts({
+          category: activeCategory === 'all' ? undefined : activeCategory,
+        });
+        if (isActive) {
+          setProducts(response.products);
+        }
+      } catch (loadError) {
+        console.error('Failed to load clinic marketplace:', loadError);
+        if (isActive) {
+          setProducts([]);
+          setError(
+            loadError instanceof PublicApiError
+              ? loadError.message
+              : 'Unable to load the live procurement catalog right now.',
+          );
+        }
+      } finally {
+        if (isActive) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadProducts();
+
+    return () => {
+      isActive = false;
+    };
+  }, [activeCategory]);
+
+  const filteredProducts = React.useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    return products.filter((product) => {
+      const matchesQuery =
+        !normalizedQuery ||
+        [
+          product.name,
+          product.description,
+          product.vendor,
+          product.category,
+          product.compatibility,
+          ...product.features,
+          ...product.useCases,
+        ]
+          .join(' ')
+          .toLowerCase()
+          .includes(normalizedQuery);
+      const matchesVerification = !verifiedOnly || product.verified;
+      return matchesQuery && matchesVerification;
     });
+  }, [products, searchQuery, verifiedOnly]);
 
-    return () => unsubscribe();
-  }, []);
-
-  const handleOrderService = async (service: MarketplaceService) => {
-    if (!user) return;
+  const handleOrderService = async (product: PublicMarketplaceProduct) => {
+    setOrderingProductId(product.id);
+    setOrderFeedback(null);
     try {
-      await addDoc(collection(db, 'marketplaceOrders'), {
-        serviceId: service.id,
-        clinicId: user.uid,
-        status: 'pending',
-        amount: service.price,
-        createdAt: serverTimestamp()
+      const response = await ClinicService.createMarketplaceOrder(product.id);
+      setOrderFeedback({
+        type: 'success',
+        message: `Procurement request ${response.order.id.slice(0, 8).toUpperCase()} queued for ${product.name}.`,
       });
-      alert(`Order request for ${service.title} submitted successfully!`);
     } catch (error) {
-      console.error("Error ordering service:", error);
+      console.error('Error ordering service:', error);
+      setOrderFeedback({
+        type: 'error',
+        message:
+          error instanceof ClinicApiError
+            ? error.message
+            : 'Unable to submit that procurement request right now.',
+      });
+    } finally {
+      setOrderingProductId(null);
     }
   };
 
-  const filteredServices = activeCategory === 'all' 
-    ? services 
-    : services.filter(s => s.category.toLowerCase().includes(activeCategory.toLowerCase()));
-
-  if (loading) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col animate-in fade-in duration-500">
-      
-      {/* Header & Actions */}
-      <div className="flex-none flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+    <div className="min-h-[calc(100vh-8rem)] space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-display font-bold text-white">Infrastructure & Procurement</h1>
-          <p className="text-text-secondary mt-1">Curated equipment, diagnostics, and protocols tailored to your clinic's growth.</p>
+          <p className="text-text-secondary mt-1">Live marketplace catalog with clinic-side procurement requests routed through the backend.</p>
+          {orderFeedback ? (
+            <div className={`mt-4 rounded-lg border px-4 py-3 text-sm ${
+              orderFeedback.type === 'success'
+                ? 'border-success/20 bg-success/10 text-success'
+                : 'border-danger/20 bg-danger/10 text-danger'
+            }`}>
+              {orderFeedback.message}
+            </div>
+          ) : null}
+          {error ? (
+            <div className="mt-4 rounded-lg border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger">
+              {error}
+            </div>
+          ) : null}
         </div>
-        <div className="flex flex-wrap gap-3 w-full md:w-auto">
-          <Link to="/dashboard/billing" className="w-full sm:w-auto">
-            <Button variant="outline" className="w-full sm:w-auto border-surface-3 text-white hover:bg-surface-2">
+        <div className="flex flex-wrap gap-3">
+          <Link to="/dashboard/billing">
+            <Button variant="outline" className="border-surface-3 text-white hover:bg-surface-2">
               Procurement History
             </Button>
           </Link>
-          <Link to="/contact" className="w-full sm:w-auto">
-            <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-black font-bold">
+          <Link to="/contact?role=clinic&topic=custom_procurement_request">
+            <Button className="bg-primary hover:bg-primary/90 text-black font-bold">
               Request Custom Sourcing
             </Button>
           </Link>
         </div>
       </div>
 
-      {/* Scrollable Content Area */}
-      <div className="flex-grow overflow-y-auto hide-scrollbar pb-8">
-        <div className="space-y-8">
-          
-          {/* AI Procurement Insight Hero */}
-          <Card className="p-8 bg-[#0B0F14] border-primary/30 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 opacity-5">
-              <Sparkles className="w-48 h-48 text-primary" />
+      <Card className="p-8 bg-[#0B0F14] border-primary/20 relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-8 opacity-5">
+          <Sparkles className="w-40 h-40 text-primary" />
+        </div>
+        <div className="relative z-10 max-w-4xl">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="w-5 h-5 text-primary" />
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider">Live Procurement View</h2>
+          </div>
+          <p className="text-2xl font-display font-bold text-white leading-tight">
+            {filteredProducts.length
+              ? `${filteredProducts.length} verified catalog item${filteredProducts.length === 1 ? '' : 's'} are currently available in ${CATEGORIES.find((category) => category.id === activeCategory)?.label || 'the marketplace'}.`
+              : 'No published products match the current filters. Adjust the catalog filters or request a custom sourcing workflow.'}
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3 text-sm text-text-secondary">
+            <span className="inline-flex items-center gap-2 rounded-full border border-surface-3 px-3 py-1.5">
+              <ShieldCheck className="w-4 h-4 text-success" />
+              {products.filter((product) => product.verified).length} verified products
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-surface-3 px-3 py-1.5">
+              <TrendingUp className="w-4 h-4 text-primary" />
+              Real backend procurement requests
+            </span>
+          </div>
+        </div>
+      </Card>
+
+      <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr] gap-8">
+        <div className="space-y-6">
+          <Card className="p-6 bg-surface-1 border-surface-3">
+            <div className="flex items-center gap-2 mb-4">
+              <Filter className="w-4 h-4 text-text-secondary" />
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider">Catalog Filters</h2>
             </div>
-            <div className="relative z-10 max-w-4xl">
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="w-5 h-5 text-primary" />
-                <h2 className="text-sm font-bold text-white uppercase tracking-wider">AI Procurement Recommendation</h2>
-              </div>
-              <p className="text-2xl font-display font-bold text-white leading-tight mb-6">
-                Based on <span className="text-primary">45 recent patient leads</span> requesting ED treatments in your area, adding <span className="text-white">Acoustic Wave Therapy</span> could increase your monthly revenue by <span className="text-success">$12,500</span> with a payback period of 2.5 months.
-              </p>
-              <div className="flex flex-wrap gap-4">
-                <Link to="/marketplace/equipment">
-                  <Button className="bg-primary hover:bg-primary/90 text-black font-bold">
-                    View ROI Calculator
-                  </Button>
-                </Link>
-                <Link to="/marketplace/equipment">
-                  <Button variant="outline" className="border-surface-3 text-white hover:bg-surface-2">
-                    Explore Equipment
-                  </Button>
-                </Link>
-              </div>
+            <div className="space-y-2">
+              {CATEGORIES.map((category) => (
+                <button
+                  key={category.id}
+                  type="button"
+                  onClick={() => setActiveCategory(category.id)}
+                  className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                    activeCategory === category.id
+                      ? 'bg-primary/10 text-primary border border-primary/20'
+                      : 'bg-surface-2 text-text-secondary hover:text-white'
+                  }`}
+                >
+                  {category.label}
+                </button>
+              ))}
             </div>
+
+            <label className="mt-6 flex items-center gap-3 text-sm text-text-secondary">
+              <input
+                type="checkbox"
+                checked={verifiedOnly}
+                onChange={() => setVerifiedOnly((current) => !current)}
+                className="rounded border-surface-3 bg-surface-2 text-primary focus:ring-primary/50"
+              />
+              Verified products only
+            </label>
           </Card>
+        </div>
 
-          {/* Main Layout: Sidebar + Grid */}
-          <div className="flex flex-col lg:flex-row gap-8">
-            
-            {/* Sidebar Filters */}
-            <div className="w-full lg:w-64 flex-shrink-0 space-y-6">
-              <div className="relative w-full">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
-                <input 
-                  type="text" 
-                  placeholder="Search infrastructure..." 
-                  className="w-full h-10 pl-10 pr-4 bg-surface-1 border border-surface-3 rounded-lg text-sm text-white focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-text-secondary"
-                />
-              </div>
-
-              <div>
-                <h3 className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-3">Categories</h3>
-                <div className="space-y-1">
-                  {categories.map(cat => (
-                    <button
-                      key={cat.id}
-                      onClick={() => setActiveCategory(cat.id)}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        activeCategory === cat.id 
-                          ? 'bg-primary/10 text-primary' 
-                          : 'text-text-secondary hover:bg-surface-2 hover:text-white'
-                      }`}
-                    >
-                      {cat.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-3">Compatibility Filters</h3>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer hover:text-white transition-colors">
-                    <input type="checkbox" className="rounded border-surface-3 bg-surface-1 text-primary focus:ring-primary/50" defaultChecked />
-                    EMR Integrated
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer hover:text-white transition-colors">
-                    <input type="checkbox" className="rounded border-surface-3 bg-surface-1 text-primary focus:ring-primary/50" defaultChecked />
-                    Matches Current Staffing
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer hover:text-white transition-colors">
-                    <input type="checkbox" className="rounded border-surface-3 bg-surface-1 text-primary focus:ring-primary/50" />
-                    No Additional Space Required
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* Product Grid */}
-            <div className="flex-grow">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-white">
-                  {categories.find(c => c.id === activeCategory)?.label}
-                </h3>
-                <span className="text-sm text-text-secondary">Showing {filteredServices.length} recommendations</span>
-              </div>
-
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                {filteredServices.length > 0 ? filteredServices.map((product) => (
-                  <Card key={product.id} className="bg-[#0B0F14] border-surface-3 hover:border-surface-4 transition-colors overflow-hidden flex flex-col group">
-                    {/* Image / Header Area */}
-                    <div className={`h-32 ${product.image || 'bg-gradient-to-br from-surface-2 to-surface-3'} relative p-4 flex flex-col justify-between border-b border-surface-3`}>
-                      <div className="flex justify-between items-start">
-                        <span className="px-2 py-1 rounded bg-black/50 backdrop-blur-md border border-white/10 text-[10px] font-mono font-bold text-white uppercase tracking-wider">
-                          {product.category}
-                        </span>
-                        {product.compatibility?.status === 'perfect' && (
-                          <span className="px-2 py-1 rounded bg-success/20 backdrop-blur-md border border-success/30 text-[10px] font-bold text-success flex items-center gap-1">
-                            <ShieldCheck className="w-3 h-3" /> EMR Ready
-                          </span>
-                        )}
-                      </div>
-                      <h3 className="text-xl font-bold text-white drop-shadow-md">{product.title}</h3>
-                    </div>
-
-                    <div className="p-5 flex-grow flex flex-col">
-                      
-                      {/* Compatibility & Demand Signals */}
-                      <div className="space-y-3 mb-6">
-                        <div className="flex items-start gap-2">
-                          <CheckCircle2 className={`w-4 h-4 mt-0.5 shrink-0 ${
-                            product.compatibility?.status === 'perfect' ? 'text-success' : 
-                            product.compatibility?.status === 'high' ? 'text-primary' : 'text-warning'
-                          }`} />
-                          <p className="text-sm text-text-secondary leading-tight">
-                            <span className="text-white font-medium">Compatibility:</span> {product.compatibility?.message || 'Standard integration available.'}
-                          </p>
-                        </div>
-                        <div className="flex items-start gap-2">
-                          <Activity className="w-4 h-4 mt-0.5 shrink-0 text-secondary" />
-                          <p className="text-sm text-text-secondary leading-tight">
-                            <span className="text-white font-medium">{product.demand?.level || 'Steady'} Demand:</span> {product.demand?.signal || 'Consistent market interest.'}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* ROI Framing */}
-                      {product.roi && (
-                        <div className="grid grid-cols-3 gap-2 mb-6 p-3 rounded-lg bg-surface-1 border border-surface-3">
-                          <div>
-                            <p className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Est. Revenue</p>
-                            <p className="text-sm font-bold text-success flex items-center gap-1">
-                              <TrendingUp className="w-3 h-3" /> {product.roi.estRevenue}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Payback</p>
-                            <p className="text-sm font-bold text-white">{product.roi.payback}</p>
-                          </div>
-                          <div>
-                            <p className="text-[10px] text-text-secondary uppercase tracking-wider mb-1">Margin</p>
-                            <p className="text-sm font-bold text-white">{product.roi.margin}</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Pricing & Action */}
-                      <div className="mt-auto pt-4 border-t border-surface-3 flex items-center justify-between">
-                        <div>
-                          <p className="text-lg font-display font-bold text-white">${product.price.toLocaleString()}</p>
-                          <p className="text-xs text-text-secondary">by {product.provider}</p>
-                        </div>
-                        <Button 
-                          onClick={() => handleOrderService(product)}
-                          className="bg-surface-2 hover:bg-surface-3 text-white border border-surface-3 group-hover:border-primary/50 transition-colors"
-                        >
-                          Procurement Details <ArrowUpRight className="w-4 h-4 ml-2 opacity-50 group-hover:opacity-100 group-hover:text-primary transition-all" />
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                )) : (
-                  <div className="xl:col-span-2 p-12 text-center border-2 border-dashed border-surface-3 rounded-xl bg-surface-1/30">
-                    <Package className="w-12 h-12 text-surface-3 mx-auto mb-4" />
-                    <h3 className="text-lg font-bold text-white">No services found</h3>
-                    <p className="text-text-secondary mt-2">Try adjusting your filters or search terms.</p>
-                  </div>
-                )}
-              </div>
-            </div>
+        <div className="space-y-6">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search products, vendors, protocols, or compatibility..."
+              className="w-full rounded-xl border border-surface-3 bg-surface-1 px-11 py-3 text-white outline-none focus:border-primary/40"
+            />
           </div>
 
+          {loading ? (
+            <Card className="p-10 bg-surface-1 border-surface-3 flex items-center justify-center">
+              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </Card>
+          ) : filteredProducts.length ? (
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              {filteredProducts.map((product) => (
+                <Card key={product.id} className="overflow-hidden border-surface-3 bg-[#0B0F14] flex flex-col">
+                  <div className="p-5 border-b border-surface-3 bg-surface-1/50">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-wider text-text-secondary">{product.vendor}</p>
+                        <h3 className="mt-2 text-xl font-bold text-white">{product.name}</h3>
+                      </div>
+                      {product.verified ? (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-success/20 bg-success/10 px-3 py-1 text-[10px] uppercase tracking-wider text-success">
+                          <ShieldCheck className="w-3 h-3" />
+                          Verified
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-4 text-sm text-text-secondary leading-7">
+                      {product.description || 'Live marketplace item.'}
+                    </p>
+                  </div>
+
+                  <div className="p-5 flex-grow flex flex-col">
+                    <div className="grid grid-cols-2 gap-3 mb-5">
+                      <div className="rounded-lg border border-surface-3 bg-surface-1/50 p-3">
+                        <p className="text-[10px] uppercase tracking-wider text-text-secondary">Category</p>
+                        <p className="mt-1 text-sm font-bold text-white">{product.category}</p>
+                      </div>
+                      <div className="rounded-lg border border-surface-3 bg-surface-1/50 p-3">
+                        <p className="text-[10px] uppercase tracking-wider text-text-secondary">Price</p>
+                        <p className="mt-1 text-sm font-bold text-white">{product.price || 'Contact for pricing'}</p>
+                      </div>
+                      <div className="rounded-lg border border-surface-3 bg-surface-1/50 p-3">
+                        <p className="text-[10px] uppercase tracking-wider text-text-secondary">Implementation</p>
+                        <p className="mt-1 text-sm font-bold text-white">{product.implementation || product.turnaround || 'Custom'}</p>
+                      </div>
+                      <div className="rounded-lg border border-surface-3 bg-surface-1/50 p-3">
+                        <p className="text-[10px] uppercase tracking-wider text-text-secondary">ROI</p>
+                        <p className="mt-1 text-sm font-bold text-white">{product.roi || product.revenuePerPatient || 'Custom'}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 text-sm text-text-secondary">
+                      {product.compatibility ? (
+                        <p><span className="text-white font-medium">Compatibility:</span> {product.compatibility}</p>
+                      ) : null}
+                      {product.compliance ? (
+                        <p><span className="text-white font-medium">Compliance:</span> {product.compliance}</p>
+                      ) : null}
+                    </div>
+
+                    <div className="mt-auto pt-6 flex flex-col sm:flex-row gap-3">
+                      <Link to={`/marketplace/product/${product.id}`} className="flex-1">
+                        <Button variant="outline" className="w-full border-surface-3 text-white hover:bg-surface-2">
+                          View Details
+                        </Button>
+                      </Link>
+                      <Button
+                        className="flex-1 bg-primary hover:bg-primary/90 text-black font-bold"
+                        onClick={() => void handleOrderService(product)}
+                        disabled={orderingProductId === product.id}
+                      >
+                        {orderingProductId === product.id ? 'Submitting...' : 'Request Procurement'}
+                        <ArrowUpRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card className="p-12 bg-surface-1 border-surface-3 text-center">
+              <Package className="w-12 h-12 text-text-secondary mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-white">No products match these filters</h3>
+              <p className="mt-3 text-text-secondary">
+                Adjust the category filters or open a direct procurement request for a custom vendor recommendation.
+              </p>
+              <div className="mt-6 flex justify-center">
+                <Link to="/contact?role=clinic&topic=custom_procurement_request">
+                  <Button className="bg-primary hover:bg-primary/90 text-black font-bold">
+                    Request Custom Procurement
+                  </Button>
+                </Link>
+              </div>
+            </Card>
+          )}
         </div>
       </div>
     </div>

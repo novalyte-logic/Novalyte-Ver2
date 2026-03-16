@@ -1,86 +1,35 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Activity, ArrowRight, ChevronLeft, LockKeyhole, ShieldAlert, UserCircle2, ShieldCheck } from 'lucide-react';
+import { Activity, ArrowRight, ChevronLeft, ShieldAlert, ShieldCheck, UserCircle2 } from 'lucide-react';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
+import { AccessCodeAuth } from '@/src/components/auth/AccessCodeAuth';
 import { useAuth } from '@/src/lib/auth/AuthContext';
 
-const ADMIN_ACCESS_CODE = '1750';
 const ADMIN_HOME_PATH = '/admin/command-center';
-
-function getGoogleSignInErrorMessage(error: unknown) {
-  const errorMessage =
-    typeof error === 'object' && error && 'message' in error ? String(error.message) : '';
-
-  if (errorMessage.toLowerCase().includes('redirect')) {
-    return 'Google sign-in redirect is not configured. Add this app URL to Supabase Auth redirect URLs and your Google provider settings.';
-  }
-
-  return 'Google sign-in failed. Use your approved admin account and verify Supabase Google Auth is configured.';
-}
 
 export function AdminLogin() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, hasAdminAccess, isAdminUser, grantAdminAccess, signInWithGoogle, logout } = useAuth();
-  const [accessCode, setAccessCode] = useState('');
+  const { user, isAdminUser, logout } = useAuth();
   const [error, setError] = useState('');
-  const [isSubmittingCode, setIsSubmittingCode] = useState(false);
-  const [isSigningIn, setIsSigningIn] = useState(false);
 
   const targetPath = typeof location.state?.from?.pathname === 'string'
     ? location.state.from.pathname
     : ADMIN_HOME_PATH;
 
   useEffect(() => {
-    if (hasAdminAccess && isAdminUser) {
+    if (isAdminUser) {
       navigate(targetPath, { replace: true });
     }
-  }, [hasAdminAccess, isAdminUser, navigate, targetPath]);
-
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setIsSubmittingCode(true);
-    setError('');
-
-    if (accessCode.trim() !== ADMIN_ACCESS_CODE) {
-      setError('Invalid access code.');
-      setIsSubmittingCode(false);
-      return;
-    }
-
-    grantAdminAccess();
-    setIsSubmittingCode(false);
-  };
-
-  const handleGoogleSignIn = async () => {
-    setIsSigningIn(true);
-    setError('');
-
-    try {
-      if (user && !isAdminUser) {
-        await logout();
-      }
-
-      await signInWithGoogle();
-    } catch (signInError) {
-      console.error('Admin sign-in failed:', signInError);
-      setError(getGoogleSignInErrorMessage(signInError));
-    } finally {
-      setIsSigningIn(false);
-    }
-  };
+  }, [isAdminUser, navigate, targetPath]);
 
   useEffect(() => {
-    if (!hasAdminAccess) {
-      return;
-    }
-
     if (user && !isAdminUser) {
-      setError('This Google account does not have admin access.');
+      setError('This account does not have admin access.');
     }
-  }, [hasAdminAccess, isAdminUser, user]);
+  }, [isAdminUser, user]);
 
   return (
     <div className="min-h-screen bg-[#05070A] overflow-hidden relative">
@@ -112,14 +61,14 @@ export function AdminLogin() {
               className="mt-16 max-w-2xl"
             >
               <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-xs uppercase tracking-[0.3em] text-primary">
-                <LockKeyhole className="w-4 h-4" />
+                <ShieldCheck className="w-4 h-4" />
                 Dedicated admin entry
               </div>
               <h1 className="mt-6 font-display text-4xl sm:text-5xl font-bold leading-tight text-white">
                 Separate operator access from the clinic workspace.
               </h1>
               <p className="mt-6 max-w-xl text-base sm:text-lg text-text-secondary leading-8">
-                `/admin` now routes to its own login screen. Authorized team members unlock the console with the internal access code and then authenticate with an approved admin Google account before entering CRM, outreach, and launch controls.
+                `/admin` now routes to its own login screen. Authorized team members authenticate with an approved admin email access code first, with Google as a secondary option, before entering CRM, outreach, and launch controls.
               </p>
             </motion.div>
           </div>
@@ -127,8 +76,8 @@ export function AdminLogin() {
           <div className="mt-12 grid gap-4 sm:grid-cols-2">
             <Card className="bg-[#0B1622]/90 border-primary/15 p-5">
               <p className="text-xs uppercase tracking-[0.24em] text-text-secondary">Access policy</p>
-              <p className="mt-3 text-2xl font-display font-semibold text-white">Code gated</p>
-              <p className="mt-2 text-sm text-text-secondary">A valid operator code is required before protected admin routes are resolved.</p>
+              <p className="mt-3 text-2xl font-display font-semibold text-white">Server enforced</p>
+              <p className="mt-2 text-sm text-text-secondary">Protected admin routes now rely on authenticated admin identity instead of client-side access flags.</p>
             </Card>
             <Card className="bg-[#120C1C]/90 border-secondary/15 p-5">
               <p className="text-xs uppercase tracking-[0.24em] text-text-secondary">Destination</p>
@@ -149,81 +98,54 @@ export function AdminLogin() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm uppercase tracking-[0.24em] text-text-secondary">Admin login</p>
-                  <h2 className="mt-2 text-3xl font-display font-bold text-white">
-                    {hasAdminAccess ? 'Authenticate admin account' : 'Enter access code'}
-                  </h2>
+                  <h2 className="mt-2 text-3xl font-display font-bold text-white">Authenticate admin account</h2>
                 </div>
                 <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
                   <ShieldAlert className="w-7 h-7 text-primary" />
                 </div>
               </div>
 
-              {!hasAdminAccess ? (
-                <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-                  <div>
-                    <label htmlFor="admin-access-code" className="block text-sm font-medium text-text-secondary mb-2">
-                      Operator access code
-                    </label>
-                    <input
-                      id="admin-access-code"
-                      type="password"
-                      autoComplete="one-time-code"
-                      inputMode="numeric"
-                      value={accessCode}
-                      onChange={(event) => setAccessCode(event.target.value)}
-                      placeholder="Enter code"
-                      className="w-full h-14 rounded-xl border border-surface-3 bg-[#05070A] px-4 text-center text-xl font-mono tracking-[0.45em] text-white outline-none transition-colors focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
-                      required
-                    />
-                  </div>
-
-                  {error ? (
-                    <div className="rounded-xl border border-danger/25 bg-danger/10 px-4 py-3 text-sm text-danger">
-                      {error}
+              <div className="mt-8 space-y-6">
+                <div className="rounded-2xl border border-surface-3 bg-[#05070A]/70 p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/10">
+                      {isAdminUser ? <ShieldCheck className="w-5 h-5 text-primary" /> : <UserCircle2 className="w-5 h-5 text-primary" />}
                     </div>
-                  ) : null}
-
-                  <Button type="submit" size="lg" className="w-full group font-semibold" disabled={isSubmittingCode}>
-                    {isSubmittingCode ? 'Verifying...' : 'Continue'}
-                    <ArrowRight className="ml-2 w-5 h-5 transition-transform group-hover:translate-x-1" />
-                  </Button>
-                </form>
-              ) : (
-                <div className="mt-8 space-y-6">
-                  <div className="rounded-2xl border border-surface-3 bg-[#05070A]/70 p-5">
-                    <div className="flex items-start gap-3">
-                      <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/10">
-                        {isAdminUser ? <ShieldCheck className="w-5 h-5 text-primary" /> : <UserCircle2 className="w-5 h-5 text-primary" />}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-white">
-                          {user ? `Signed in as ${user.email}` : 'Google account required'}
-                        </p>
-                        <p className="mt-1 text-sm text-text-secondary">
-                          Admin data now routes through the Supabase-backed backend. Use an approved admin account to open CRM data.
-                        </p>
-                      </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">
+                        {user ? `Signed in as ${user.email}` : 'Approved admin account required'}
+                      </p>
+                      <p className="mt-1 text-sm text-text-secondary">
+                        Admin routes are protected server-side. Request a 6-digit access code to your approved admin email, or use your configured Google account.
+                      </p>
                     </div>
                   </div>
+                </div>
 
-                  {error ? (
-                    <div className="rounded-xl border border-danger/25 bg-danger/10 px-4 py-3 text-sm text-danger">
-                      {error}
-                    </div>
-                  ) : null}
+                {error ? (
+                  <div className="rounded-xl border border-danger/25 bg-danger/10 px-4 py-3 text-sm text-danger">
+                    {error}
+                  </div>
+                ) : null}
 
+                {user && !isAdminUser ? (
                   <Button
                     type="button"
                     size="lg"
                     className="w-full group font-semibold"
-                    onClick={handleGoogleSignIn}
-                    disabled={isSigningIn}
+                    onClick={() => logout()}
                   >
-                    {isSigningIn ? 'Opening Google sign-in...' : user && !isAdminUser ? 'Switch Admin Account' : 'Sign In with Google'}
+                    Switch Admin Account
                     <ArrowRight className="ml-2 w-5 h-5 transition-transform group-hover:translate-x-1" />
                   </Button>
-                </div>
-              )}
+                ) : (
+                  <AccessCodeAuth
+                    modeLabel="Admin command center access"
+                    helperText="Use the approved admin email on your allowlist to receive a secure 6-digit access code. Google remains available as a fallback provider."
+                    providers={['google']}
+                  />
+                )}
+              </div>
 
               <div className="mt-6 rounded-xl border border-surface-3 bg-[#05070A]/70 px-4 py-4 text-sm text-text-secondary">
                 Clinic operators should use <Link to="/auth/clinic-login" className="text-primary hover:text-primary-hover">clinic login</Link> instead.

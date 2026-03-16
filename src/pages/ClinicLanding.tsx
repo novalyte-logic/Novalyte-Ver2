@@ -99,9 +99,9 @@ export function ClinicLanding() {
                   
                   <div className="space-y-3">
                     {[
-                      { name: 'Michael T.', status: 'Triage Complete', score: '98%', value: '$3,200' },
-                      { name: 'David R.', status: 'Consult Scheduled', score: '92%', value: '$2,500' },
-                      { name: 'James L.', status: 'Awaiting Labs', score: '85%', value: '$4,100' },
+                      { name: 'Hormone Optimization Lead', status: 'Triage Complete', score: '98%', value: '$3,200' },
+                      { name: 'Longevity Consult Queue', status: 'Consult Scheduled', score: '92%', value: '$2,500' },
+                      { name: 'Metabolic Assessment Intake', status: 'Awaiting Labs', score: '85%', value: '$4,100' },
                     ].map((lead, i) => (
                       <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-[#15202B] border border-surface-3">
                         <div className="flex items-center gap-3">
@@ -326,4 +326,3 @@ export function ClinicLanding() {
     </div>
   );
 }
-
