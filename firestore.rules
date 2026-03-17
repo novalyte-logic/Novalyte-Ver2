@@ -1,0 +1,186 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        (request.auth.token.email == "admin@novalyte.io" && request.auth.token.email_verified == true)
+      );
+    }
+
+    function isClinic() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'clinic';
+    }
+
+    function isPractitioner() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'practitioner';
+    }
+
+    function isVendor() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'vendor';
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+    
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      // Allow users to create their own profile, but they cannot set their role to admin unless they are already admin
+      allow create: if isAuthenticated() && isOwner(userId) && (request.resource.data.role != 'admin' || isAdmin());
+      allow update: if isOwner(userId) && (request.resource.data.role == resource.data.role || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /patients/{patientId} {
+      allow read: if isOwner(patientId) || isAdmin() || isClinic();
+      allow create: if true; // Publicly creatable for lead gen
+      allow update: if isOwner(patientId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /assessments/{assessmentId} {
+      allow read: if isOwner(resource.data.patientId) || isAdmin() || isClinic();
+      allow create: if true; // Publicly creatable for lead gen
+      allow update: if isOwner(resource.data.patientId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /clinics/{clinicId} {
+      allow read: if true; // Publicly readable for directory
+      allow create: if true; // Publicly creatable via application
+      allow update: if isOwner(clinicId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /leads/{leadId} {
+      allow read: if isOwner(resource.data.patientId) || isOwner(resource.data.clinicId) || isAdmin();
+      allow create: if true; // Publicly creatable via assessment
+      allow update: if isOwner(resource.data.clinicId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /bookings/{bookingId} {
+      allow read: if isOwner(resource.data.patientId) || isOwner(resource.data.clinicId) || isAdmin();
+      allow create: if isOwner(request.resource.data.patientId) || isAdmin();
+      allow update: if isOwner(resource.data.patientId) || isOwner(resource.data.clinicId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /products/{productId} {
+      allow read: if true; // Publicly readable marketplace
+      allow create: if isOwner(request.resource.data.vendorId) || isAdmin();
+      allow update: if isOwner(resource.data.vendorId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /vendors/{vendorId} {
+      allow read: if true; // Publicly readable
+      allow create: if isOwner(vendorId) || isAdmin();
+      allow update: if isOwner(vendorId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /practitioners/{practitionerId} {
+      allow read: if true; // Publicly readable for clinics
+      allow create: if isOwner(practitionerId) || isAdmin();
+      allow update: if isOwner(practitionerId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /staffingRequests/{requestId} {
+      allow read: if true; // Publicly readable for practitioners
+      allow create: if isOwner(request.resource.data.clinicId) || isAdmin();
+      allow update: if isOwner(resource.data.clinicId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /applications/{applicationId} {
+      allow read: if isOwner(resource.data.practitionerId) || isOwner(resource.data.clinicId) || isAdmin();
+      allow create: if isOwner(request.resource.data.practitionerId) || isAdmin();
+      allow update: if isOwner(resource.data.practitionerId) || isOwner(resource.data.clinicId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /campaigns/{campaignId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /invoices/{invoiceId} {
+      allow read: if isOwner(resource.data.clinicId) || isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /alerts/{alertId} {
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      allow create: if isAdmin();
+      allow update: if isOwner(resource.data.userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /symptom_checks/{checkId} {
+      allow read: if isAdmin();
+      allow create: if true; // Publicly creatable
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /ai_interactions/{interactionId} {
+      allow read: if isAdmin();
+      allow create: if true; // Publicly creatable
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /auditEvents/{eventId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.clinicId == request.auth.uid);
+      allow create: if isAuthenticated();
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    match /supportTickets/{ticketId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.clinicId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.clinicId == request.auth.uid;
+      allow update: if isAdmin() || (isAuthenticated() && resource.data.clinicId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    match /intelligenceInsights/{insightId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.clinicId == request.auth.uid);
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /marketplaceServices/{serviceId} {
+      allow read: if true;
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /marketplaceOrders/{orderId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.clinicId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.clinicId == request.auth.uid;
+      allow update: if isAdmin() || (isAuthenticated() && resource.data.clinicId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+  }
+}

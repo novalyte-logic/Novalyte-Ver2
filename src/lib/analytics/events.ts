@@ -13,59 +13,24 @@ export interface TrackingEvent {
   userId?: string;
   sessionId: string;
   timestamp: string;
-  properties: Record<string, unknown>;
-}
-
-const SESSION_STORAGE_KEY = 'novalyte_session_id';
-
-function getSessionId() {
-  const existing = sessionStorage.getItem(SESSION_STORAGE_KEY);
-  if (existing) {
-    return existing;
-  }
-
-  const sessionId = crypto.randomUUID();
-  sessionStorage.setItem(SESSION_STORAGE_KEY, sessionId);
-  return sessionId;
-}
-
-function dispatchEvent(event: TrackingEvent) {
-  const body = JSON.stringify(event);
-
-  if (navigator.sendBeacon) {
-    const sent = navigator.sendBeacon(
-      '/api/telemetry/events',
-      new Blob([body], { type: 'application/json' }),
-    );
-    if (sent) {
-      return;
-    }
-  }
-
-  void fetch('/api/telemetry/events', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body,
-    keepalive: true,
-  }).catch(() => {
-    // Swallow analytics failures on the client.
-  });
+  properties: Record<string, any>;
 }
 
 export const AnalyticsEngine = {
-  track: (type: EventType, properties: Record<string, unknown> = {}) => {
+  track: (type: EventType, properties: Record<string, any> = {}) => {
     const event: TrackingEvent = {
       id: crypto.randomUUID(),
       type,
-      sessionId: getSessionId(),
+      sessionId: sessionStorage.getItem('novalyte_session_id') || 'unknown',
       timestamp: new Date().toISOString(),
       properties
     };
-
-    if (import.meta.env.DEV) {
-      console.debug('[Analytics]', event);
-    }
-
-    dispatchEvent(event);
+    
+    // In a real app, this would send to a backend or BigQuery
+    console.log('[Analytics]', event);
+    
+    // Store locally for demo purposes
+    const history = JSON.parse(localStorage.getItem('novalyte_events') || '[]');
+    localStorage.setItem('novalyte_events', JSON.stringify([...history, event].slice(-1000)));
   }
 };

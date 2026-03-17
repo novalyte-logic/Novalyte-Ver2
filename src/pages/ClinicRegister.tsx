@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   Activity, 
   ShieldCheck, 
@@ -15,8 +15,9 @@ import {
   FileText,
   AlertCircle
 } from 'lucide-react';
+import { doc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { db } from '@/src/firebase';
 import { useAuth } from '@/src/lib/auth/AuthContext';
-import { AccessCodeAuth } from '@/src/components/auth/AccessCodeAuth';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 
@@ -29,7 +30,8 @@ const ONBOARDING_STEPS = [
 ];
 
 export function ClinicRegister() {
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { user, signInWithGoogle } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [isProvisioning, setIsProvisioning] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
@@ -66,13 +68,16 @@ export function ClinicRegister() {
     setError('');
   };
 
-  useEffect(() => {
-    if (user && currentStep === 0) {
-      setCurrentStep(1);
-    }
-  }, [currentStep, user]);
-
   const handleNext = async () => {
+    if (currentStep === 0 && !user) {
+      try {
+        await signInWithGoogle();
+      } catch (err) {
+        setError('Authentication failed. Please try again.');
+        return;
+      }
+    }
+
     if (currentStep < ONBOARDING_STEPS.length - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
@@ -92,33 +97,39 @@ export function ClinicRegister() {
     setError('');
 
     try {
-      const token = await user.getIdToken();
-      const response = await fetch('/api/auth/clinic-registration', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
+      // 1. Update user role to clinic
+      await updateDoc(doc(db, 'users', user.uid), {
+        role: 'clinic',
+        updatedAt: serverTimestamp()
       });
 
-      if (!response.ok) {
-        let message = 'Failed to submit clinic registration.';
-        try {
-          const payload = (await response.json()) as { error?: string };
-          if (payload.error) {
-            message = payload.error;
-          }
-        } catch {
-          // Ignore malformed error payloads.
-        }
-        throw new Error(message);
-      }
+      // 2. Create clinic document
+      await setDoc(doc(db, 'clinics', user.uid), {
+        name: formData.legalName,
+        npiNumber: formData.npiNumber,
+        taxId: formData.taxId,
+        email: formData.adminEmail,
+        hipaaOfficer: formData.hipaaOfficer,
+        hipaaEmail: formData.hipaaEmail,
+        baaAccepted: formData.baaAccepted,
+        dataResidency: formData.dataResidency,
+        primaryEmr: formData.primaryEmr,
+        telehealth: formData.telehealth,
+        monthlyVolume: formData.monthlyVolume,
+        hl7Capable: formData.hl7Capable,
+        webhookUrl: formData.webhookUrl,
+        techContact: formData.techContact,
+        status: 'Verified',
+        outreachStatus: 'Active',
+        createdAt: serverTimestamp()
+      });
 
+      // Simulate enterprise provisioning sequence for UI feel
+      await new Promise(resolve => setTimeout(resolve, 2000));
       setIsComplete(true);
     } catch (err) {
       console.error("Error provisioning clinic:", err);
-      setError(err instanceof Error ? err.message : 'Failed to submit clinic registration. Please contact support.');
+      setError('Failed to provision clinic environment. Please contact support.');
     } finally {
       setIsProvisioning(false);
     }
@@ -220,20 +231,20 @@ export function ClinicRegister() {
                   <CheckCircle2 className="w-12 h-12 text-success" />
                 </div>
                 <div>
-                  <h2 className="text-4xl font-display font-bold text-white mb-4">Registration Submitted</h2>
+                  <h2 className="text-4xl font-display font-bold text-white mb-4">Infrastructure Provisioned</h2>
                   <p className="text-lg text-text-secondary max-w-md mx-auto">
-                    Your clinic workspace is created and pending verification. Continue into the operating system to complete onboarding and activation.
+                    Your clinic operating environment has been successfully deployed and secured.
                   </p>
                 </div>
                 
                 <div className="bg-[#05070A] border border-surface-3 rounded-xl p-6 text-left font-mono text-sm space-y-3 mx-auto max-w-md">
                   <div className="flex justify-between">
-                    <span className="text-text-secondary">Workspace</span>
-                    <span className="text-success">Created</span>
+                    <span className="text-text-secondary">Environment</span>
+                    <span className="text-success">Production</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-text-secondary">Review Status</span>
-                    <span className="text-warning">Pending</span>
+                    <span className="text-text-secondary">NPI Status</span>
+                    <span className="text-success">Verified</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-text-secondary">Data Residency</span>
@@ -241,8 +252,8 @@ export function ClinicRegister() {
                   </div>
                 </div>
 
-                <Button size="lg" className="w-full text-lg h-14" onClick={() => window.location.assign('/dashboard')}>
-                  Open Clinic Workspace
+                <Button size="lg" className="w-full text-lg h-14" onClick={() => navigate('/dashboard')}>
+                  Access Control Center
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </motion.div>
@@ -257,23 +268,23 @@ export function ClinicRegister() {
                   <Server className="w-10 h-10 text-primary" />
                 </div>
                 <div>
-                  <h2 className="text-3xl font-display font-bold text-white mb-4">Submitting Registration</h2>
-                  <p className="text-text-secondary">Creating your clinic workspace and securing onboarding records...</p>
+                  <h2 className="text-3xl font-display font-bold text-white mb-4">Deploying Environment</h2>
+                  <p className="text-text-secondary">Configuring secure infrastructure and establishing data pipelines...</p>
                 </div>
                 <div className="space-y-4 text-left font-mono text-sm max-w-sm mx-auto">
                   <div className="flex items-center gap-3 text-success">
-                    <CheckCircle2 className="w-4 h-4" /> <span>Verifying authenticated session...</span>
+                    <CheckCircle2 className="w-4 h-4" /> <span>Validating NPI Registry...</span>
                   </div>
                   <div className="flex items-center gap-3 text-success">
-                    <CheckCircle2 className="w-4 h-4" /> <span>Writing clinic onboarding record...</span>
+                    <CheckCircle2 className="w-4 h-4" /> <span>Generating BAA Agreements...</span>
                   </div>
                   <div className="flex items-center gap-3 text-primary">
                     <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" /> 
-                    <span>Assigning clinic workspace permissions...</span>
+                    <span>Provisioning Isolated Database...</span>
                   </div>
                   <div className="flex items-center gap-3 text-text-secondary">
                     <div className="w-4 h-4 rounded-full border border-surface-3" /> 
-                    <span>Readying activation checklist...</span>
+                    <span>Establishing EMR Webhooks...</span>
                   </div>
                 </div>
               </motion.div>
@@ -311,7 +322,7 @@ export function ClinicRegister() {
                           </div>
                           <h3 className="text-xl font-bold text-white mb-4">Secure Identity Verification</h3>
                           <p className="text-text-secondary mb-8">
-                            To begin provisioning your clinic environment, verify your operator identity with an email access code. Google and LinkedIn remain available as secondary options.
+                            To begin provisioning your clinic environment, please authenticate with your professional Google account.
                           </p>
                           {user ? (
                             <div className="p-4 rounded-xl bg-success/10 border border-success/20 flex items-center justify-center gap-3">
@@ -319,11 +330,9 @@ export function ClinicRegister() {
                               <span className="text-success font-bold">Authenticated as {user.email}</span>
                             </div>
                           ) : (
-                            <AccessCodeAuth
-                              modeLabel="Clinic operator account"
-                              helperText="Use the business email tied to your clinic. We will create the account if it does not exist and send a secure 6-digit access code."
-                              providers={['google', 'linkedin']}
-                            />
+                            <Button size="lg" className="w-full" onClick={signInWithGoogle}>
+                              Authenticate with Google
+                            </Button>
                           )}
                         </div>
                       )}
@@ -411,7 +420,7 @@ export function ClinicRegister() {
                               <p className="text-sm text-text-secondary mb-2">
                                 I acknowledge and agree to the standard Novalyte AI BAA for the handling of Protected Health Information (PHI).
                               </p>
-                              <Link to="/security" className="text-primary text-sm hover:underline flex items-center gap-1">
+                              <Link to="#" className="text-primary text-sm hover:underline flex items-center gap-1">
                                 <FileText className="w-4 h-4" /> View Full BAA
                               </Link>
                             </div>

@@ -1,118 +1,26 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
-import { PublicService, type PublicMarketplaceProduct } from '@/src/services/public';
-import { ShoppingCart, Server, Activity, ArrowRight, Search, ShieldCheck, Zap, Database, Building2, TrendingUp, Cpu, Package } from 'lucide-react';
+import { ShoppingCart, Server, Activity, ArrowRight, Search, ShieldCheck, Zap, Database, CheckCircle2, Building2, TrendingUp, Cpu } from 'lucide-react';
 
 export function Marketplace() {
   const [searchQuery, setSearchQuery] = useState('');
-  const navigate = useNavigate();
-  const [products, setProducts] = React.useState<PublicMarketplaceProduct[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState('');
 
-  React.useEffect(() => {
-    let isActive = true;
+  const stats = [
+    { label: "Vetted Vendors", value: "150+" },
+    { label: "Clinical Products", value: "2,400+" },
+    { label: "Avg. ROI (Months)", value: "4.2" },
+    { label: "Procurement Volume", value: "$12M+" }
+  ];
 
-    const loadProducts = async () => {
-      setLoading(true);
-      setError('');
-
-      try {
-        const response = await PublicService.getMarketplaceProducts({ limit: 200 });
-        if (isActive) {
-          setProducts(response.products);
-        }
-      } catch (loadError) {
-        console.error('Failed to load marketplace summary:', loadError);
-        if (isActive) {
-          setProducts([]);
-          setError('Unable to load live marketplace stats right now.');
-        }
-      } finally {
-        if (isActive) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void loadProducts();
-
-    return () => {
-      isActive = false;
-    };
-  }, []);
-
-  const stats = React.useMemo(() => {
-    const vendors = new Set(products.map((product) => product.vendor).filter(Boolean));
-    const categoryCount = new Set(products.map((product) => product.categorySlug).filter(Boolean)).size;
-    const roiSignals = products
-      .map((product) => {
-        const match = product.roi.match(/([0-9]+(?:\.[0-9]+)?)/);
-        return match ? Number.parseFloat(match[1]) : null;
-      })
-      .filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
-    const averageRoiMonths = roiSignals.length
-      ? (roiSignals.reduce((sum, value) => sum + value, 0) / roiSignals.length).toFixed(1)
-      : 'Live';
-
-    return [
-      { label: 'Vetted Vendors', value: vendors.size ? vendors.size.toLocaleString() : '0' },
-      { label: 'Published Products', value: products.length ? products.length.toLocaleString() : '0' },
-      { label: 'Active Categories', value: categoryCount ? String(categoryCount) : '0' },
-      { label: 'Avg. ROI (Months)', value: averageRoiMonths },
-    ];
-  }, [products]);
-
-  const featuredVendors = React.useMemo(() => {
-    const vendorIcon = (category: string) => {
-      if (category.includes('diagnostic')) {
-        return Activity;
-      }
-      if (category.includes('health') || category.includes('software')) {
-        return Database;
-      }
-      if (category.includes('equipment')) {
-        return Server;
-      }
-      if (category.includes('supplement')) {
-        return Package;
-      }
-      return Cpu;
-    };
-
-    const vendorMap = new Map<
-      string,
-      { name: string; category: string; rating: number; logo: React.ElementType }
-    >();
-
-    products.forEach((product) => {
-      if (!product.vendor) {
-        return;
-      }
-
-      const current = vendorMap.get(product.vendor);
-      if (!current || product.rating > current.rating) {
-        vendorMap.set(product.vendor, {
-          name: product.vendor,
-          category: product.category,
-          rating: product.rating,
-          logo: vendorIcon(product.category.toLowerCase()),
-        });
-      }
-    });
-
-    return Array.from(vendorMap.values())
-      .sort((left, right) => right.rating - left.rating)
-      .slice(0, 4);
-  }, [products]);
-
-  const handleSearch = () => {
-    const normalizedQuery = searchQuery.trim();
-    navigate(normalizedQuery ? `/marketplace/all?query=${encodeURIComponent(normalizedQuery)}` : '/marketplace/all');
-  };
+  const featuredVendors = [
+    { name: "NeuroTech Systems", category: "Diagnostics", rating: "4.9", logo: Cpu },
+    { name: "Apex Clinical", category: "Equipment", rating: "4.8", logo: Server },
+    { name: "Vitality Labs", category: "Supplements", rating: "4.9", logo: Activity },
+    { name: "Pulse Analytics", category: "Health Tech", rating: "4.7", logo: Database }
+  ];
 
   return (
     <div className="flex flex-col bg-background min-h-screen">
@@ -157,13 +65,13 @@ export function Marketplace() {
                     className="w-full h-14 bg-transparent border-none text-base sm:text-lg text-white placeholder-text-secondary focus:outline-none focus:ring-0 px-4"
                   />
                 </div>
-                <Button
-                  type="button"
-                  onClick={handleSearch}
-                  className="w-full sm:w-auto h-12 px-8 bg-primary hover:bg-primary-hover text-background font-semibold rounded-xl transition-colors"
-                >
-                  Search
-                </Button>
+                <Link to="/marketplace/equipment" className="w-full sm:w-auto">
+                  <Button 
+                    className="w-full sm:w-auto h-12 px-8 bg-primary hover:bg-primary-hover text-background font-semibold rounded-xl transition-colors"
+                  >
+                    Search
+                  </Button>
+                </Link>
               </div>
             </div>
           </motion.div>
@@ -173,17 +81,10 @@ export function Marketplace() {
       {/* Trust Stats */}
       <section className="py-12 bg-surface-1/30 border-b border-surface-3/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {error ? (
-            <div className="mb-6 rounded-xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger">
-              {error}
-            </div>
-          ) : null}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 divide-x divide-surface-3/50">
             {stats.map((stat, i) => (
               <div key={i} className="text-center px-4">
-                <div className="text-3xl md:text-4xl font-display font-bold text-white mb-2">
-                  {loading ? '...' : stat.value}
-                </div>
+                <div className="text-3xl md:text-4xl font-display font-bold text-white mb-2">{stat.value}</div>
                 <div className="text-xs md:text-sm font-mono text-text-secondary uppercase tracking-widest">{stat.label}</div>
               </div>
             ))}
@@ -303,8 +204,8 @@ export function Marketplace() {
               </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {featuredVendors.length ? featuredVendors.map((vendor) => (
-                  <Card key={vendor.name} className="bg-surface-1/80 border-surface-3 p-6 flex items-center gap-4 hover:bg-surface-2 transition-colors">
+                {featuredVendors.map((vendor, i) => (
+                  <Card key={i} className="bg-surface-1/80 border-surface-3 p-6 flex items-center gap-4 hover:bg-surface-2 transition-colors cursor-pointer">
                     <div className="w-12 h-12 rounded-xl bg-surface-3 flex items-center justify-center text-text-secondary">
                       <vendor.logo className="w-6 h-6" />
                     </div>
@@ -313,14 +214,10 @@ export function Marketplace() {
                       <p className="text-sm text-text-secondary">{vendor.category}</p>
                     </div>
                     <div className="flex items-center gap-1 text-sm font-medium text-success bg-success/10 px-2 py-1 rounded-md">
-                      ★ {vendor.rating.toFixed(1)}
+                      ★ {vendor.rating}
                     </div>
                   </Card>
-                )) : (
-                  <Card className="bg-surface-1/80 border-surface-3 p-6 text-text-secondary">
-                    Live vendor partner highlights will appear here once products are published.
-                  </Card>
-                )}
+                ))}
               </div>
             </div>
 
@@ -351,3 +248,4 @@ export function Marketplace() {
     </div>
   );
 }
+

@@ -22,18 +22,6 @@
   
   --color-text-primary: #F8FAFC;
   --color-text-secondary: #94A3B8;
-
-  --animate-marquee: marquee 30s linear infinite;
-  --animate-pulse-slow: pulse-slow 4s ease-in-out infinite;
-
-  @keyframes marquee {
-    from { transform: translateX(0); }
-    to { transform: translateX(-50%); }
-  }
-  @keyframes pulse-slow {
-    0%, 100% { opacity: 0.3; transform: scale(1); }
-    50% { opacity: 0.6; transform: scale(1.05); }
-  }
 }
 
 body {

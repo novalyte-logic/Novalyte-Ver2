@@ -1,4 +1,4 @@
-import type { AppRole } from '../../../shared/authRoles';
+import { Role } from '../../types/models';
 
 type Permission = 
   | 'view_patient_pii'
@@ -7,10 +7,8 @@ type Permission =
   | 'route_leads'
   | 'manage_directory';
 
-const RolePermissions: Record<AppRole, Permission[]> = {
-  admin: ['view_patient_pii', 'manage_clinic_settings', 'view_system_analytics', 'route_leads', 'manage_directory'],
+const RolePermissions: Record<Role, Permission[]> = {
   system_admin: ['view_patient_pii', 'manage_clinic_settings', 'view_system_analytics', 'route_leads', 'manage_directory'],
-  clinic: ['view_patient_pii', 'manage_clinic_settings'],
   clinic_admin: ['view_patient_pii', 'manage_clinic_settings'],
   practitioner: ['view_patient_pii'],
   vendor: [],
@@ -18,7 +16,7 @@ const RolePermissions: Record<AppRole, Permission[]> = {
 };
 
 export const PermissionEngine = {
-  hasPermission: (role: AppRole, permission: Permission): boolean => {
+  hasPermission: (role: Role, permission: Permission): boolean => {
     return RolePermissions[role]?.includes(permission) || false;
   }
 };

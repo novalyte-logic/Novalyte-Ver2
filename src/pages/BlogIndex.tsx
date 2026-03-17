@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 import { Search, ChevronRight, ArrowRight, Activity, Shield, Sparkles, Clock, User, Tag } from 'lucide-react';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
-import { PublicApiError, PublicService } from '@/src/services/public';
 
 const CATEGORIES = [
   "All",
@@ -93,9 +92,6 @@ const POSTS = [
 export function BlogIndex() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
-  const [newsletterEmail, setNewsletterEmail] = useState('');
-  const [newsletterLoading, setNewsletterLoading] = useState(false);
-  const [newsletterFeedback, setNewsletterFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const filteredPosts = POSTS.filter(post => {
     const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -103,42 +99,6 @@ export function BlogIndex() {
     const matchesCategory = activeCategory === "All" || post.category === activeCategory;
     return matchesSearch && matchesCategory;
   });
-
-  const handleNewsletterSubscribe = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!newsletterEmail.trim()) {
-      setNewsletterFeedback({
-        type: 'error',
-        message: 'Enter an email address to subscribe.',
-      });
-      return;
-    }
-
-    setNewsletterLoading(true);
-    setNewsletterFeedback(null);
-
-    try {
-      await PublicService.submitContact({
-        name: 'Clinical Briefing Subscriber',
-        email: newsletterEmail.trim(),
-        role: 'other',
-        message: 'Please subscribe this email address to the Novalyte Clinical Briefing newsletter.',
-      });
-      setNewsletterEmail('');
-      setNewsletterFeedback({
-        type: 'success',
-        message: 'Subscription request received. We will confirm onboarding by email.',
-      });
-    } catch (error) {
-      setNewsletterFeedback({
-        type: 'error',
-        message: error instanceof PublicApiError ? error.message : 'Unable to submit your subscription right now.',
-      });
-    } finally {
-      setNewsletterLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-[#05070A] font-sans text-text-primary pt-24 pb-24">
@@ -394,28 +354,16 @@ export function BlogIndex() {
               <p className="text-sm text-text-secondary mb-4">
                 Get the latest protocols and research delivered to your inbox weekly.
               </p>
-              {newsletterFeedback ? (
-                <div className={`mb-4 rounded-lg border px-3 py-2 text-sm ${
-                  newsletterFeedback.type === 'success'
-                    ? 'border-success/20 bg-success/10 text-success'
-                    : 'border-danger/20 bg-danger/10 text-danger'
-                }`}>
-                  {newsletterFeedback.message}
-                </div>
-              ) : null}
-              <form onSubmit={handleNewsletterSubscribe} className="space-y-3">
+              <div className="space-y-3">
                 <input 
                   type="email" 
                   placeholder="Enter your email" 
-                  value={newsletterEmail}
-                  onChange={(event) => setNewsletterEmail(event.target.value)}
-                  disabled={newsletterLoading}
                   className="w-full px-4 py-2 rounded-lg bg-surface-2 border border-surface-3 text-white placeholder-text-secondary focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
-                <Button className="w-full" type="submit" disabled={newsletterLoading}>
-                  {newsletterLoading ? 'Submitting...' : 'Subscribe'}
-                </Button>
-              </form>
+                <Link to="/contact">
+                  <Button className="w-full">Subscribe</Button>
+                </Link>
+              </div>
             </Card>
 
           </div>

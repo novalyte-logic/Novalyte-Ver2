@@ -7,10 +7,11 @@ import {
   ChevronDown, ChevronUp, Ticket, Phone, Mail, ArrowRight,
   AlertCircle, X, Send
 } from 'lucide-react';
+import { collection, query, where, onSnapshot, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/src/firebase';
+import { useAuth } from '@/src/lib/auth/AuthContext';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
-import { useNavigate } from 'react-router-dom';
-import { ClinicApiError, ClinicService } from '@/src/services/clinic';
 
 interface SupportTicket {
   id: string;
@@ -22,7 +23,7 @@ interface SupportTicket {
 }
 
 export function ClinicHelp() {
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
@@ -30,115 +31,48 @@ export function ClinicHelp() {
   const [showNewTicketModal, setShowNewTicketModal] = useState(false);
   const [newTicket, setNewTicket] = useState({ subject: '', description: '', priority: 'Medium' });
   const [submitting, setSubmitting] = useState(false);
-  const [ticketFeedback, setTicketFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [systemHealth, setSystemHealth] = useState<Array<{ id: string; label: string; status: string }>>([]);
 
   useEffect(() => {
-    let isActive = true;
+    if (!user) return;
 
-    const loadSupport = async (silent = false) => {
-      if (!silent) {
-        setLoading(true);
-      }
-      try {
-        const response = await ClinicService.getSupport();
-        if (isActive) {
-          setTickets(response.tickets as SupportTicket[]);
-          setSystemHealth(response.systemHealth);
-        }
-      } catch (error) {
-        console.error('Error loading support:', error);
-        if (isActive) {
-          setTicketFeedback({
-            type: 'error',
-            message: error instanceof ClinicApiError ? error.message : 'Unable to load support resources right now.',
-          });
-        }
-      } finally {
-        if (isActive) {
-          setLoading(false);
-        }
-      }
-    };
+    const q = query(
+      collection(db, 'supportTickets'),
+      where('clinicId', '==', user.uid),
+      orderBy('createdAt', 'desc')
+    );
 
-    void loadSupport();
-    const interval = window.setInterval(() => {
-      void loadSupport(true);
-    }, 30000);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as SupportTicket[];
+      setTickets(data);
+      setLoading(false);
+    });
 
-    return () => {
-      isActive = false;
-      window.clearInterval(interval);
-    };
-  }, []);
+    return () => unsubscribe();
+  }, [user]);
 
   const handleSubmitTicket = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTicket.subject || !newTicket.description) return;
+    if (!user || !newTicket.subject || !newTicket.description) return;
 
     setSubmitting(true);
-    setTicketFeedback(null);
     try {
-      const response = await ClinicService.createSupportTicket({
+      await addDoc(collection(db, 'supportTickets'), {
+        clinicId: user.uid,
         subject: newTicket.subject,
         description: newTicket.description,
         priority: newTicket.priority,
+        status: 'Open',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
       });
-      setTickets((current) => [response.ticket as SupportTicket, ...current]);
       setNewTicket({ subject: '', description: '', priority: 'Medium' });
       setShowNewTicketModal(false);
-      setTicketFeedback({
-        type: 'success',
-        message: 'Support ticket submitted successfully. Our team will respond shortly.',
-      });
     } catch (error) {
       console.error('Error submitting ticket:', error);
-      setTicketFeedback({
-        type: 'error',
-        message:
-          error instanceof ClinicApiError
-            ? error.message
-            : 'Unable to submit your ticket right now. Please try again or contact support.',
-      });
     } finally {
       setSubmitting(false);
     }
   };
-
-  const resources = [
-    {
-      title: 'Knowledge Base',
-      description: 'Browse articles, tutorials, and operational guides.',
-      link: '/blog',
-      label: 'Browse Articles',
-      icon: BookOpen,
-      accent: 'primary',
-    },
-    {
-      title: 'Video Tutorials',
-      description: 'Step-by-step video guides for clinic operators.',
-      link: '/blog?topic=Clinic%20Operations',
-      label: 'Watch Videos',
-      icon: PlayCircle,
-      accent: 'secondary',
-    },
-    {
-      title: 'Community Forum',
-      description: 'Connect with other clinic operators and share protocols.',
-      link: '/contact?role=clinic&topic=community_forum',
-      label: 'Join Discussion',
-      icon: MessageCircle,
-      accent: 'warning',
-    },
-    {
-      title: 'API Documentation',
-      description: 'Technical docs for custom EMR and CRM integrations.',
-      link: '/support/clinic',
-      label: 'View Docs',
-      icon: FileText,
-      accent: 'success',
-    },
-  ];
 
   const faqs = [
     { 
@@ -163,24 +97,6 @@ export function ClinicHelp() {
     }
   ];
 
-  const normalizedSearch = searchQuery.trim().toLowerCase();
-  const filteredResources = resources.filter((resource) =>
-    !normalizedSearch ||
-    resource.title.toLowerCase().includes(normalizedSearch) ||
-    resource.description.toLowerCase().includes(normalizedSearch),
-  );
-  const filteredFaqs = faqs.filter((faq) =>
-    !normalizedSearch ||
-    faq.q.toLowerCase().includes(normalizedSearch) ||
-    faq.a.toLowerCase().includes(normalizedSearch),
-  );
-  const filteredTickets = tickets.filter((ticket) =>
-    !normalizedSearch ||
-    ticket.subject.toLowerCase().includes(normalizedSearch) ||
-    ticket.status.toLowerCase().includes(normalizedSearch) ||
-    ticket.priority.toLowerCase().includes(normalizedSearch),
-  );
-
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col animate-in fade-in duration-500">
       
@@ -189,15 +105,6 @@ export function ClinicHelp() {
         <div>
           <h1 className="text-3xl font-display font-bold text-white">Help & Support</h1>
           <p className="text-text-secondary mt-1">Get assistance, read documentation, and manage your support tickets.</p>
-          {ticketFeedback ? (
-            <div className={`mt-4 rounded-lg border px-4 py-3 text-sm ${
-              ticketFeedback.type === 'success'
-                ? 'border-success/20 bg-success/10 text-success'
-                : 'border-danger/20 bg-danger/10 text-danger'
-            }`}>
-              {ticketFeedback.message}
-            </div>
-          ) : null}
         </div>
         <div className="relative w-full md:w-96">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary" />
@@ -219,69 +126,74 @@ export function ClinicHelp() {
             
             {/* Resource Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {filteredResources.map((resource) => {
-                const accentStyles =
-                  resource.accent === 'primary'
-                    ? {
-                        border: 'hover:border-primary/50',
-                        iconColor: 'text-primary',
-                        iconBg: 'bg-primary/10',
-                        titleHover: 'group-hover:text-primary',
-                      }
-                    : resource.accent === 'secondary'
-                    ? {
-                        border: 'hover:border-secondary/50',
-                        iconColor: 'text-secondary',
-                        iconBg: 'bg-secondary/10',
-                        titleHover: 'group-hover:text-secondary',
-                      }
-                    : resource.accent === 'warning'
-                    ? {
-                        border: 'hover:border-warning/50',
-                        iconColor: 'text-warning',
-                        iconBg: 'bg-warning/10',
-                        titleHover: 'group-hover:text-warning',
-                      }
-                    : {
-                        border: 'hover:border-success/50',
-                        iconColor: 'text-success',
-                        iconBg: 'bg-success/10',
-                        titleHover: 'group-hover:text-success',
-                      };
-
-                return (
-                  <Link key={resource.title} to={resource.link}>
-                    <Card className={`p-5 bg-surface-1 border-surface-3 transition-all cursor-pointer group ${accentStyles.border}`}>
-                      <div className="flex items-start gap-4">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${accentStyles.iconBg}`}>
-                          <resource.icon className={`w-5 h-5 ${accentStyles.iconColor}`} />
-                        </div>
-                        <div>
-                          <h3 className={`font-bold text-white mb-1 ${accentStyles.titleHover} transition-colors`}>{resource.title}</h3>
-                          <p className="text-sm text-text-secondary mb-3">{resource.description}</p>
-                          <span className={`text-xs font-bold flex items-center gap-1 ${accentStyles.iconColor}`}>
-                            {resource.label} <ArrowRight className="w-3 h-3" />
-                          </span>
-                        </div>
-                      </div>
-                    </Card>
-                  </Link>
-                );
-              })}
-              {!filteredResources.length ? (
-                <div className="sm:col-span-2 rounded-xl border border-dashed border-surface-3 bg-surface-1/30 p-8 text-center text-text-secondary">
-                  No support resources matched that search.
+              <Card className="p-5 bg-surface-1 border-surface-3 hover:border-primary/50 transition-all cursor-pointer group">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0 group-hover:scale-110 transition-transform">
+                    <BookOpen className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white mb-1 group-hover:text-primary transition-colors">Knowledge Base</h3>
+                    <p className="text-sm text-text-secondary mb-3">Browse articles, tutorials, and operational guides.</p>
+                    <span className="text-xs font-bold text-primary flex items-center gap-1">
+                      Browse Articles <ArrowRight className="w-3 h-3" />
+                    </span>
+                  </div>
                 </div>
-              ) : null}
+              </Card>
+
+              <Card className="p-5 bg-surface-1 border-surface-3 hover:border-secondary/50 transition-all cursor-pointer group">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary shrink-0 group-hover:scale-110 transition-transform">
+                    <PlayCircle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white mb-1 group-hover:text-secondary transition-colors">Video Tutorials</h3>
+                    <p className="text-sm text-text-secondary mb-3">Step-by-step video guides for clinic operators.</p>
+                    <span className="text-xs font-bold text-secondary flex items-center gap-1">
+                      Watch Videos <ArrowRight className="w-3 h-3" />
+                    </span>
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="p-5 bg-surface-1 border-surface-3 hover:border-warning/50 transition-all cursor-pointer group">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center text-warning shrink-0 group-hover:scale-110 transition-transform">
+                    <MessageCircle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white mb-1 group-hover:text-warning transition-colors">Community Forum</h3>
+                    <p className="text-sm text-text-secondary mb-3">Connect with other clinic operators and share protocols.</p>
+                    <span className="text-xs font-bold text-warning flex items-center gap-1">
+                      Join Discussion <ExternalLink className="w-3 h-3" />
+                    </span>
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="p-5 bg-surface-1 border-surface-3 hover:border-success/50 transition-all cursor-pointer group">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center text-success shrink-0 group-hover:scale-110 transition-transform">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white mb-1 group-hover:text-success transition-colors">API Documentation</h3>
+                    <p className="text-sm text-text-secondary mb-3">Technical docs for custom EMR and CRM integrations.</p>
+                    <span className="text-xs font-bold text-success flex items-center gap-1">
+                      View Docs <ExternalLink className="w-3 h-3" />
+                    </span>
+                  </div>
+                </div>
+              </Card>
             </div>
 
             {/* FAQs */}
             <Card className="p-6 bg-surface-1 border-surface-3">
               <h2 className="text-xl font-bold text-white mb-6">Frequently Asked Questions</h2>
               <div className="space-y-3">
-                {filteredFaqs.map((faq, i) => (
+                {faqs.map((faq, i) => (
                   <div 
-                    key={faq.q}
+                    key={i} 
                     className={`border rounded-xl overflow-hidden transition-colors ${
                       openFaq === i ? 'border-primary/30 bg-primary/5' : 'border-surface-3 bg-[#0B0F14] hover:border-surface-4'
                     }`}
@@ -313,11 +225,6 @@ export function ClinicHelp() {
                     </AnimatePresence>
                   </div>
                 ))}
-                {!filteredFaqs.length ? (
-                  <div className="rounded-xl border border-dashed border-surface-3 bg-[#0B0F14] p-6 text-center text-text-secondary">
-                    No FAQs matched your search.
-                  </div>
-                ) : null}
               </div>
             </Card>
 
@@ -333,10 +240,7 @@ export function ClinicHelp() {
               </h2>
               
               <div className="space-y-3">
-                <Button
-                  className="w-full bg-primary hover:bg-primary/90 text-black font-bold flex items-center justify-center gap-2 py-3"
-                  onClick={() => navigate('/contact?role=clinic&topic=live_chat_support')}
-                >
+                <Button className="w-full bg-primary hover:bg-primary/90 text-black font-bold flex items-center justify-center gap-2 py-3">
                   <MessageCircle className="w-4 h-4" /> Live Chat Support
                 </Button>
                 
@@ -378,15 +282,13 @@ export function ClinicHelp() {
             <Card className="p-6 bg-surface-1 border-surface-3">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-white">Recent Tickets</h2>
-                <span className="text-xs font-bold text-text-secondary">
-                  {filteredTickets.length} visible
-                </span>
+                <button className="text-xs font-bold text-primary hover:text-primary/80 transition-colors">View All</button>
               </div>
               <div className="space-y-3">
                 {loading ? (
                   <p className="text-xs text-text-secondary">Loading tickets...</p>
-                ) : filteredTickets.length > 0 ? (
-                  filteredTickets.map((ticket) => (
+                ) : tickets.length > 0 ? (
+                  tickets.map((ticket) => (
                     <div key={ticket.id} className="p-3 border border-surface-3 rounded-lg bg-[#0B0F14] hover:border-surface-4 transition-colors cursor-pointer">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-mono text-text-secondary">{ticket.id.slice(0, 8).toUpperCase()}</span>
@@ -402,12 +304,12 @@ export function ClinicHelp() {
                       </div>
                       <p className="text-sm font-bold text-white truncate">{ticket.subject}</p>
                       <p className="text-xs text-text-secondary mt-1">
-                        Updated {ticket.updatedAt ? new Date(ticket.updatedAt).toLocaleDateString() : 'Recently'}
+                        Updated {ticket.updatedAt?.toDate().toLocaleDateString() || 'Recently'}
                       </p>
                     </div>
                   ))
                 ) : (
-                  <p className="text-xs text-text-secondary">No recent tickets matched your search.</p>
+                  <p className="text-xs text-text-secondary">No recent tickets.</p>
                 )}
               </div>
             </Card>
@@ -418,23 +320,29 @@ export function ClinicHelp() {
                 <Activity className="w-5 h-5 text-success" /> System Health
               </h2>
               <div className="space-y-4">
-                {(systemHealth.length ? systemHealth : [
-                  { id: 'lead-routing', label: 'Lead Routing Engine', status: 'operational' },
-                  { id: 'clinic-api', label: 'Clinic API', status: 'operational' },
-                  { id: 'workforce-exchange', label: 'Workforce Exchange', status: 'operational' },
-                ]).map((entry) => (
-                  <div key={entry.id} className="flex items-center justify-between">
-                    <span className="text-sm text-text-secondary">{entry.label}</span>
-                    <span className="flex items-center gap-1.5 text-xs font-bold text-success">
-                      <div className="w-2 h-2 rounded-full bg-success animate-pulse" /> {entry.status === 'operational' ? 'Operational' : entry.status}
-                    </span>
-                  </div>
-                ))}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-text-secondary">Lead Routing Engine</span>
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-success">
+                    <div className="w-2 h-2 rounded-full bg-success animate-pulse" /> Operational
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-text-secondary">EMR Sync API</span>
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-success">
+                    <div className="w-2 h-2 rounded-full bg-success animate-pulse" /> Operational
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-text-secondary">Workforce Matching</span>
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-success">
+                    <div className="w-2 h-2 rounded-full bg-success animate-pulse" /> Operational
+                  </span>
+                </div>
                 <div className="pt-3 mt-3 border-t border-surface-3 flex items-center justify-between">
                   <span className="text-xs text-text-secondary">Last checked: Just now</span>
-                  <Link to="/status" className="text-xs font-bold text-primary hover:text-primary/80 flex items-center gap-1">
+                  <button className="text-xs font-bold text-primary hover:text-primary/80 flex items-center gap-1">
                     Status Page <ExternalLink className="w-3 h-3" />
-                  </Link>
+                  </button>
                 </div>
               </div>
             </Card>

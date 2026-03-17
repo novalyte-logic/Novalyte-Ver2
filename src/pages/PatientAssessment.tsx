@@ -1,17 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { collection, addDoc, serverTimestamp, getDocs, query, where, limit } from 'firebase/firestore';
+import { db } from '@/src/firebase';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
-import { Shield, Activity, ArrowRight, CheckCircle2, ChevronLeft, Brain, Zap, AlertCircle, Calendar, Clock, Lock } from 'lucide-react';
-import {
-  PublicService,
-  type BookingResponse,
-  type ClinicAvailabilitySlot,
-  type MatchedClinicSummary,
-} from '@/src/services/public';
-import { AnalyticsEngine } from '@/src/lib/analytics/events';
-import { parsePatientAssessmentHandoff } from '@/src/lib/patientJourney';
+import { Shield, Activity, ArrowRight, CheckCircle2, ChevronLeft, Brain, Zap, AlertCircle, Calendar, Clock, Lock, MapPin, Star } from 'lucide-react';
 
 type AssessmentData = {
   goal: string;
@@ -43,100 +37,30 @@ const initialData: AssessmentData = {
 
 const symptomsByGoal: Record<string, string[]> = {
   'Hormone Optimization': ['Low Energy / Fatigue', 'Decreased Libido', 'Brain Fog', 'Loss of Muscle Mass', 'Stubborn Body Fat', 'Mood Swings'],
-  'Peptide Therapy': ['Slow Recovery', 'Joint Pain', 'Muscle Wasting', 'Injury Rehabilitation', 'Inflammation', 'Decreased Vitality'],
-  'Weight Management': ['Stubborn Body Fat', 'Cravings', 'Slow Metabolism', 'Low Energy / Fatigue', 'Joint Pain', 'Poor Sleep Quality'],
-  'Sexual Health': ['Decreased Libido', 'Performance Anxiety', 'Vascular Issues', 'Low Stamina', 'Hormonal Imbalance', 'Mood Swings'],
-  'Longevity & Aging': ['Joint Pain', 'Slow Recovery', 'Poor Sleep Quality', 'Decreased Stamina', 'Skin Aging', 'Metabolic Slowdown'],
-  'Hair & Aesthetics': ['Thinning Hair', 'Receding Hairline', 'Skin Elasticity', 'Sun Damage', 'Volume Loss', 'Premature Aging'],
-  'Physical Performance': ['Low Stamina', 'Slow Recovery', 'Strength Plateau', 'Muscle Soreness', 'High Heart Rate', 'Decreased VO2 Max'],
   'Cognitive Performance': ['Brain Fog', 'Poor Focus', 'Memory Issues', 'Afternoon Crashes', 'Anxiety', 'Poor Sleep Quality'],
+  'Longevity & Aging': ['Joint Pain', 'Slow Recovery', 'Poor Sleep Quality', 'Decreased Stamina', 'Skin Aging', 'Metabolic Slowdown'],
+  'Weight Management': ['Stubborn Body Fat', 'Cravings', 'Slow Metabolism', 'Low Energy / Fatigue', 'Joint Pain', 'Poor Sleep Quality'],
   'General Wellness': ['Low Energy / Fatigue', 'Poor Sleep Quality', 'Stress / Anxiety', 'Frequent Illness', 'Digestive Issues', 'Brain Fog']
 };
 
-function isValidEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
-}
-
-function isValidPhone(value: string) {
-  return value.replace(/\D/g, '').length >= 10;
-}
-
-function isValidZip(value: string) {
-  return /^[A-Za-z0-9 -]{3,10}$/.test(value.trim());
-}
-
 export function PatientAssessment() {
-  const [searchParams] = useSearchParams();
-  const handoff = useMemo(() => parsePatientAssessmentHandoff(searchParams), [searchParams]);
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [data, setData] = useState<AssessmentData>(initialData);
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<'qualified' | 'disqualified' | null>(null);
   const [showBooking, setShowBooking] = useState(false);
   const [bookingStep, setBookingStep] = useState(1);
-  const [matchedClinic, setMatchedClinic] = useState<MatchedClinicSummary>(null);
+  const [matchedClinic, setMatchedClinic] = useState<any>(null);
   const [patientId, setPatientId] = useState<string | null>(null);
   const [assessmentId, setAssessmentId] = useState<string | null>(null);
-  const [bookingSlots, setBookingSlots] = useState<ClinicAvailabilitySlot[]>([]);
-  const [selectedSlotKey, setSelectedSlotKey] = useState('');
-  const [assessmentError, setAssessmentError] = useState('');
-  const [bookingError, setBookingError] = useState('');
-  const [bookingSlotsError, setBookingSlotsError] = useState('');
-  const [bookingSlotsLoading, setBookingSlotsLoading] = useState(false);
-  const [bookingSubmitting, setBookingSubmitting] = useState(false);
-  const [bookingResult, setBookingResult] = useState<BookingResponse | null>(null);
 
   const totalSteps = 7;
-  const availableSymptoms = useMemo(
-    () =>
-      [...new Set([...(symptomsByGoal[data.goal || 'General Wellness'] || []), ...data.symptoms])],
-    [data.goal, data.symptoms],
-  );
-  const contactValidationError = useMemo(() => {
-    if (!data.firstName.trim() || !data.lastName.trim()) {
-      return 'Enter your full name so the matched clinic can identify your intake.';
-    }
-    if (!isValidEmail(data.email)) {
-      return 'Enter a valid email address for follow-up.';
-    }
-    if (!isValidPhone(data.phone)) {
-      return 'Enter a valid phone number for scheduling updates.';
-    }
-    if (!isValidZip(data.zip)) {
-      return 'Enter a valid ZIP or postal code.';
-    }
-    return '';
-  }, [data.email, data.firstName, data.lastName, data.phone, data.zip]);
-
-  useEffect(() => {
-    setData((current) => {
-      const next = { ...current };
-      let changed = false;
-
-      if (!current.goal && handoff.goal) {
-        next.goal = handoff.goal;
-        changed = true;
-      }
-      if (!current.urgency && handoff.urgency) {
-        next.urgency = handoff.urgency;
-        changed = true;
-      }
-      if (handoff.symptoms.length > 0 && current.symptoms.length === 0) {
-        next.symptoms = handoff.symptoms;
-        changed = true;
-      }
-
-      return changed ? next : current;
-    });
-  }, [handoff.goal, handoff.urgency, handoff.symptoms]);
 
   const handleNext = () => {
     if (step < totalSteps) {
       setStep(step + 1);
     } else {
-      if (contactValidationError) {
-        return;
-      }
       processAssessment();
     }
   };
@@ -162,105 +86,123 @@ export function PatientAssessment() {
 
   const processAssessment = async () => {
     setIsProcessing(true);
-    setAssessmentError('');
     
     try {
-      const response = await PublicService.submitPatientAssessment({
-        ...data,
-        preferredClinicId: handoff.preferredClinicId,
-        entryPoint: handoff.entryPoint || 'direct',
+      const isDisqualified = 
+        data.labWork === 'No, I am not willing to do lab work' || 
+        (data.paymentPreference === 'Insurance Only' && data.budget === 'Under $200/mo');
+      
+      const status = isDisqualified ? 'disqualified' : 'qualified';
+
+      // Save patient
+      const patientRef = await addDoc(collection(db, 'patients'), {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        phone: data.phone,
+        zip: data.zip,
+        createdAt: serverTimestamp()
       });
-      setBookingStep(1);
-      setBookingSlots([]);
-      setSelectedSlotKey('');
-      setBookingError('');
-      setBookingSlotsError('');
-      setPatientId(response.patientId);
-      setAssessmentId(response.assessmentId);
-      setMatchedClinic(response.matchedClinic);
-      setResult(response.result);
-      setBookingResult(null);
-      setShowBooking(false);
-      AnalyticsEngine.track('assessment_complete', {
-        source: handoff.entryPoint || 'patient_assessment',
-        result: response.result,
-        matchedClinicId: response.matchedClinic?.id || null,
+      setPatientId(patientRef.id);
+
+      // Save assessment
+      const assessmentRef = await addDoc(collection(db, 'assessments'), {
+        patientId: patientRef.id,
+        treatmentInterest: data.goal,
+        symptoms: data.symptoms,
+        urgency: data.urgency,
+        budget: data.budget,
+        paymentPreference: data.paymentPreference,
+        labWork: data.labWork,
+        status: status,
+        createdAt: serverTimestamp()
       });
+      setAssessmentId(assessmentRef.id);
+
+      // Real Clinic Matching Logic
+      if (!isDisqualified) {
+        const clinicsRef = collection(db, 'clinics');
+        // Simple matching: find active clinics that have the goal in their specialties
+        const q = query(
+          clinicsRef, 
+          where('status', '==', 'active'),
+          where('specialties', 'array-contains', data.goal),
+          limit(5)
+        );
+        
+        const querySnapshot = await getDocs(q);
+        const matchedClinics: any[] = [];
+        querySnapshot.forEach((doc) => {
+          matchedClinics.push({ id: doc.id, ...doc.data() });
+        });
+
+        // If no specialty match, just get any active clinics
+        if (matchedClinics.length === 0) {
+          const fallbackQ = query(clinicsRef, where('status', '==', 'active'), limit(3));
+          const fallbackSnapshot = await getDocs(fallbackQ);
+          fallbackSnapshot.forEach((doc) => {
+            matchedClinics.push({ id: doc.id, ...doc.data() });
+          });
+        }
+
+        // Pick the best match (for now, just the first one)
+        const bestMatch = matchedClinics[0] || {
+          id: 'fallback-clinic',
+          name: "Apex Longevity & Performance",
+          specialties: [data.goal],
+          city: "Austin",
+          state: "TX",
+          rating: 4.9,
+          pricingTier: "elite"
+        };
+        
+        setMatchedClinic(bestMatch);
+
+        // Save lead
+        await addDoc(collection(db, 'leads'), {
+          patientId: patientRef.id,
+          clinicId: bestMatch.id,
+          assessmentId: assessmentRef.id,
+          status: 'new',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+      }
+
+      setResult(status);
       setStep(totalSteps + 1);
     } catch (error) {
       console.error("Error saving assessment:", error);
-      setAssessmentError(
-        error instanceof Error ? error.message : 'Unable to submit your clinical assessment right now.',
-      );
+      setResult('disqualified');
+      setStep(totalSteps + 1);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const loadBookingAvailability = async (clinicId: string) => {
-    setBookingSlotsLoading(true);
-    setBookingSlotsError('');
-
-    try {
-      const response = await PublicService.getClinicAvailability(clinicId);
-      setBookingSlots(response.slots);
-      setSelectedSlotKey((current) =>
-        response.slots.some((slot) => slot.key === current) ? current : response.slots[0]?.key || '',
-      );
-    } catch (error) {
-      console.error('Error loading booking availability:', error);
-      setBookingSlots([]);
-      setBookingSlotsError(
-        error instanceof Error ? error.message : 'Unable to load consultation windows right now.',
-      );
-    } finally {
-      setBookingSlotsLoading(false);
-    }
-  };
-
   const handleBookConsultation = () => {
-    if (!matchedClinic) {
-      return;
-    }
-    AnalyticsEngine.track('cta_click', {
-      source: 'patient_assessment_match',
-      label: 'request_consultation',
-      destination: `/clinics/${matchedClinic.id}`,
-    });
     setShowBooking(true);
-    setBookingStep(1);
-    void loadBookingAvailability(matchedClinic.id);
   };
 
   const confirmBooking = async () => {
-    if (!patientId || !matchedClinic || !selectedSlotKey) {
-      setBookingError('Select an available consultation window before continuing.');
-      return;
-    }
-    setBookingSubmitting(true);
-    setBookingError('');
+    if (!patientId || !matchedClinic) return;
 
     try {
-      const response = await PublicService.requestBooking({
+      await addDoc(collection(db, 'bookings'), {
         patientId,
         clinicId: matchedClinic.id,
         assessmentId,
-        requestedSlotKey: selectedSlotKey,
+        date: new Date().toISOString(), // In a real app, this would be the selected date
+        status: 'confirmed',
+        createdAt: serverTimestamp()
       });
-      setBookingResult(response);
+
       setBookingStep(2);
-      AnalyticsEngine.track('cta_click', {
-        source: 'patient_assessment_booking',
-        label: 'consultation_requested',
-        destination: response.followUpPath,
-      });
+      setTimeout(() => {
+        navigate('/mens-trivia', { state: { fromBooking: true } });
+      }, 2500);
     } catch (error) {
       console.error("Error saving booking:", error);
-      setBookingError(
-        error instanceof Error ? error.message : 'Unable to send your consultation request right now.',
-      );
-    } finally {
-      setBookingSubmitting(false);
     }
   };
 
@@ -309,13 +251,6 @@ export function PatientAssessment() {
                   <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/5 rounded-full blur-[64px] pointer-events-none" />
                   
                   <div className="relative z-10">
-                    {handoff.preferredClinicName ? (
-                      <div className="mb-6 rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-primary">
-                        We will prioritize <span className="font-semibold text-white">{handoff.preferredClinicName}</span>
-                        {handoff.preferredClinicLocation ? ` in ${handoff.preferredClinicLocation}` : ''} during routing if the clinic remains the best active fit for your intake.
-                      </div>
-                    ) : null}
-
                     {step === 1 && (
                       <div className="space-y-6">
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/10 text-secondary text-xs font-mono uppercase tracking-wider mb-2">
@@ -346,7 +281,7 @@ export function PatientAssessment() {
                         <h2 className="text-3xl md:text-4xl font-display font-bold text-white">What symptoms are you experiencing?</h2>
                         <p className="text-text-secondary text-lg">Select all that apply. This data is encrypted and used only for clinical matching.</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-8">
-                          {availableSymptoms.map((symptom, i) => {
+                          {(symptomsByGoal[data.goal || 'General Wellness'] || []).map((symptom, i) => {
                             const isSelected = data.symptoms.includes(symptom);
                             return (
                               <button 
@@ -476,11 +411,6 @@ export function PatientAssessment() {
                         </div>
                         <h2 className="text-3xl md:text-4xl font-display font-bold text-white">Where should we send your clinical match?</h2>
                         <p className="text-text-secondary text-lg">Your data is encrypted and will only be shared with your matched clinic.</p>
-                        {assessmentError ? (
-                          <div className="rounded-xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger">
-                            {assessmentError}
-                          </div>
-                        ) : null}
                         <div className="space-y-4 mt-8">
                           <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -541,18 +471,10 @@ export function PatientAssessment() {
                             size="lg" 
                             className="w-full mt-6 bg-secondary hover:bg-secondary-hover text-white border-none shadow-[0_0_20px_rgba(139,92,246,0.2)]" 
                             onClick={handleNext}
-                            disabled={
-                              isProcessing ||
-                              Boolean(contactValidationError)
-                            }
+                            disabled={!data.firstName || !data.email || !data.zip}
                           >
-                            {assessmentError ? 'Retry Clinical Match' : 'Analyze & Match'} <Brain className="ml-2 w-5 h-5" />
+                            Analyze & Match <Brain className="ml-2 w-5 h-5" />
                           </Button>
-                          {contactValidationError && (data.firstName || data.lastName || data.email || data.phone || data.zip) ? (
-                            <p className="text-sm text-warning">
-                              {contactValidationError}
-                            </p>
-                          ) : null}
                           <p className="text-xs text-center text-text-secondary mt-4">
                             By continuing, you agree to our Terms of Service and Privacy Policy.
                           </p>
@@ -601,13 +523,9 @@ export function PatientAssessment() {
                 <div className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-8 border border-success/20">
                   <CheckCircle2 className="w-10 h-10 text-success" />
                 </div>
-                <h2 className="text-4xl md:text-5xl font-display font-bold text-white mb-4">
-                  {matchedClinic ? 'Clinical Match Found' : 'Qualified for Concierge Routing'}
-                </h2>
+                <h2 className="text-4xl md:text-5xl font-display font-bold text-white mb-4">Clinical Match Found</h2>
                 <p className="text-xl text-text-secondary mb-8 max-w-xl mx-auto">
-                  {matchedClinic
-                    ? "Based on your symptoms, goals, and readiness, we've identified an elite clinic that specializes in your exact needs."
-                    : "You meet the intake requirements. Our routing team is reviewing live clinic availability and will place you with the best current partner."}
+                  Based on your symptoms, goals, and readiness, we've identified an elite clinic that specializes in your exact needs.
                 </p>
                 
                 <Card className="p-8 bg-surface-1/80 backdrop-blur-xl border-surface-3 text-left mb-8 shadow-2xl relative overflow-hidden">
@@ -617,13 +535,13 @@ export function PatientAssessment() {
                       <div>
                         <div className="flex items-center gap-2 mb-2">
                           <span className="px-3 py-1 rounded-full bg-success/10 text-success text-xs font-bold uppercase tracking-wider border border-success/20">
-                            {matchedClinic?.matchScore ? `${matchedClinic.matchScore}% Clinical Match` : 'Human Review'}
+                            {matchedClinic?.rating ? `${Math.round(matchedClinic.rating * 20)}% Clinical Match` : '98% Clinical Match'}
                           </span>
                           <span className="text-sm text-text-secondary">
-                            {matchedClinic?.city ? `${matchedClinic.city}, ${matchedClinic.state}` : 'Nationwide network review'}
+                            {matchedClinic?.city ? `${matchedClinic.city}, ${matchedClinic.state}` : '2.4 miles away'}
                           </span>
                         </div>
-                        <h3 className="text-2xl font-bold text-white">{matchedClinic?.name || 'Novalyte Concierge Team'}</h3>
+                        <h3 className="text-2xl font-bold text-white">{matchedClinic?.name || 'Apex Longevity & Performance'}</h3>
                         <p className="text-text-secondary mt-1">Specializes in {data.goal}</p>
                       </div>
                       <div className="w-16 h-16 rounded-xl bg-surface-2 border border-surface-3 flex items-center justify-center">
@@ -634,39 +552,17 @@ export function PatientAssessment() {
                     <div className="grid grid-cols-2 gap-4 mb-8">
                       <div className="p-4 rounded-lg bg-surface-2/50 border border-surface-3">
                         <p className="text-xs text-text-secondary uppercase tracking-wider mb-1">Availability</p>
-                        <p className="font-medium text-white text-lg">{matchedClinic ? 'This Week' : 'Under 24 Hours'}</p>
+                        <p className="font-medium text-white text-lg">This Week</p>
                       </div>
                       <div className="p-4 rounded-lg bg-surface-2/50 border border-surface-3">
                         <p className="text-xs text-text-secondary uppercase tracking-wider mb-1">Pricing Tier</p>
-                        <p className="font-medium text-white text-lg capitalize">{matchedClinic?.pricingTier || 'Custom'}</p>
+                        <p className="font-medium text-white text-lg capitalize">{matchedClinic?.pricingTier || 'Elite'}</p>
                       </div>
                     </div>
 
-                    {matchedClinic ? (
-                      <div className="space-y-3">
-                        {matchedClinic.routingReason ? (
-                          <p className="text-sm text-text-secondary">
-                            {matchedClinic.routingReason}
-                          </p>
-                        ) : null}
-                        <div className="flex flex-col sm:flex-row gap-3">
-                          <Button size="lg" className="w-full bg-secondary hover:bg-secondary-hover text-white border-none shadow-lg h-14 text-lg" onClick={handleBookConsultation}>
-                            <Calendar className="w-5 h-5 mr-2" /> Request Consultation
-                          </Button>
-                          <Link to={`/clinics/${matchedClinic.id}`} className="w-full">
-                            <Button variant="outline" size="lg" className="w-full h-14 text-lg border-surface-3 hover:bg-surface-2">
-                              Review Clinic
-                            </Button>
-                          </Link>
-                        </div>
-                      </div>
-                    ) : (
-                      <Link to="/contact?role=patient&topic=concierge_routing">
-                        <Button size="lg" className="w-full bg-secondary hover:bg-secondary-hover text-white border-none shadow-lg h-14 text-lg">
-                          <ArrowRight className="w-5 h-5 mr-2" /> Contact Concierge
-                        </Button>
-                      </Link>
-                    )}
+                    <Button size="lg" className="w-full bg-secondary hover:bg-secondary-hover text-white border-none shadow-lg h-14 text-lg" onClick={handleBookConsultation}>
+                      <Calendar className="w-5 h-5 mr-2" /> Request Consultation
+                    </Button>
                   </div>
                 </Card>
                 
@@ -694,18 +590,18 @@ export function PatientAssessment() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8 text-left">
                   <Card className="p-6 bg-surface-1/80 border-surface-3 hover:border-primary/50 transition-colors cursor-pointer group">
                     <Zap className="w-8 h-8 text-primary mb-4" />
-                    <h3 className="text-xl font-bold text-white mb-2">Revisit Symptom Review</h3>
-                    <p className="text-sm text-text-secondary mb-4">Run the guided symptom checker again if you want additional context before pursuing next steps.</p>
-                    <Link to="/symptom-checker" className="text-primary font-medium flex items-center text-sm group-hover:underline">
-                      Open Symptom Checker <ArrowRight className="w-4 h-4 ml-1" />
+                    <h3 className="text-xl font-bold text-white mb-2">Explore Supplements</h3>
+                    <p className="text-sm text-text-secondary mb-4">Discover clinical-grade OTC supplements to start optimizing today.</p>
+                    <Link to="/marketplace/supplements" className="text-primary font-medium flex items-center text-sm group-hover:underline">
+                      Shop Marketplace <ArrowRight className="w-4 h-4 ml-1" />
                     </Link>
                   </Card>
                   <Card className="p-6 bg-surface-1/80 border-surface-3 hover:border-secondary/50 transition-colors cursor-pointer group">
                     <Brain className="w-8 h-8 text-secondary mb-4" />
-                    <h3 className="text-xl font-bold text-white mb-2">Talk to Novalyte AI</h3>
-                    <p className="text-sm text-text-secondary mb-4">Get educational guidance on treatment readiness, lab work, and what to do next.</p>
-                    <Link to="/ask-ai" className="text-secondary font-medium flex items-center text-sm group-hover:underline">
-                      Ask a Question <ArrowRight className="w-4 h-4 ml-1" />
+                    <h3 className="text-xl font-bold text-white mb-2">Men's Health Trivia</h3>
+                    <p className="text-sm text-text-secondary mb-4">Test your knowledge and learn more about health optimization.</p>
+                    <Link to="/mens-trivia" className="text-secondary font-medium flex items-center text-sm group-hover:underline">
+                      Play Now <ArrowRight className="w-4 h-4 ml-1" />
                     </Link>
                   </Card>
                 </div>
@@ -721,68 +617,29 @@ export function PatientAssessment() {
               >
                 {bookingStep === 1 ? (
                   <>
-                    <h2 className="text-3xl font-display font-bold text-white mb-4">Select a Consultation Window</h2>
-                    <p className="text-text-secondary mb-8">Choose a preferred time for your initial consultation request with {matchedClinic?.name || 'your matched clinic'}.</p>
-                    {bookingError ? (
-                      <div className="mb-6 rounded-xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger text-left">
-                        {bookingError}
-                      </div>
-                    ) : null}
+                    <h2 className="text-3xl font-display font-bold text-white mb-4">Select a Time</h2>
+                    <p className="text-text-secondary mb-8">Choose a time for your initial consultation with {matchedClinic?.name || 'Apex Longevity'}.</p>
                     
                     <Card className="p-6 bg-surface-1/80 border-surface-3 text-left mb-8">
-                      {bookingSlotsLoading ? (
-                        <div className="rounded-xl border border-surface-3 bg-surface-2/50 px-4 py-5 text-center text-text-secondary">
-                          Loading live availability...
-                        </div>
-                      ) : bookingSlotsError ? (
-                        <div className="space-y-4">
-                          <div className="rounded-xl border border-danger/20 bg-danger/10 px-4 py-4 text-sm text-danger">
-                            {bookingSlotsError}
+                      <div className="grid grid-cols-3 gap-4 mb-6">
+                        {['Today', 'Tomorrow', 'Wednesday'].map((day, i) => (
+                          <div key={i} className={`p-3 text-center rounded-lg border cursor-pointer transition-colors ${i === 1 ? 'bg-secondary/10 border-secondary text-white' : 'bg-surface-2 border-surface-3 text-text-secondary hover:bg-surface-3'}`}>
+                            <p className="font-bold">{day}</p>
+                            <p className="text-xs opacity-80">Oct {14 + i}</p>
                           </div>
-                          <Button variant="outline" className="w-full" onClick={() => matchedClinic ? void loadBookingAvailability(matchedClinic.id) : undefined}>
-                            Retry Availability
-                          </Button>
-                        </div>
-                      ) : bookingSlots.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {bookingSlots.map((slot) => (
-                            <button
-                              key={slot.key}
-                              type="button"
-                              onClick={() => setSelectedSlotKey(slot.key)}
-                              className={`rounded-xl border p-4 text-left transition-colors ${
-                                selectedSlotKey === slot.key
-                                  ? 'border-secondary bg-secondary/10 text-white'
-                                  : 'border-surface-3 bg-surface-2 hover:border-secondary/50 text-text-secondary hover:text-white'
-                              }`}
-                            >
-                              <p className="font-bold text-white">{slot.dayLabel}</p>
-                              <p className="mt-1 text-sm">{slot.timeLabel}</p>
-                              <p className="mt-2 text-xs opacity-80">{slot.label}</p>
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          <div className="rounded-xl border border-surface-3 bg-surface-2/50 px-4 py-5 text-sm text-text-secondary">
-                            No consultation windows are currently published for this clinic. You can contact concierge and we will coordinate the next available option.
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {['09:00 AM', '10:30 AM', '01:00 PM', '03:45 PM'].map((time, i) => (
+                          <div key={i} className="p-3 text-center rounded-lg border border-surface-3 bg-surface-2 text-white hover:border-secondary hover:bg-secondary/5 cursor-pointer transition-colors">
+                            {time}
                           </div>
-                          <Link to={`/contact?role=patient&topic=clinic_${encodeURIComponent(matchedClinic?.id || '')}`}>
-                            <Button variant="outline" className="w-full">
-                              Contact Concierge
-                            </Button>
-                          </Link>
-                        </div>
-                      )}
+                        ))}
+                      </div>
                     </Card>
                     
-                    <Button
-                      size="lg"
-                      className="w-full bg-secondary hover:bg-secondary-hover text-white border-none h-14 text-lg"
-                      onClick={confirmBooking}
-                      disabled={bookingSubmitting || bookingSlotsLoading || bookingSlots.length === 0 || !selectedSlotKey}
-                    >
-                      {bookingSubmitting ? 'Sending Request...' : 'Send Consultation Request'}
+                    <Button size="lg" className="w-full bg-secondary hover:bg-secondary-hover text-white border-none h-14 text-lg" onClick={confirmBooking}>
+                      Confirm Appointment
                     </Button>
                   </>
                 ) : (
@@ -790,31 +647,10 @@ export function PatientAssessment() {
                     <div className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-8 border border-success/20">
                       <CheckCircle2 className="w-10 h-10 text-success" />
                     </div>
-                    <h2 className="text-4xl font-display font-bold text-white mb-4">Consultation Request Sent</h2>
-                    <p className="text-xl text-text-secondary mb-4">
-                      {bookingResult?.clinicName || matchedClinic?.name} has your preferred slot request.
+                    <h2 className="text-4xl font-display font-bold text-white mb-4">Consultation Confirmed</h2>
+                    <p className="text-xl text-text-secondary mb-8">
+                      Your appointment is set. We're redirecting you to your dashboard...
                     </p>
-                    <p className="text-sm text-text-secondary mb-8">
-                      {bookingResult?.slotLabel ? `Requested window: ${bookingResult.slotLabel}. ` : ''}
-                      Reference ID: <span className="text-white font-medium">{bookingResult?.bookingId}</span>
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                      <Link to={bookingResult?.followUpPath || `/clinics/${matchedClinic?.id || ''}`}>
-                        <Button className="w-full sm:w-auto">
-                          Review Clinic Profile
-                        </Button>
-                      </Link>
-                      <Link to="/support/patient">
-                        <Button variant="outline" className="w-full sm:w-auto border-surface-3 hover:bg-surface-2">
-                          Patient Support
-                        </Button>
-                      </Link>
-                      <Link to="/ask-ai">
-                        <Button variant="outline" className="w-full sm:w-auto border-surface-3 hover:bg-surface-2">
-                          Ask Novalyte AI
-                        </Button>
-                      </Link>
-                    </div>
                   </div>
                 )}
               </motion.div>

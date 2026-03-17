@@ -5,52 +5,35 @@ import {
   FileText, Users, CreditCard, Activity, 
   AlertCircle, ChevronRight, Lock
 } from 'lucide-react';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/src/firebase';
+import { useAuth } from '@/src/lib/auth/AuthContext';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 import { Link } from 'react-router-dom';
-import { ClinicApiError, ClinicService } from '@/src/services/clinic';
 
 export function ClinicActivate() {
+  const { user } = useAuth();
   const [clinicData, setClinicData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
   useEffect(() => {
-    let isActive = true;
+    if (!user) return;
 
-    const loadProfile = async () => {
-      try {
-        const response = await ClinicService.getProfile();
-        if (isActive) {
-          setClinicData(response.clinic);
-        }
-      } catch (loadError) {
-        console.error('Failed to load clinic activation state:', loadError);
-        if (isActive) {
-          setError(
-            loadError instanceof ClinicApiError
-              ? loadError.message
-              : 'Unable to load clinic activation progress right now.',
-          );
-        }
-      } finally {
-        if (isActive) {
-          setLoading(false);
-        }
+    const unsubscribe = onSnapshot(doc(db, 'clinics', user.uid), (doc) => {
+      if (doc.exists()) {
+        setClinicData(doc.data());
       }
-    };
+      setLoading(false);
+    });
 
-    void loadProfile();
-
-    return () => {
-      isActive = false;
-    };
-  }, []);
+    return () => unsubscribe();
+  }, [user]);
 
   const getProgress = () => {
     if (!clinicData) return 0;
     let completed = 0;
-    if (String(clinicData.status || '').toLowerCase() === 'verified') completed += 25;
+    if (clinicData.status === 'Verified') completed += 25;
     if (clinicData.icpDefined) completed += 25;
     if (clinicData.billingSetup) completed += 25;
     if (clinicData.medicalDirectorVerified) completed += 25;
@@ -65,8 +48,8 @@ export function ClinicActivate() {
       title: 'Complete Clinic Profile',
       description: 'Add your clinic details, specialties, and public directory information.',
       icon: FileText,
-      status: String(clinicData?.status || '').toLowerCase() === 'verified' ? 'completed' : 'current',
-      action: String(clinicData?.status || '').toLowerCase() === 'verified' ? 'Edit Profile' : 'Complete Profile',
+      status: clinicData?.status === 'Verified' ? 'completed' : 'current',
+      action: clinicData?.status === 'Verified' ? 'Edit Profile' : 'Complete Profile',
       link: '/dashboard/settings'
     },
     {
@@ -98,8 +81,6 @@ export function ClinicActivate() {
     }
   ];
 
-  const currentStep = steps.find((step) => step.status === 'current');
-
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -116,11 +97,6 @@ export function ClinicActivate() {
         <div>
           <h1 className="text-3xl font-display font-bold text-white">Clinic Activation</h1>
           <p className="text-text-secondary mt-1">Complete these steps to activate your lead flow and directory listing.</p>
-          {error ? (
-            <div className="mt-4 rounded-lg border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger">
-              {error}
-            </div>
-          ) : null}
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm font-bold text-text-secondary">Status:</span>
@@ -238,11 +214,9 @@ export function ClinicActivate() {
                     </Button>
                   </Link>
                 ) : (
-                  <Link to={currentStep?.link || '/dashboard/help'}>
-                    <Button variant="outline" className="w-full md:w-auto border-surface-3 text-text-secondary hover:bg-surface-2">
-                      <Lock className="w-4 h-4 mr-2" /> {currentStep ? 'Complete Previous Step' : 'Get Help'}
-                    </Button>
-                  </Link>
+                  <Button variant="outline" disabled className="w-full md:w-auto border-surface-3 text-text-secondary opacity-50 cursor-not-allowed">
+                    <Lock className="w-4 h-4 mr-2" /> {step.action}
+                  </Button>
                 )}
               </div>
             </div>

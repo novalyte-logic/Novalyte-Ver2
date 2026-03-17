@@ -1,30 +1,22 @@
 import React, { useState } from 'react';
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Activity, Users, Send, Database, Rocket, Server, Menu, X, Search, Bell, Sparkles, LogOut } from 'lucide-react';
+import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Activity, Users, Send, Database, Rocket, Server, Menu, X, Search, Bell, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useShell } from '../shell/ShellContext';
-import { useAuth } from '@/src/lib/auth/AuthContext';
 
 export function AdminLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
   const { setCommandOpen, setCopilotOpen } = useShell();
-  const { user, logout } = useAuth();
 
   const navItems = [
-    { path: '/admin/command-center', icon: Activity, label: 'Command Center' },
+    { path: '/admin', icon: Activity, label: 'Command Center' },
     { path: '/admin/crm', icon: Users, label: 'CRM' },
     { path: '/admin/outreacher', icon: Send, label: 'Outreacher' },
     { path: '/admin/directory', icon: Database, label: 'Directory' },
     { path: '/admin/launch', icon: Rocket, label: 'Launch' },
     { path: '/admin/mcp', icon: Server, label: 'MCP Control' },
   ];
-
-  const handleSignOut = async () => {
-    await logout();
-    navigate('/admin', { replace: true });
-  };
 
   return (
     <div className="min-h-screen bg-background text-text-primary flex">
@@ -59,20 +51,10 @@ export function AdminLayout() {
               <span className="text-xs font-bold">AD</span>
             </div>
             <div className="text-sm">
-              <p className="font-medium">{user?.displayName || 'Admin User'}</p>
-              <p className="text-xs text-text-secondary">{user?.email || 'System Operator'}</p>
+              <p className="font-medium">Admin User</p>
+              <p className="text-xs text-text-secondary">System Operator</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              void handleSignOut();
-            }}
-            className="mt-4 w-full flex items-center justify-center gap-2 rounded-lg border border-surface-3 px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            Sign Out
-          </button>
         </div>
       </aside>
 
@@ -115,18 +97,6 @@ export function AdminLayout() {
                   );
                 })}
               </nav>
-              <div className="p-4 border-t border-surface-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    void handleSignOut();
-                  }}
-                  className="w-full flex items-center justify-center gap-2 rounded-lg border border-surface-3 px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Sign Out
-                </button>
-              </div>
             </div>
             <div className="flex-grow bg-background/80 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
           </motion.div>
@@ -149,7 +119,7 @@ export function AdminLayout() {
               <Search className="w-4 h-4 absolute left-3 text-text-secondary group-hover:text-primary transition-colors" />
               <div className="pl-9 pr-4 py-1.5 bg-surface-2 border border-surface-3 rounded-md text-sm text-text-secondary group-hover:border-primary/50 w-64 text-left transition-all flex justify-between items-center">
                 <span>Command search...</span>
-                <span className="text-xs font-mono bg-surface-3 px-1.5 rounded">Cmd K</span>
+                <span className="text-xs font-mono bg-surface-3 px-1.5 rounded">âŒ˜K</span>
               </div>
             </button>
           </div>

@@ -1,10 +1,8 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ShellRoot } from './components/shell/ShellRoot';
-import { RouteAnalytics } from './components/system/RouteAnalytics';
 import { AuthProvider } from './lib/auth/AuthContext';
 import { ProtectedRoute } from './lib/auth/ProtectedRoute';
-import { AdminRoute } from './lib/auth/AdminRoute';
 import { MainLayout } from './components/layout/MainLayout';
 import { AdminLayout } from './components/layout/AdminLayout';
 import { ClinicLayout } from './components/layout/ClinicLayout';
@@ -21,12 +19,7 @@ import { ClinicRegister } from './pages/ClinicRegister';
 import { ClinicLogin } from './pages/ClinicLogin';
 import { Marketplace } from './pages/Marketplace';
 import { MarketplaceCategory } from './pages/MarketplaceCategory';
-import { MarketplaceClinics } from './pages/MarketplaceClinics';
-import { MarketplaceEquipment } from './pages/MarketplaceEquipment';
-import { MarketplaceDiagnostics } from './pages/MarketplaceDiagnostics';
-import { MarketplaceDigitalHealth } from './pages/MarketplaceDigitalHealth';
-import { MarketplaceHomeGym } from './pages/MarketplaceHomeGym';
-import { MarketplaceHealthTech } from './pages/MarketplaceHealthTech';
+
 import { ProductDetail } from './pages/ProductDetail';
 import { Workforce } from './pages/Workforce';
 import { WorkforceJobs } from './pages/WorkforceJobs';
@@ -47,7 +40,6 @@ import { Outreacher } from './pages/admin/Outreacher';
 import { DirectoryManager } from './pages/admin/DirectoryManager';
 import { LaunchDashboard } from './pages/admin/LaunchDashboard';
 import { MCPDashboard } from './pages/admin/MCPDashboard';
-import { AdminLogin } from './pages/admin/AdminLogin';
 import { ClinicOverview } from './pages/ClinicOverview';
 import { ClinicLeads } from './pages/ClinicLeads';
 import { ClinicPipeline } from './pages/ClinicPipeline';
@@ -75,7 +67,6 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <RouteAnalytics />
         <ShellRoot>
         <Routes>
           {/* Public Routes with Navbar/Footer */}
@@ -87,12 +78,7 @@ export default function App() {
             <Route path="clinics" element={<ClinicLanding />} />
             <Route path="clinics/:id" element={<ClinicProfile />} />
             <Route path="marketplace" element={<Marketplace />} />
-            <Route path="marketplace/clinics" element={<MarketplaceClinics />} />
-            <Route path="marketplace/equipment" element={<MarketplaceEquipment />} />
-            <Route path="marketplace/diagnostics" element={<MarketplaceDiagnostics />} />
-            <Route path="marketplace/digital-health" element={<MarketplaceDigitalHealth />} />
-            <Route path="marketplace/home-gym" element={<MarketplaceHomeGym />} />
-            <Route path="marketplace/health-tech" element={<MarketplaceHealthTech />} />
+
             <Route path="marketplace/:category" element={<MarketplaceCategory />} />
             <Route path="marketplace/product/:id" element={<ProductDetail />} />
             <Route path="network" element={<PartnerNetwork />} />
@@ -123,10 +109,8 @@ export default function App() {
           <Route path="/vendors/apply" element={<VendorApply />} />
           <Route path="/auth/register-clinic" element={<ClinicRegister />} />
           <Route path="/auth/clinic-login" element={<ClinicLogin />} />
-          <Route path="/admin" element={<AdminLogin />} />
           <Route path="/workforce/profile" element={<WorkforceProfile />} />
           <Route path="/workforce/apply/:id" element={<WorkforceApply />} />
-          <Route path="/workforce/candidate/:id" element={<PractitionerProfile />} />
           <Route path="/workforce/dashboard" element={<WorkforceDashboard />} />
           <Route path="/practitioners/onboarding" element={<PractitionerOnboarding />} />
           <Route path="/practitioners/profile" element={<PractitionerProfile />} />
@@ -136,7 +120,7 @@ export default function App() {
           <Route path="/clinic/activate" element={<Navigate to="/dashboard/activate" replace />} />
 
           {/* Clinic Routes with ClinicLayout */}
-          <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['clinic', 'clinic_admin']}><ClinicLayout /></ProtectedRoute>}>
+          <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['clinic', 'admin']}><ClinicLayout /></ProtectedRoute>}>
             <Route index element={<ClinicOverview />} />
             <Route path="activate" element={<ClinicActivate />} />
             <Route path="leads" element={<ClinicLeads />} />
@@ -150,8 +134,8 @@ export default function App() {
           </Route>
 
           {/* Admin Routes with AdminLayout */}
-          <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
-            <Route path="command-center" element={<CommandCenter />} />
+          <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminLayout /></ProtectedRoute>}>
+            <Route index element={<CommandCenter />} />
             <Route path="crm" element={<CRM />} />
             <Route path="outreacher" element={<Outreacher />} />
             <Route path="directory" element={<DirectoryManager />} />
@@ -164,4 +148,9 @@ export default function App() {
     </AuthProvider>
   );
 }
+
+
+
+
+
 
