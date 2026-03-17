@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Link, useParams } from 'react-router-dom';
 import { 
   MapPin, Star, Activity, CheckCircle2, Shield, ArrowRight, 
@@ -48,19 +48,22 @@ const CLINIC_DATA = {
       name: "Comprehensive TRT", 
       description: "Bio-identical testosterone replacement with continuous metabolic monitoring, estrogen management, and fertility preservation options.", 
       duration: "Ongoing", 
-      price: "From $199/mo" 
+      price: "From $199/mo",
+      rating: 4.9
     },
     { 
       name: "Cognitive Peptides", 
       description: "Advanced neuro-regenerative peptide stacks (Dihexa, Semax, Cerebrolysin) designed for executive function, focus, and memory enhancement.", 
       duration: "12 Weeks", 
-      price: "From $349/mo" 
+      price: "From $349/mo",
+      rating: 4.7
     },
     { 
       name: "Metabolic Reset", 
       description: "GLP-1 and Tirzepatide protocols combined with continuous glucose monitoring (CGM) and lean mass preservation coaching.", 
       duration: "6 Months", 
-      price: "From $299/mo" 
+      price: "From $299/mo",
+      rating: 4.8
     }
   ],
   outcomes: [
@@ -69,11 +72,17 @@ const CLINIC_DATA = {
     { metric: "94%", label: "Patient Retention Rate", timeframe: "Year 1" }
   ],
   features: ["Telehealth Available", "In-house Labs", "Concierge Service", "Novalyte Certified", "Direct Doctor Messaging", "Quarterly Blood Panels"],
+  reviewsList: [
+    { name: "Michael T.", rating: 5, text: "Dr. Thorne and the team completely changed my life. The metabolic reset protocol helped me lose 20lbs and regain my energy.", date: "2 months ago" },
+    { name: "David S.", rating: 5, text: "Incredible attention to detail. The continuous monitoring makes a huge difference compared to other clinics I've tried.", date: "4 months ago" },
+    { name: "James R.", rating: 4, text: "Very professional and knowledgeable staff. The initial assessment was thorough, though the waitlist was a bit long.", date: "6 months ago" }
+  ],
   hours: "Mon-Fri: 8am - 6pm",
   address: "1200 Brickell Ave, Suite 400, Miami, FL 33131",
   phone: "(305) 555-0123",
   website: "apexlongevity.com",
-  price: "$$$"
+  price: "$$$",
+  appointmentsAvailable: true
 };
 
 const SIMILAR_CLINICS = [
@@ -84,6 +93,9 @@ const SIMILAR_CLINICS = [
 export function ClinicProfile() {
   const { id } = useParams();
   const [isBooking, setIsBooking] = useState(false);
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [bookingStep, setBookingStep] = useState(1);
+  const [bookingData, setBookingData] = useState({ name: '', email: '', phone: '', date: '', time: '' });
   const [clinicData, setClinicData] = useState<any>(CLINIC_DATA);
   const [loading, setLoading] = useState(true);
 
@@ -121,11 +133,11 @@ export function ClinicProfile() {
   }, [id]);
 
   if (loading) {
-    return <div className="min-h-screen bg-[#05070A] flex items-center justify-center text-white">Loading...</div>;
+    return <div className="min-h-screen bg-background flex items-center justify-center text-white">Loading...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-[#05070A] font-sans text-text-primary pb-24">
+    <div className="min-h-screen bg-background font-sans text-text-primary pb-24">
       
       {/* Editorial Hero Section */}
       <div className="relative h-[60vh] min-h-[500px] w-full">
@@ -134,8 +146,8 @@ export function ClinicProfile() {
           alt={clinicData.name} 
           className="absolute inset-0 w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#05070A] via-[#05070A]/60 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#05070A]/80 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background/80 to-transparent" />
         
         <div className="absolute bottom-0 left-0 right-0">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
@@ -186,7 +198,7 @@ export function ClinicProfile() {
               </p>
               <div className="flex flex-wrap gap-2">
                 {clinicData.specialties.map((spec: string, i: number) => (
-                  <span key={i} className="px-4 py-2 rounded-lg bg-[#0B0F14] border border-surface-3 text-sm font-medium text-white">
+                  <span key={i} className="px-4 py-2 rounded-lg bg-surface-1 border border-surface-3 text-sm font-medium text-white">
                     {spec}
                   </span>
                 ))}
@@ -195,7 +207,7 @@ export function ClinicProfile() {
 
             {/* AI Insights & Proof Signals */}
             <section>
-              <Card className="p-8 bg-gradient-to-br from-[#0B0F14] to-[#05070A] border-primary/20 relative overflow-hidden">
+              <Card className="p-8 bg-gradient-to-br from-surface-1 to-background border-primary/20 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
                 <div className="absolute bottom-0 left-0 w-64 h-64 bg-secondary/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
                 
@@ -213,7 +225,7 @@ export function ClinicProfile() {
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {clinicData.outcomes.map((outcome: any, i: number) => (
-                      <div key={i} className="p-4 rounded-xl bg-[#05070A] border border-surface-3 text-center">
+                      <div key={i} className="p-4 rounded-xl bg-background border border-surface-3 text-center">
                         <div className="text-3xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary mb-1">
                           {outcome.metric}
                         </div>
@@ -232,10 +244,19 @@ export function ClinicProfile() {
                 <Microscope className="w-6 h-6 text-primary" /> Core Protocols
               </h2>
               <div className="space-y-4">
-                {clinicData.protocols.map((protocol: any, i: number) => (
-                  <Card key={i} className="p-6 bg-[#0B0F14] border-surface-3 hover:border-primary/30 transition-colors">
+                {clinicData.protocols.map((protocol: any, i: number) => {
+                  const isHighestRated = protocol.rating >= 4.9;
+                  return (
+                  <Card key={i} className={`p-6 bg-surface-1 transition-colors ${isHighestRated ? 'border-primary shadow-[0_0_15px_rgba(139,92,246,0.2)]' : 'border-surface-3 hover:border-primary/30'}`}>
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                      <h3 className="text-xl font-bold text-white">{protocol.name}</h3>
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-xl font-bold text-white">{protocol.name}</h3>
+                        {isHighestRated && (
+                          <span className="px-2 py-0.5 rounded text-xs font-bold bg-warning/20 text-warning border border-warning/30 flex items-center gap-1">
+                            <Star className="w-3 h-3 fill-current" /> Highest Rated
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-3 text-sm font-medium">
                         <span className="px-3 py-1 rounded bg-surface-2 text-text-secondary">{protocol.duration}</span>
                         <span className="px-3 py-1 rounded bg-primary/10 text-primary border border-primary/20">{protocol.price}</span>
@@ -245,7 +266,7 @@ export function ClinicProfile() {
                       {protocol.description}
                     </p>
                   </Card>
-                ))}
+                )})}
               </div>
             </section>
 
@@ -256,7 +277,7 @@ export function ClinicProfile() {
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {clinicData.providers.map((provider: any, i: number) => (
-                  <Card key={i} className="p-6 bg-[#0B0F14] border-surface-3">
+                  <Card key={i} className="p-6 bg-surface-1 border-surface-3">
                     <div className="flex items-center gap-4 mb-4">
                       <img src={provider.image} alt={provider.name} className="w-16 h-16 rounded-full object-cover border-2 border-surface-3" />
                       <div>
@@ -287,6 +308,36 @@ export function ClinicProfile() {
               </div>
             </section>
 
+            {/* Reviews */}
+            <section>
+              <h2 className="text-2xl font-display font-bold text-white mb-6 flex items-center gap-2">
+                <MessageSquare className="w-6 h-6 text-primary" /> Patient Reviews
+              </h2>
+              <div className="space-y-4">
+                {clinicData.reviewsList?.map((review: any, i: number) => (
+                  <Card key={i} className="p-6 bg-surface-1 border-surface-3">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-white font-bold">
+                          {review.name.charAt(0)}
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-white">{review.name}</h4>
+                          <p className="text-xs text-text-secondary">{review.date}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 text-warning">
+                        {[...Array(5)].map((_, j) => (
+                          <Star key={j} className={`w-4 h-4 ${j < review.rating ? 'fill-current' : 'text-surface-3'}`} />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-text-secondary leading-relaxed">"{review.text}"</p>
+                  </Card>
+                ))}
+              </div>
+            </section>
+
           </div>
 
           {/* Right Column: Sticky Booking & Info */}
@@ -294,7 +345,7 @@ export function ClinicProfile() {
             <div className="sticky top-24 space-y-6">
               
               {/* Booking Handoff Card */}
-              <Card className="p-6 bg-[#0B0F14] border-primary/30 shadow-[0_0_40px_rgba(6,182,212,0.1)]">
+              <Card className="p-6 bg-surface-1 border-primary/30 shadow-[0_0_40px_rgba(6,182,212,0.1)]">
                 <h3 className="text-2xl font-display font-bold text-white mb-2">Ready to Optimize?</h3>
                 <p className="text-text-secondary text-sm mb-6">
                   Novalyte requires a standardized clinical assessment before matching you with a provider.
@@ -304,7 +355,7 @@ export function ClinicProfile() {
                   <div className="space-y-6">
                     <div className="space-y-4 relative before:absolute before:inset-0 before:ml-3.5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-primary before:via-surface-3 before:to-transparent">
                       <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                        <div className="flex items-center justify-center w-7 h-7 rounded-full border-2 border-primary bg-[#05070A] text-primary shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+                        <div className="flex items-center justify-center w-7 h-7 rounded-full border-2 border-primary bg-background text-primary shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
                           <FileText className="w-3 h-3" />
                         </div>
                         <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-3 rounded-lg bg-surface-2 border border-surface-3">
@@ -312,7 +363,7 @@ export function ClinicProfile() {
                         </div>
                       </div>
                       <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group">
-                        <div className="flex items-center justify-center w-7 h-7 rounded-full border-2 border-surface-3 bg-[#05070A] text-text-secondary shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+                        <div className="flex items-center justify-center w-7 h-7 rounded-full border-2 border-surface-3 bg-background text-text-secondary shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
                           <Microscope className="w-3 h-3" />
                         </div>
                         <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-3 rounded-lg bg-surface-1 border border-surface-2 opacity-50">
@@ -320,7 +371,7 @@ export function ClinicProfile() {
                         </div>
                       </div>
                       <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group">
-                        <div className="flex items-center justify-center w-7 h-7 rounded-full border-2 border-surface-3 bg-[#05070A] text-text-secondary shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+                        <div className="flex items-center justify-center w-7 h-7 rounded-full border-2 border-surface-3 bg-background text-text-secondary shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
                           <Calendar className="w-3 h-3" />
                         </div>
                         <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-3 rounded-lg bg-surface-1 border border-surface-2 opacity-50">
@@ -335,6 +386,14 @@ export function ClinicProfile() {
                     >
                       Start Assessment
                     </Button>
+                    {clinicData.appointmentsAvailable && (
+                      <Button 
+                        className="w-full h-14 text-lg font-bold bg-primary text-black hover:bg-primary-hover" 
+                        onClick={() => setShowBookingModal(true)}
+                      >
+                        Book Consultation
+                      </Button>
+                    )}
                     <Link to="/contact">
                       <Button variant="outline" className="w-full gap-2">
                         <MessageSquare className="w-4 h-4" /> Message Clinic
@@ -364,7 +423,7 @@ export function ClinicProfile() {
               </Card>
 
               {/* Clinic Info Card */}
-              <Card className="p-6 bg-[#0B0F14] border-surface-3">
+              <Card className="p-6 bg-surface-1 border-surface-3">
                 <h3 className="font-bold text-white mb-4">Clinic Information</h3>
                 <div className="space-y-4">
                   <div className="flex items-start gap-3 text-text-secondary text-sm">
@@ -385,8 +444,17 @@ export function ClinicProfile() {
                     <Globe className="w-5 h-5 text-primary shrink-0" />
                     <div>
                       <p className="text-white font-medium mb-1">Website</p>
-                      <p className="hover:text-primary cursor-pointer transition-colors">apexlongevity.com</p>
+                      <p className="hover:text-primary cursor-pointer transition-colors">{clinicData.website}</p>
                     </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-6 border-t border-surface-3">
+                  <h4 className="font-bold text-white text-sm mb-3">Location Map</h4>
+                  <div className="w-full h-48 bg-surface-2 rounded-lg border border-surface-3 flex items-center justify-center relative overflow-hidden">
+                    <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80&w=800')] bg-cover bg-center opacity-30 grayscale" />
+                    <div className="absolute inset-0 bg-background/50 backdrop-blur-[2px]" />
+                    <MapPin className="w-8 h-8 text-primary relative z-10 animate-bounce" />
                   </div>
                 </div>
 
@@ -421,10 +489,10 @@ export function ClinicProfile() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {SIMILAR_CLINICS.map((clinic, i) => (
             <Link key={i} to={`/clinics/${clinic.id}`}>
-              <Card className="overflow-hidden bg-[#0B0F14] border-surface-3 hover:border-primary/30 transition-all group cursor-pointer h-full flex flex-col">
+              <Card className="overflow-hidden bg-surface-1 border-surface-3 hover:border-primary/30 transition-all group cursor-pointer h-full flex flex-col">
                 <div className="h-40 relative overflow-hidden">
                   <img src={clinic.image} alt={clinic.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F14] to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-surface-1 to-transparent" />
                   <div className="absolute top-3 left-3 px-2 py-1 rounded bg-black/60 backdrop-blur-md border border-white/10 flex items-center gap-1">
                     <Sparkles className="w-3 h-3 text-primary" />
                     <span className="text-white font-bold text-xs">{clinic.matchScore}% Match</span>
@@ -451,6 +519,74 @@ export function ClinicProfile() {
           ))}
         </div>
       </div>
+
+      {/* Booking Modal */}
+      <AnimatePresence>
+        {showBookingModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md"
+            >
+              <Card className="bg-surface-1 border-surface-3 p-6 relative">
+                <button onClick={() => setShowBookingModal(false)} className="absolute top-4 right-4 text-text-secondary hover:text-white">✕</button>
+                <h3 className="text-2xl font-display font-bold text-white mb-6">Book Consultation</h3>
+                
+                {bookingStep === 1 && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-text-secondary mb-1">Full Name</label>
+                      <input type="text" className="w-full bg-surface-2 border border-surface-3 rounded-lg p-3 text-white focus:border-primary outline-none" value={bookingData.name} onChange={e => setBookingData({...bookingData, name: e.target.value})} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-text-secondary mb-1">Email Address</label>
+                      <input type="email" className="w-full bg-surface-2 border border-surface-3 rounded-lg p-3 text-white focus:border-primary outline-none" value={bookingData.email} onChange={e => setBookingData({...bookingData, email: e.target.value})} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-text-secondary mb-1">Phone Number</label>
+                      <input type="tel" className="w-full bg-surface-2 border border-surface-3 rounded-lg p-3 text-white focus:border-primary outline-none" value={bookingData.phone} onChange={e => setBookingData({...bookingData, phone: e.target.value})} />
+                    </div>
+                    <Button className="w-full mt-4 bg-primary text-black font-bold" onClick={() => setBookingStep(2)}>Next Step <ArrowRight className="w-4 h-4 ml-2" /></Button>
+                  </div>
+                )}
+
+                {bookingStep === 2 && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-text-secondary mb-1">Preferred Date</label>
+                      <input type="date" className="w-full bg-surface-2 border border-surface-3 rounded-lg p-3 text-white focus:border-primary outline-none" value={bookingData.date} onChange={e => setBookingData({...bookingData, date: e.target.value})} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-text-secondary mb-1">Preferred Time</label>
+                      <select className="w-full bg-surface-2 border border-surface-3 rounded-lg p-3 text-white focus:border-primary outline-none" value={bookingData.time} onChange={e => setBookingData({...bookingData, time: e.target.value})}>
+                        <option value="">Select a time...</option>
+                        <option value="morning">Morning (8AM - 12PM)</option>
+                        <option value="afternoon">Afternoon (12PM - 4PM)</option>
+                        <option value="evening">Evening (4PM - 7PM)</option>
+                      </select>
+                    </div>
+                    <div className="flex gap-3 mt-6">
+                      <Button variant="outline" className="w-full" onClick={() => setBookingStep(1)}>Back</Button>
+                      <Button className="w-full bg-primary text-black font-bold" onClick={() => setBookingStep(3)}>Confirm Booking</Button>
+                    </div>
+                  </div>
+                )}
+
+                {bookingStep === 3 && (
+                  <div className="text-center py-8">
+                    <CheckCircle2 className="w-16 h-16 text-success mx-auto mb-4" />
+                    <h4 className="text-xl font-bold text-white mb-2">Consultation Requested!</h4>
+                    <p className="text-text-secondary mb-6">We've received your request for {bookingData.date}. The clinic will contact you shortly to confirm your exact appointment time.</p>
+                    <Button className="w-full bg-surface-2 text-white hover:bg-surface-3" onClick={() => { setShowBookingModal(false); setBookingStep(1); }}>Close</Button>
+                  </div>
+                )}
+              </Card>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

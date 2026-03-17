@@ -95,13 +95,14 @@ export function PatientAssessment() {
       // Call AI Service for triage
       const aiInsightsResponse = await AIService.generatePatientInsights({
         id: 'temp',
-        demographics: { age: 35, gender: 'male', location: data.zip },
+        role: 'patient',
+        email: data.email,
+        name: `${data.firstName} ${data.lastName}`,
+        createdAt: new Date().toISOString(),
+        lastActiveAt: new Date().toISOString(),
+        demographics: { age: 35, gender: 'male', location: { city: '', state: '', zipCode: data.zip } },
         healthProfile: { primaryGoals: [data.goal], symptoms: data.symptoms, currentTreatments: [] },
-        symptoms: data.symptoms,
-        duration: 'Unknown',
-        severity: 'Unknown',
-        status: 'new',
-        createdAt: new Date().toISOString()
+        financialProfile: { willingToPayOOP: data.paymentPreference !== 'Insurance Only', monthlyBudget: 0 }
       });
       setAiInsights(aiInsightsResponse);
 

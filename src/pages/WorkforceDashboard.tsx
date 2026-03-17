@@ -56,14 +56,21 @@ export function WorkforceDashboard() {
 
         <div className="p-6 flex-grow flex flex-col">
           {/* User Profile Snippet */}
-          <div className="flex items-center gap-4 mb-8 p-4 rounded-xl bg-surface-2 border border-surface-3">
-            <div className="w-12 h-12 rounded-full bg-secondary/10 border border-secondary/20 flex items-center justify-center text-lg font-bold text-secondary">
-              {getInitials()}
+          <div className="mb-8">
+            <div className="flex items-center gap-4 p-4 rounded-xl bg-surface-2 border border-surface-3 mb-3">
+              <div className="w-12 h-12 rounded-full bg-secondary/10 border border-secondary/20 flex items-center justify-center text-lg font-bold text-secondary">
+                {getInitials()}
+              </div>
+              <div className="overflow-hidden">
+                <h3 className="font-bold text-white truncate">{profile?.firstName} {profile?.lastName}</h3>
+                <p className="text-xs text-text-secondary truncate">{profile?.role}</p>
+              </div>
             </div>
-            <div className="overflow-hidden">
-              <h3 className="font-bold text-white truncate">{profile?.firstName} {profile?.lastName}</h3>
-              <p className="text-xs text-text-secondary truncate">{profile?.role}</p>
-            </div>
+            <Link to="/practitioners/profile">
+              <Button variant="outline" className="w-full text-xs font-bold border-surface-3 text-text-secondary hover:text-white">
+                View Public Profile
+              </Button>
+            </Link>
           </div>
 
           {/* Navigation */}

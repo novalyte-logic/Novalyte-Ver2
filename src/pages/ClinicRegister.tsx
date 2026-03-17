@@ -135,18 +135,22 @@ export function ClinicRegister() {
     }
   };
 
+  const isValidEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
   const isStepValid = () => {
     switch (currentStep) {
       case 0:
         return true; // Auth step, handled by user presence
       case 1:
-        return formData.legalName && formData.npiNumber.length >= 10 && formData.adminEmail;
+        return formData.legalName && formData.npiNumber.length >= 10 && formData.adminEmail && isValidEmail(formData.adminEmail);
       case 2:
-        return formData.hipaaOfficer && formData.hipaaEmail && formData.baaAccepted;
+        return formData.hipaaOfficer && formData.hipaaEmail && isValidEmail(formData.hipaaEmail) && formData.baaAccepted;
       case 3:
         return formData.primaryEmr && formData.monthlyVolume;
       case 4:
-        return formData.techContact;
+        return formData.techContact && isValidEmail(formData.techContact);
       default:
         return false;
     }
@@ -471,7 +475,7 @@ export function ClinicRegister() {
                       )}
 
                       {/* Step 4: Connectivity */}
-                      {currentStep === 3 && (
+                      {currentStep === 4 && (
                         <>
                           <div>
                             <label className="block text-sm font-medium text-text-secondary mb-3">HL7 / FHIR Capability</label>

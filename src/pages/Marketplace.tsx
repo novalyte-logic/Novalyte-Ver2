@@ -3,32 +3,116 @@ import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
-import { ShoppingCart, Server, Activity, ArrowRight, Search, ShieldCheck, Zap, Database, CheckCircle2, Building2, TrendingUp, Cpu } from 'lucide-react';
+import { 
+  ShoppingCart, Server, Activity, ArrowRight, Search, ShieldCheck, 
+  Zap, Database, CheckCircle2, Building2, TrendingUp, Cpu, Sparkles, Filter, MessageSquare
+} from 'lucide-react';
 
 export function Marketplace() {
   const [searchQuery, setSearchQuery] = useState('');
 
-  const stats = [
-    { label: "Vetted Vendors", value: "150+" },
-    { label: "Clinical Products", value: "2,400+" },
-    { label: "Avg. ROI (Months)", value: "4.2" },
-    { label: "Procurement Volume", value: "$12M+" }
+  const categories = [
+    {
+      title: "Supplements",
+      description: "Clinical-grade peptides, TRT supplies, and specialized formulations.",
+      image: "https://images.unsplash.com/photo-1579722820308-d74e571900a9?auto=format&fit=crop&q=80&w=800",
+      link: "/marketplace/supplements",
+      icon: Activity
+    },
+    {
+      title: "Home Gym",
+      description: "High-end training systems designed for measurable results at home.",
+      image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=800",
+      link: "/marketplace/home-gym",
+      icon: Server
+    },
+    {
+      title: "Clinic Equipment",
+      description: "Commercial multi-stations, diagnostic tools, and operational hardware.",
+      image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800",
+      link: "/marketplace/clinic-equipment",
+      icon: Building2
+    },
+    {
+      title: "Health Tech Devices",
+      description: "Wearables, metabolic scanners, and AI-powered diagnostic tools.",
+      image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=800",
+      link: "/marketplace/health-tech",
+      icon: Cpu
+    }
   ];
 
-  const featuredVendors = [
-    { name: "NeuroTech Systems", category: "Diagnostics", rating: "4.9", logo: Cpu },
-    { name: "Apex Clinical", category: "Equipment", rating: "4.8", logo: Server },
-    { name: "Vitality Labs", category: "Supplements", rating: "4.9", logo: Activity },
-    { name: "Pulse Analytics", category: "Health Tech", rating: "4.7", logo: Database }
+  const includedItems = [
+    {
+      title: "IV Therapy Stations",
+      brands: "Multi-line infusion pods",
+      price: "Clinical Grade",
+      features: ["Automated fluid delivery with digital monitoring", "Designed for hormone, regenerative, and vitamin therapy clinics"],
+      image: "https://images.unsplash.com/photo-1583324113626-70df0f4deaab?auto=format&fit=crop&q=80&w=800"
+    },
+    {
+      title: "Cryotherapy Chambers",
+      brands: "Single and multi-person cryo units",
+      price: "Clinical Grade",
+      features: ["Electric and nitrogen-free systems", "For recovery and inflammation reduction"],
+      image: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=800"
+    },
+    {
+      title: "Hyperbaric Oxygen Chambers",
+      brands: "Soft & hard-shell medical oxygen chambers",
+      price: "Clinical Grade",
+      features: ["Accelerate healing", "Cellular oxygenation"],
+      image: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&q=80&w=800"
+    },
+    {
+      title: "Laser & Ultrasound Therapy",
+      brands: "FDA-cleared regenerative lasers",
+      price: "Clinical Grade",
+      features: ["Ultrasound systems for tissue repair", "Pain management and aesthetics"],
+      image: "https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&q=80&w=800"
+    },
+    {
+      title: "PEMF & Shockwave Systems",
+      brands: "Electromagnetic and shockwave platforms",
+      price: "Clinical Grade",
+      features: ["Rehab and pain management", "Recovery and performance clinics"],
+      image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800"
+    },
+    {
+      title: "Red-Light Therapy Beds & Panels",
+      brands: "Full-body therapy beds + modular panels",
+      price: "Clinical Grade",
+      features: ["Hormone support and recovery", "Skin rejuvenation"],
+      image: "https://images.unsplash.com/photo-1550537687-c91072c4792d?auto=format&fit=crop&q=80&w=800"
+    },
+    {
+      title: "Regenerative Medicine Tools",
+      brands: "PRP centrifuges, ozone therapy units",
+      price: "Clinical Grade",
+      features: ["Stem-cell processing equipment", "Clinical-grade precision"],
+      image: "https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?auto=format&fit=crop&q=80&w=800"
+    },
+    {
+      title: "Clinic-Grade Smart Diagnostics",
+      brands: "AI-powered comp analyzers",
+      price: "Clinical Grade",
+      features: ["Metabolic scanners", "IoT wearable hubs integrated with Novalyte"],
+      image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=800"
+    }
   ];
 
   return (
-    <div className="flex flex-col bg-background min-h-screen">
+    <div className="flex flex-col bg-[#05070A] min-h-screen font-sans text-text-primary">
       {/* Hero Section */}
-      <section className="relative pt-32 pb-24 overflow-hidden border-b border-surface-3/50">
-        <div className="absolute inset-0 bg-background" />
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20 mix-blend-overlay" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-primary/10 rounded-full blur-[120px] opacity-50 mix-blend-screen" />
+      <section className="relative pt-32 pb-24 overflow-hidden border-b border-surface-3/50 min-h-[60vh] flex flex-col justify-center">
+        {/* Deep layered background */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/20 via-background to-background" />
+        
+        {/* Abstract Data Grid Motif */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-20" />
+        
+        {/* Glowing Orbs */}
+        <div className="absolute top-0 right-0 w-[800px] h-[600px] bg-primary/10 rounded-full blur-[120px] opacity-50 mix-blend-screen pointer-events-none" />
         
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.div
@@ -36,212 +120,149 @@ export function Marketplace() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
           >
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface-2/80 backdrop-blur-md border border-surface-3 mb-8 shadow-[0_0_30px_rgba(6,182,212,0.15)]">
-              <ShieldCheck className="w-4 h-4 text-primary" />
-              <span className="text-sm font-mono text-text-primary uppercase tracking-widest">Verified Clinical Exchange</span>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface-2/80 backdrop-blur-md border border-surface-3 mb-8 shadow-[0_0_30px_rgba(139,92,246,0.15)]">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span className="text-sm font-mono text-white uppercase tracking-widest">AI Powered Infrastructure</span>
             </div>
             
-            <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tight mb-6 text-white leading-tight">
-              Clinical Optimization <br className="hidden md:block" />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
-                Infrastructure
-              </span>
+            <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tight mb-6 text-white leading-tight uppercase">
+              Equip Your Clinic for the <br className="hidden md:block" />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Future of Optimization.</span>
             </h1>
             
-            <p className="text-xl md:text-2xl text-slate-400 max-w-3xl mx-auto mb-12 leading-relaxed font-light">
-              Procure advanced clinical equipment, specialized diagnostics, and high-performance protocols. Vetted for quality, optimized for ROI, and integrated directly into your Clinic OS.
+            <p className="text-xl md:text-2xl text-text-secondary max-w-3xl mx-auto mb-12 leading-relaxed font-light">
+              Direct access to top-tier medical devices, compounding pharmacies, and diagnostic equipment.
             </p>
             
-            <div className="max-w-3xl mx-auto relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/30 to-blue-600/30 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-500" />
-              <div className="relative flex flex-col sm:flex-row items-center bg-surface-1/80 backdrop-blur-xl border border-surface-3 rounded-2xl p-2 shadow-2xl gap-2 sm:gap-0">
+            <div className="max-w-4xl mx-auto relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 to-secondary/30 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-500" />
+              <div className="relative flex flex-col sm:flex-row items-center bg-surface-1/80 backdrop-blur-xl border border-surface-3 rounded-2xl p-2 shadow-2xl gap-2">
                 <div className="flex items-center w-full">
-                  <Search className="w-6 h-6 text-slate-400 ml-4 shrink-0" />
+                  <Search className="w-6 h-6 text-text-secondary ml-4 shrink-0" />
                   <input 
                     type="text" 
-                    placeholder="Search TRT protocols, peptides, Dexa scanners, or diagnostics..." 
+                    placeholder="Search equipment, supplements, or clinics..." 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full h-14 bg-transparent border-none text-base sm:text-lg text-white placeholder-slate-500 focus:outline-none focus:ring-0 px-4"
+                    className="w-full h-14 bg-transparent border-none text-base sm:text-lg text-white placeholder-text-secondary focus:outline-none focus:ring-0 px-4"
                   />
                 </div>
-                <Link to="/marketplace/equipment" className="w-full sm:w-auto">
-                  <Button 
-                    className="w-full sm:w-auto h-12 px-8 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold rounded-xl transition-colors"
-                  >
-                    Search
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <Button variant="outline" className="h-12 px-4 border-surface-3 text-text-secondary hover:text-white">
+                    <Filter className="w-5 h-5" />
                   </Button>
-                </Link>
+                  <Button className="w-full sm:w-auto h-12 px-6 bg-primary hover:bg-primary-hover text-black font-bold rounded-xl transition-colors flex items-center gap-2">
+                    <MessageSquare className="w-5 h-5" /> Ask AI
+                  </Button>
+                </div>
               </div>
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* Trust Stats */}
-      <section className="py-12 bg-surface-1/30 border-b border-surface-3/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 divide-x divide-surface-3/50">
-            {stats.map((stat, i) => (
-              <div key={i} className="text-center px-4">
-                <div className="text-3xl md:text-4xl font-display font-bold text-white mb-2">{stat.value}</div>
-                <div className="text-xs md:text-sm font-mono text-text-secondary uppercase tracking-widest">{stat.label}</div>
-              </div>
+      {/* Category Grid */}
+      <section className="py-24 relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="flex items-center justify-between mb-12">
+            <div>
+              <h2 className="text-4xl font-display font-bold text-white mb-4">Marketplace Categories</h2>
+              <p className="text-xl text-text-secondary">Explore our curated selection of high-end products and services.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {categories.map((category, i) => (
+              <Link key={i} to={category.link} className="group">
+                <Card className="overflow-hidden bg-[#0B0F14] border-surface-3 hover:border-primary/50 transition-all duration-500 h-full flex flex-col">
+                  <div className="h-64 relative overflow-hidden">
+                    <img src={category.image} alt={category.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F14] via-[#0B0F14]/40 to-transparent" />
+                    <div className="absolute top-4 left-4 w-12 h-12 rounded-xl bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center">
+                      <category.icon className="w-6 h-6 text-primary" />
+                    </div>
+                  </div>
+                  <div className="p-8 flex-grow flex flex-col justify-between relative -mt-12 z-10">
+                    <div>
+                      <h3 className="text-2xl font-display font-bold mb-3 text-white group-hover:text-primary transition-colors">{category.title}</h3>
+                      <p className="text-text-secondary text-lg leading-relaxed mb-6">
+                        {category.description}
+                      </p>
+                    </div>
+                    <div className="flex items-center text-primary font-bold uppercase tracking-wider text-sm group-hover:gap-2 transition-all">
+                      Explore Category <ArrowRight className="ml-2 w-4 h-4" />
+                    </div>
+                  </div>
+                </Card>
+              </Link>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Categories */}
-      <section className="py-24 relative">
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 mix-blend-overlay" />
+      {/* What's Included */}
+      <section className="py-24 bg-[#0B0F14] border-t border-surface-3/50 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="flex items-center justify-between mb-12">
-            <div>
-              <h2 className="text-3xl font-display font-bold text-white mb-2">Procurement Categories</h2>
-              <p className="text-text-secondary">Browse vetted infrastructure and protocols.</p>
-            </div>
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-display font-bold text-white mb-4">What's Included</h2>
+            <p className="text-xl text-text-secondary max-w-3xl mx-auto">
+              Our curated collection features only the highest quality systems for home and clinical use.
+            </p>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {includedItems.slice(0, 4).map((item, i) => (
+              <Card key={i} className="bg-surface-1/50 border-surface-3 overflow-hidden flex flex-col">
+                <div className="h-48 relative">
+                  <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-surface-1 to-transparent" />
+                  <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
+                    <h3 className="text-xl font-bold text-white">{item.title}</h3>
+                  </div>
+                </div>
+                <div className="p-6 flex-grow flex flex-col">
+                  <div className="mb-4">
+                    <p className="text-primary font-semibold text-sm mb-1">{item.brands}</p>
+                    <p className="text-text-secondary text-sm">{item.price}</p>
+                  </div>
+                  <ul className="space-y-2 mt-auto">
+                    {item.features.map((feature, j) => (
+                      <li key={j} className="flex items-start gap-2 text-sm text-slate-300">
+                        <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </Card>
+            ))}
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Link to="/marketplace/equipment" className="group">
-              <Card glow="cyan" className="h-full flex flex-col justify-between p-8 bg-surface-1/50 backdrop-blur-xl border-surface-3/50 hover:border-cyan-500/50 transition-all duration-500">
-                <div>
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500 shadow-[0_0_30px_rgba(6,182,212,0.1)]">
-                      <Server className="w-7 h-7 text-cyan-400" />
-                    </div>
-                    <span className="px-3 py-1 rounded-full bg-surface-2 border border-surface-3 text-xs font-mono text-slate-400 uppercase tracking-wider">High ROI</span>
-                  </div>
-                  <h3 className="text-2xl font-display font-bold mb-3 text-white group-hover:text-cyan-400 transition-colors">Capital Equipment & Devices</h3>
-                  <p className="text-slate-400 mb-8 leading-relaxed">
-                    Dexa scanners, InBody analyzers, shockwave therapy (GAINSWave), and operational hardware for modern clinics. Includes AI-driven ROI calculators.
-                  </p>
+            {includedItems.slice(4).map((item, i) => (
+              <Card key={i} className="bg-surface-1/50 border-surface-3 overflow-hidden flex flex-col sm:flex-row">
+                <div className="sm:w-2/5 h-48 sm:h-auto relative">
+                  <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent to-surface-1 hidden sm:block" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-surface-1 to-transparent sm:hidden" />
                 </div>
-                <div className="flex items-center text-cyan-400 font-semibold uppercase tracking-wider text-sm group-hover:gap-2 transition-all">
-                  Browse Equipment <ArrowRight className="ml-2 w-4 h-4" />
+                <div className="p-6 sm:w-3/5 flex flex-col justify-center">
+                  <h3 className="text-xl font-bold text-white mb-2">{item.title}</h3>
+                  <div className="mb-4">
+                    <p className="text-primary font-semibold text-sm mb-1">{item.brands}</p>
+                    <p className="text-text-secondary text-sm">{item.price}</p>
+                  </div>
+                  <ul className="space-y-2">
+                    {item.features.map((feature, j) => (
+                      <li key={j} className="flex items-start gap-2 text-sm text-slate-300">
+                        <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </Card>
-            </Link>
-
-            <Link to="/marketplace/diagnostics" className="group">
-              <Card glow="blue" className="h-full flex flex-col justify-between p-8 bg-surface-1/50 backdrop-blur-xl border-surface-3/50 hover:border-blue-500/50 transition-all duration-500">
-                <div>
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500 shadow-[0_0_30px_rgba(59,130,246,0.1)]">
-                      <Activity className="w-7 h-7 text-blue-400" />
-                    </div>
-                    <span className="px-3 py-1 rounded-full bg-surface-2 border border-surface-3 text-xs font-mono text-slate-400 uppercase tracking-wider">Essential</span>
-                  </div>
-                  <h3 className="text-2xl font-display font-bold mb-3 text-white group-hover:text-blue-400 transition-colors">Specialized Diagnostics</h3>
-                  <p className="text-slate-400 mb-8 leading-relaxed">
-                    Comprehensive hormone panels, biological age testing, and advanced diagnostic kits to expand your clinic's precision medicine capabilities.
-                  </p>
-                </div>
-                <div className="flex items-center text-blue-400 font-semibold uppercase tracking-wider text-sm group-hover:gap-2 transition-all">
-                  Browse Diagnostics <ArrowRight className="ml-2 w-4 h-4" />
-                </div>
-              </Card>
-            </Link>
-
-            <Link to="/marketplace/health-tech" className="group">
-              <Card glow="cyan" className="h-full flex flex-col justify-between p-8 bg-surface-1/50 backdrop-blur-xl border-surface-3/50 hover:border-cyan-500/50 transition-all duration-500">
-                <div>
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500 shadow-[0_0_30px_rgba(6,182,212,0.1)]">
-                      <Database className="w-7 h-7 text-cyan-400" />
-                    </div>
-                  </div>
-                  <h3 className="text-2xl font-display font-bold mb-3 text-white group-hover:text-cyan-400 transition-colors">Wearables & Biomarkers</h3>
-                  <p className="text-slate-400 mb-8 leading-relaxed">
-                    CGMs, Oura rings, HRV monitors, and digital health software for continuous patient tracking, engagement, and remote monitoring.
-                  </p>
-                </div>
-                <div className="flex items-center text-cyan-400 font-semibold uppercase tracking-wider text-sm group-hover:gap-2 transition-all">
-                  Browse Health Tech <ArrowRight className="ml-2 w-4 h-4" />
-                </div>
-              </Card>
-            </Link>
-
-            <Link to="/marketplace/supplements" className="group">
-              <Card glow="blue" className="h-full flex flex-col justify-between p-8 bg-surface-1/50 backdrop-blur-xl border-surface-3/50 hover:border-blue-500/50 transition-all duration-500">
-                <div>
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500 shadow-[0_0_30px_rgba(59,130,246,0.1)]">
-                      <ShoppingCart className="w-7 h-7 text-blue-400" />
-                    </div>
-                  </div>
-                  <h3 className="text-2xl font-display font-bold mb-3 text-white group-hover:text-blue-400 transition-colors">Peptides & Protocols</h3>
-                  <p className="text-slate-400 mb-8 leading-relaxed">
-                    Clinical-grade NAD+, BPC-157, GLP-1, TRT supplies, and specialized formulations for optimized patient outcomes and recurring revenue.
-                  </p>
-                </div>
-                <div className="flex items-center text-blue-400 font-semibold uppercase tracking-wider text-sm group-hover:gap-2 transition-all">
-                  Browse Protocols <ArrowRight className="ml-2 w-4 h-4" />
-                </div>
-              </Card>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Featured Vendors & AI Recommendations */}
-      <section className="py-24 bg-[#101720] border-t border-surface-3/50 relative overflow-hidden">
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1/2 h-full bg-gradient-to-r from-blue-500/5 to-transparent blur-[100px]" />
-        
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="flex flex-col lg:flex-row gap-12">
-            
-            {/* Featured Vendors */}
-            <div className="lg:w-2/3">
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-2xl font-display font-bold text-white flex items-center gap-2">
-                  <Building2 className="w-6 h-6 text-cyan-400" /> Featured Partners
-                </h2>
-                <Link to="/vendors/apply" className="text-sm text-slate-400 hover:text-white transition-colors">
-                  Become a Vendor &rarr;
-                </Link>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {featuredVendors.map((vendor, i) => (
-                  <Card key={i} className="bg-surface-1/80 border-surface-3 p-6 flex items-center gap-4 hover:bg-surface-2 transition-colors cursor-pointer">
-                    <div className="w-12 h-12 rounded-xl bg-surface-3 flex items-center justify-center text-slate-400">
-                      <vendor.logo className="w-6 h-6" />
-                    </div>
-                    <div className="flex-grow">
-                      <h4 className="text-white font-bold">{vendor.name}</h4>
-                      <p className="text-sm text-slate-400">{vendor.category}</p>
-                    </div>
-                    <div className="flex items-center gap-1 text-sm font-medium text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-md">
-                      ★ {vendor.rating}
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </div>
-
-            {/* AI Recommendation Hook */}
-            <div className="lg:w-1/3">
-              <Card className="bg-gradient-to-br from-surface-1 to-surface-2 border-surface-3 p-8 h-full relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-[32px]" />
-                <div className="relative z-10 flex flex-col h-full">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-400 text-xs font-mono uppercase tracking-wider mb-6 w-fit">
-                    <Zap className="w-3 h-3" /> AI Procurement Advisor
-                  </div>
-                  <h3 className="text-xl font-bold text-white mb-4">Optimize Your Clinic Stack</h3>
-                  <p className="text-slate-400 text-sm mb-8 flex-grow leading-relaxed">
-                    Connect your Clinic OS to receive personalized equipment and protocol recommendations based on your patient demographics, capacity, and revenue goals.
-                  </p>
-                  <Link to="/clinics/icp">
-                    <Button className="w-full bg-surface-3 hover:bg-surface-3/80 text-white border border-surface-3">
-                      Run Clinic Analysis
-                    </Button>
-                  </Link>
-                </div>
-              </Card>
-            </div>
-
+            ))}
           </div>
         </div>
       </section>

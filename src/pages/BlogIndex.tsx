@@ -15,17 +15,6 @@ const CATEGORIES = [
   "Clinic Operations"
 ];
 
-const FEATURED_POST = {
-  id: "future-of-trt",
-  title: "The Future of Testosterone Replacement: Moving Beyond the Numbers",
-  excerpt: "Why modern endocrinology is shifting from simple reference ranges to comprehensive symptom resolution, metabolic markers, and continuous monitoring.",
-  category: "Hormone Optimization",
-  author: "Dr. Marcus Thorne",
-  date: "Oct 12, 2026",
-  readTime: "8 min read",
-  image: "https://images.unsplash.com/photo-1532187863486-abf9db61b15c?auto=format&fit=crop&q=80&w=1200"
-};
-
 const POSTS = [
   {
     id: "glp1-muscle-preservation",
@@ -86,6 +75,36 @@ const POSTS = [
     date: "Sep 15, 2026",
     readTime: "9 min read",
     image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    id: "hair-restoration-protocols",
+    title: "Advanced Hair Restoration: Beyond Finasteride",
+    excerpt: "A deep dive into topical compounds, micro-needling, and PRP therapies for aggressive androgenetic alopecia.",
+    category: "Hormone Optimization",
+    author: "Dr. Marcus Thorne",
+    date: "Sep 10, 2026",
+    readTime: "7 min read",
+    image: "https://images.unsplash.com/photo-1620331311520-246422fd82f9?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    id: "shockwave-therapy-ed",
+    title: "Shockwave Therapy for Erectile Dysfunction",
+    excerpt: "How low-intensity extracorporeal shockwave therapy (LI-ESWT) is replacing PDE5 inhibitors for long-term vascular repair.",
+    category: "Longevity & Aging",
+    author: "Dr. Sarah Jenkins",
+    date: "Sep 02, 2026",
+    readTime: "6 min read",
+    image: "https://images.unsplash.com/photo-1584362917165-526a968579e8?auto=format&fit=crop&q=80&w=800"
+  },
+  {
+    id: "bpc157-tb500-recovery",
+    title: "BPC-157 & TB-500: The Ultimate Recovery Stack",
+    excerpt: "Accelerating tissue repair, reducing inflammation, and overcoming chronic injuries with targeted peptide therapy.",
+    category: "Performance",
+    author: "Dr. Marcus Thorne",
+    date: "Aug 28, 2026",
+    readTime: "8 min read",
+    image: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&q=80&w=800"
   }
 ];
 
@@ -148,54 +167,104 @@ export function BlogIndex() {
           {/* Main Content Area */}
           <div className="lg:col-span-8 space-y-12">
             
-            {/* Featured Post (Only show if no search and All category) */}
+            {/* The Ultimate Guide (Pillar Content) */}
             {searchQuery === "" && activeCategory === "All" && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
+                className="mb-16"
               >
-                <Link to={`/blog/${FEATURED_POST.id}`} className="block group">
-                  <Card className="overflow-hidden bg-[#0B0F14] border-surface-3 hover:border-primary/30 transition-all">
-                    <div className="relative h-72 md:h-96 w-full overflow-hidden">
-                      <img 
-                        src={FEATURED_POST.image} 
-                        alt={FEATURED_POST.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F14] via-[#0B0F14]/40 to-transparent" />
-                      <div className="absolute top-4 left-4 px-3 py-1 rounded bg-primary text-black text-xs font-bold uppercase tracking-wider">
-                        Featured Report
-                      </div>
+                <Card className="overflow-hidden bg-[#0B0F14] border-surface-3">
+                  <div className="relative h-72 md:h-96 w-full overflow-hidden">
+                    <img 
+                      src="https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&q=80&w=2000" 
+                      alt="Men's Health Optimization"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F14] via-[#0B0F14]/60 to-transparent" />
+                    <div className="absolute top-4 left-4 px-3 py-1 rounded bg-primary text-black text-xs font-bold uppercase tracking-wider">
+                      Ultimate Guide
                     </div>
-                    <div className="p-8 relative -mt-20 z-10">
-                      <div className="flex items-center gap-4 text-sm text-text-secondary mb-4">
-                        <span className="flex items-center gap-1.5"><Tag className="w-4 h-4" /> {FEATURED_POST.category}</span>
-                        <span className="flex items-center gap-1.5"><Clock className="w-4 h-4" /> {FEATURED_POST.readTime}</span>
-                      </div>
-                      <h2 className="text-3xl font-display font-bold text-white mb-4 group-hover:text-primary transition-colors leading-tight">
-                        {FEATURED_POST.title}
-                      </h2>
-                      <p className="text-lg text-text-secondary mb-6 leading-relaxed">
-                        {FEATURED_POST.excerpt}
+                  </div>
+                  <div className="p-8 md:p-12 relative -mt-20 z-10">
+                    <h2 className="text-3xl md:text-5xl font-display font-bold text-white mb-6 leading-tight">
+                      The Ultimate Guide to Men's Health Optimization: TRT, Peptides, and Beyond
+                    </h2>
+                    
+                    <div className="max-w-none">
+                      <p className="text-xl text-text-secondary leading-relaxed mb-8">
+                        The standard of care for men's health is rapidly evolving. We are moving away from the outdated model of simply treating symptoms when they become unbearable, and shifting toward a proactive approach: <strong>optimization</strong>. Whether you are looking for <span className="text-white font-semibold">Testosterone Replacement Therapy online</span>, exploring <span className="text-white font-semibold">healing peptides</span>, or seeking <span className="text-white font-semibold">metabolic optimization</span>, this guide covers the foundational pillars of modern men's health.
                       </p>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-surface-3 flex items-center justify-center text-white font-bold">
-                            {FEATURED_POST.author.charAt(4)}
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-white">{FEATURED_POST.author}</p>
-                            <p className="text-xs text-text-secondary">{FEATURED_POST.date}</p>
-                          </div>
+
+                      {/* Soft Nudge */}
+                      <div className="bg-surface-1 border border-primary/20 rounded-xl p-6 mb-10 flex flex-col sm:flex-row items-center justify-between gap-6">
+                        <div>
+                          <h4 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                            <Activity className="w-5 h-5 text-primary" />
+                            Not sure where to start?
+                          </h4>
+                          <p className="text-sm text-text-secondary">
+                            Take our comprehensive clinical assessment to get a personalized protocol recommendation and match with a top-tier provider.
+                          </p>
                         </div>
-                        <div className="text-primary font-bold flex items-center gap-1 group-hover:gap-2 transition-all">
-                          Read Article <ArrowRight className="w-4 h-4" />
-                        </div>
+                        <Link to="/patient/assessment" className="shrink-0">
+                          <Button className="bg-primary text-black hover:bg-primary-hover font-bold">
+                            Take Free Assessment
+                          </Button>
+                        </Link>
+                      </div>
+
+                      <h3 className="text-2xl font-bold text-white mt-10 mb-4">1. Testosterone Replacement Therapy (TRT)</h3>
+                      <img 
+                        src="https://images.unsplash.com/photo-1584362917165-526a968579e8?auto=format&fit=crop&q=80&w=1200" 
+                        alt="Testosterone Replacement Therapy" 
+                        className="w-full h-64 object-cover rounded-xl mb-6"
+                      />
+                      <p className="text-lg text-text-secondary leading-relaxed mb-4">
+                        For decades, men suffering from fatigue, brain fog, loss of libido, and muscle wasting were told their levels were "normal for their age." Today, the best <Link to="/directory" className="text-primary hover:underline font-semibold">TRT clinics near me</Link> and online providers focus on symptom resolution rather than just static reference ranges.
+                      </p>
+                      <p className="text-lg text-text-secondary leading-relaxed mb-6">
+                        Modern <strong>Testosterone Replacement Therapy (TRT)</strong> utilizes bioidentical hormones delivered via precise injections or compounded creams. When monitored correctly, TRT can restore energy, improve cognitive function, and enhance body composition.
+                      </p>
+
+                      <h3 className="text-2xl font-bold text-white mt-10 mb-4">2. Peptide Therapy for Healing and Longevity</h3>
+                      <img 
+                        src="https://images.unsplash.com/photo-1532187863486-abf9db61b15c?auto=format&fit=crop&q=80&w=1200" 
+                        alt="Peptide Therapy" 
+                        className="w-full h-64 object-cover rounded-xl mb-6"
+                      />
+                      <p className="text-lg text-text-secondary leading-relaxed mb-4">
+                        Peptides are short chains of amino acids that act as signaling molecules in the body. The <span className="text-white font-semibold">best peptide clinics</span> utilize these compounds to target specific biological processes.
+                      </p>
+                      <ul className="list-disc pl-6 text-lg text-text-secondary leading-relaxed mb-6 space-y-3 marker:text-primary">
+                        <li><strong className="text-white">BPC-157 & TB-500:</strong> Known as the "healing peptides," these are often prescribed for rapid recovery from joint, tendon, and muscle injuries.</li>
+                        <li><strong className="text-white">CJC-1295 & Ipamorelin:</strong> Growth hormone secretagogues that stimulate the body's natural production of GH, aiding in fat loss, sleep quality, and anti-aging.</li>
+                        <li><strong className="text-white">PT-141:</strong> A targeted peptide for enhancing libido and treating erectile dysfunction when traditional PDE5 inhibitors fall short.</li>
+                      </ul>
+
+                      <h3 className="text-2xl font-bold text-white mt-10 mb-4">3. GLP-1 Agonists for Metabolic Health</h3>
+                      <p className="text-lg text-text-secondary leading-relaxed mb-4">
+                        The introduction of GLP-1 and GIP receptor agonists (like Semaglutide and Tirzepatide) has revolutionized weight management. For men struggling with visceral fat and metabolic syndrome, <span className="text-white font-semibold">GLP-1 weight loss for men</span> offers a powerful tool to reset insulin sensitivity.
+                      </p>
+                      <p className="text-lg text-text-secondary leading-relaxed mb-6">
+                        Elite clinics often combine GLP-1 therapies with TRT and muscle-preserving peptides to ensure that weight lost is primarily fat, not lean muscle mass.
+                      </p>
+
+                      <h3 className="text-2xl font-bold text-white mt-10 mb-4">4. Advanced Hair Restoration</h3>
+                      <p className="text-lg text-text-secondary leading-relaxed mb-4">
+                        Hair loss is a primary concern for many men, especially those optimizing their androgens. Modern <span className="text-white font-semibold">hair restoration clinics</span> have moved beyond generic solutions. Today's protocols include topical Finasteride/Minoxidil compounds (to minimize systemic side effects), PRP (Platelet-Rich Plasma) therapy, and advanced micro-needling techniques.
+                      </p>
+
+                      <div className="mt-12 pt-8 border-t border-surface-3">
+                        <h4 className="text-xl font-bold text-white mb-4">Next Steps in Your Optimization Journey</h4>
+                        <p className="text-lg text-text-secondary leading-relaxed mb-6">
+                          True health optimization requires a personalized approach. Whether you are looking for a local specialist in our <Link to="/directory" className="text-primary hover:underline font-semibold">Clinic Directory</Link> or you are a healthcare professional looking to join the <Link to="/workforce" className="text-primary hover:underline font-semibold">Workforce Network</Link>, Novalyte is your partner in modern medicine.
+                        </p>
                       </div>
                     </div>
-                  </Card>
-                </Link>
+                  </div>
+                </Card>
               </motion.div>
             )}
 

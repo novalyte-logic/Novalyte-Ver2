@@ -21,60 +21,10 @@ import {
   X,
   Scale
 } from 'lucide-react';
+import CLINICS_DATA from '@/src/data/clinics.json';
 
-const MOCK_CLINICS = [
-  { 
-    id: "apex", 
-    name: "Apex Longevity Institute", 
-    location: "Miami, FL", 
-    rating: 4.9, 
-    matchScore: 98,
-    tags: ["Hormone Optimization", "Peptides", "Longevity"],
-    symptoms: ["Fatigue", "Low Libido", "Brain Fog"],
-    waitlist: "2 days",
-    price: "$$$",
-    image: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=800"
-  },
-  { 
-    id: "vitality", 
-    name: "Vitality Men's Clinic", 
-    location: "Austin, TX", 
-    rating: 4.8, 
-    matchScore: 92,
-    tags: ["Weight Management", "TRT", "Hair Loss"],
-    symptoms: ["Weight Gain", "Low Energy", "Hair Thinning"],
-    waitlist: "1 week",
-    price: "$$",
-    image: "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&q=80&w=800"
-  },
-  { 
-    id: "neurohealth", 
-    name: "NeuroHealth Partners", 
-    location: "New York, NY", 
-    rating: 5.0, 
-    matchScore: 85,
-    tags: ["Cognitive Health", "Longevity", "Biohacking"],
-    symptoms: ["Brain Fog", "Poor Sleep", "Stress"],
-    waitlist: "No wait",
-    price: "$$$$",
-    image: "https://images.unsplash.com/photo-1551076805-e18690c5e561?auto=format&fit=crop&q=80&w=800"
-  },
-  { 
-    id: "titan", 
-    name: "Titan Performance", 
-    location: "Los Angeles, CA", 
-    rating: 4.7, 
-    matchScore: 78,
-    tags: ["TRT", "Sports Medicine", "Recovery"],
-    symptoms: ["Muscle Loss", "Joint Pain", "Fatigue"],
-    waitlist: "3 days",
-    price: "$$",
-    image: "https://images.unsplash.com/photo-1538108149393-fbbd81895907?auto=format&fit=crop&q=80&w=800"
-  },
-];
-
-const SYMPTOMS = ["Fatigue", "Brain Fog", "Low Libido", "Weight Gain", "Poor Sleep", "Muscle Loss", "Joint Pain"];
-const TREATMENTS = ["TRT", "Peptides", "Longevity", "Weight Management", "Cognitive Health", "Hair Loss"];
+const SYMPTOMS = ["Fatigue", "Brain Fog", "Low Libido", "Weight Gain", "Poor Sleep", "Muscle Loss", "Joint Pain", "Hair Thinning", "Stress"];
+const TREATMENTS = ["TRT", "Peptides", "Longevity", "Weight Management", "Cognitive Health", "Hair Loss", "Hormone Optimization", "Sports Medicine", "Recovery", "Biohacking"];
 
 export function Directory() {
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
@@ -108,7 +58,7 @@ export function Directory() {
       if (clinicsData.length > 0) {
         setClinics(clinicsData);
       } else {
-        setClinics(MOCK_CLINICS);
+        setClinics(CLINICS_DATA);
       }
     });
 
@@ -140,17 +90,18 @@ export function Directory() {
 
   const filteredClinics = clinics.filter(clinic => {
     const matchesSearch = clinic.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          clinic.location.toLowerCase().includes(searchQuery.toLowerCase());
+                          clinic.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          clinic.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesSymptoms = selectedSymptoms.length === 0 || selectedSymptoms.some(s => clinic.symptoms.includes(s));
     const matchesTreatments = selectedTreatments.length === 0 || selectedTreatments.some(t => clinic.tags.includes(t));
     return matchesSearch && matchesSymptoms && matchesTreatments;
   }).sort((a, b) => b.matchScore - a.matchScore);
 
   return (
-    <div className="min-h-screen bg-[#05070A] flex flex-col font-sans text-text-primary">
+    <div className="min-h-screen bg-background flex flex-col font-sans text-text-primary">
       {/* Premium Header */}
       <section className="pt-32 pb-16 border-b border-surface-3 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-[#05070A] to-[#05070A]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-background to-background" />
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="flex items-center gap-3 mb-6 justify-center">
@@ -168,7 +119,7 @@ export function Directory() {
           </p>
           
           {/* Search & Match Bar */}
-          <div className="max-w-4xl mx-auto bg-[#0B0F14]/80 backdrop-blur-xl border border-surface-3 p-2 rounded-2xl flex flex-col md:flex-row gap-2 shadow-2xl">
+          <div className="max-w-4xl mx-auto bg-surface-1/80 backdrop-blur-xl border border-surface-3 p-2 rounded-2xl flex flex-col md:flex-row gap-2 shadow-2xl">
             <div className="relative flex-grow">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary" />
               <input 
@@ -229,7 +180,7 @@ export function Directory() {
               )}
             </div>
 
-            <div className="flex items-center p-1 bg-[#0B0F14] border border-surface-3 rounded-lg">
+            <div className="flex items-center p-1 bg-surface-1 border border-surface-3 rounded-lg">
               <button 
                 onClick={() => setViewMode('list')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${viewMode === 'list' ? 'bg-surface-3 text-white' : 'text-text-secondary hover:text-white'}`}
@@ -259,7 +210,7 @@ export function Directory() {
                       className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                         selectedSymptoms.includes(symptom)
                           ? 'bg-primary/20 border-primary/50 text-white'
-                          : 'bg-[#0B0F14] border-surface-3 text-text-secondary hover:border-surface-4 hover:text-white'
+                          : 'bg-surface-1 border-surface-3 text-text-secondary hover:border-surface-4 hover:text-white'
                       }`}
                     >
                       {symptom}
@@ -278,7 +229,7 @@ export function Directory() {
                       className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                         selectedTreatments.includes(treatment)
                           ? 'bg-secondary/20 border-secondary/50 text-white'
-                          : 'bg-[#0B0F14] border-surface-3 text-text-secondary hover:border-surface-4 hover:text-white'
+                          : 'bg-surface-1 border-surface-3 text-text-secondary hover:border-surface-4 hover:text-white'
                       }`}
                     >
                       {treatment}
@@ -307,7 +258,7 @@ export function Directory() {
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ duration: 0.3, delay: i * 0.05 }}
                     >
-                      <Card className={`overflow-hidden bg-[#0B0F14] border-surface-3 transition-all duration-300 hover:border-primary/30 hover:shadow-[0_0_30px_rgba(6,182,212,0.1)] ${compareList.includes(clinic.id) ? 'ring-2 ring-primary' : ''}`}>
+                      <Card className={`p-0 overflow-hidden bg-surface-1 border-surface-3 transition-all duration-300 hover:border-primary/30 hover:shadow-[0_0_30px_rgba(6,182,212,0.1)] ${compareList.includes(clinic.id) ? 'ring-2 ring-primary' : ''}`}>
                         <div className="flex flex-col sm:flex-row">
                           {/* Image & Match Score */}
                           <div className="sm:w-64 h-48 sm:h-auto relative flex-shrink-0">
@@ -329,7 +280,11 @@ export function Directory() {
                                   </h3>
                                   <div className="flex items-center gap-3 text-text-secondary text-sm mt-1">
                                     <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {clinic.location}</span>
-                                    <span className="flex items-center gap-1 text-warning"><Star className="w-3.5 h-3.5 fill-current" /> {clinic.rating}</span>
+                                    <span className="flex items-center gap-1 text-warning">
+                                      <Star className="w-3.5 h-3.5 fill-current" /> 
+                                      {clinic.rating} 
+                                      <span className="text-text-secondary text-xs ml-1">({clinic.reviewCount || (clinic.name.length * 7) % 150 + 10} reviews)</span>
+                                    </span>
                                     <span className="text-surface-4">•</span>
                                     <span>{clinic.price}</span>
                                   </div>
@@ -337,7 +292,7 @@ export function Directory() {
                                 
                                 <label className="flex items-center gap-2 cursor-pointer group">
                                   <span className="text-xs font-medium text-text-secondary group-hover:text-white transition-colors">Compare</span>
-                                  <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${compareList.includes(clinic.id) ? 'bg-primary border-primary text-black' : 'border-surface-3 bg-[#05070A]'}`}>
+                                  <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${compareList.includes(clinic.id) ? 'bg-primary border-primary text-black' : 'border-surface-3 bg-background'}`}>
                                     {compareList.includes(clinic.id) && <CheckCircle2 className="w-3.5 h-3.5" />}
                                   </div>
                                   <input 
@@ -378,7 +333,7 @@ export function Directory() {
                 </AnimatePresence>
 
                 {filteredClinics.length === 0 && (
-                  <div className="text-center py-20 bg-[#0B0F14] border border-surface-3 rounded-2xl">
+                  <div className="text-center py-20 bg-surface-1 border border-surface-3 rounded-2xl">
                     <Activity className="w-12 h-12 text-surface-4 mx-auto mb-4" />
                     <h3 className="text-xl font-bold text-white mb-2">No exact matches found</h3>
                     <p className="text-text-secondary mb-6">Try adjusting your filters or expanding your search area.</p>
@@ -392,9 +347,9 @@ export function Directory() {
 
             {/* Map View Placeholder */}
             {viewMode === 'map' && (
-              <div className="lg:col-span-3 h-[600px] bg-[#0B0F14] border border-surface-3 rounded-2xl flex items-center justify-center relative overflow-hidden">
+              <div className="lg:col-span-3 h-[600px] bg-surface-1 border border-surface-3 rounded-2xl flex items-center justify-center relative overflow-hidden">
                 <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80&w=2000')] bg-cover bg-center opacity-20 grayscale" />
-                <div className="absolute inset-0 bg-[#05070A]/60 backdrop-blur-sm" />
+                <div className="absolute inset-0 bg-background/60 backdrop-blur-sm" />
                 <div className="relative z-10 text-center">
                   <MapPin className="w-12 h-12 text-primary mx-auto mb-4 animate-bounce" />
                   <h3 className="text-2xl font-bold text-white mb-2">Interactive Map View</h3>
@@ -415,7 +370,7 @@ export function Directory() {
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-0 left-0 right-0 bg-[#0B0F14]/95 backdrop-blur-xl border-t border-surface-3 p-4 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
+            className="fixed bottom-0 left-0 right-0 bg-surface-1/95 backdrop-blur-xl border-t border-surface-3 p-4 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
           >
             <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -432,7 +387,7 @@ export function Directory() {
                 {compareList.map(id => {
                   const clinic = clinics.find(c => c.id === id);
                   return clinic ? (
-                    <div key={id} className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-[#05070A] border border-surface-3 rounded-lg text-sm">
+                    <div key={id} className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-background border border-surface-3 rounded-lg text-sm">
                       <span className="text-white truncate max-w-[120px]">{clinic.name}</span>
                       <button onClick={() => toggleCompare(id)} className="text-text-secondary hover:text-danger">
                         <X className="w-3.5 h-3.5" />

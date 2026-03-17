@@ -1,0 +1,948 @@
+[
+  {
+    "id": "clinic_0",
+    "name": "Advanced TRT Clinic",
+    "location": "Manhattan Beach, CA",
+    "rating": "4.8",
+    "matchScore": 95,
+    "tags": [
+      "TRT",
+      "Hormone Optimization",
+      "Recovery"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Low Libido",
+      "Muscle Loss"
+    ],
+    "waitlist": "1-2 days",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=800",
+    "contact": "Clinic Manager"
+  },
+  {
+    "id": "clinic_1",
+    "name": "Aeson Men's Health",
+    "location": "Beverly Hills",
+    "rating": "4.9",
+    "matchScore": 98,
+    "tags": [
+      "TRT",
+      "Longevity",
+      "Peptides"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Brain Fog",
+      "Low Libido"
+    ],
+    "waitlist": "No wait",
+    "price": "$$$$",
+    "image": "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&q=80&w=800",
+    "website": "aesonmenshealth.com",
+    "contact": "Dr. Movassaghi"
+  },
+  {
+    "id": "clinic_2",
+    "name": "American Longevity Centers",
+    "location": "Nationwide",
+    "rating": "4.7",
+    "matchScore": 92,
+    "tags": [
+      "Longevity",
+      "Biohacking",
+      "Weight Management"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Poor Sleep",
+      "Weight Gain"
+    ],
+    "waitlist": "1 week",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1551076805-e18690c5e561?auto=format&fit=crop&q=80&w=800",
+    "website": "americanlongevitycenters.com",
+    "contact": "Clinic Director"
+  },
+  {
+    "id": "clinic_3",
+    "name": "Aspen Hormone Institute",
+    "location": "Aspen, CO",
+    "rating": "5.0",
+    "matchScore": 99,
+    "tags": [
+      "Hormone Optimization",
+      "Sports Medicine",
+      "Recovery"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Low Libido",
+      "Joint Pain"
+    ],
+    "waitlist": "2 weeks",
+    "price": "$$$$",
+    "image": "https://images.unsplash.com/photo-1538108149393-fbbd81895907?auto=format&fit=crop&q=80&w=800",
+    "website": "kentonbruicemd.com",
+    "contact": "Dr. Kenton Bruice"
+  },
+  {
+    "id": "clinic_4",
+    "name": "Atlas Men's Health",
+    "location": "Manhattan, NY",
+    "rating": "4.6",
+    "matchScore": 88,
+    "tags": [
+      "TRT",
+      "Weight Management",
+      "Hair Loss"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Weight Gain",
+      "Hair Thinning"
+    ],
+    "waitlist": "3-5 days",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&q=80&w=800",
+    "website": "atlasmenshealth.com",
+    "contact": "Clinic Director"
+  },
+  {
+    "id": "clinic_5",
+    "name": "Cenegenics",
+    "location": "Nationwide",
+    "rating": "4.8",
+    "matchScore": 94,
+    "tags": [
+      "Longevity",
+      "Cognitive Health",
+      "Biohacking"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Brain Fog",
+      "Stress"
+    ],
+    "waitlist": "No wait",
+    "price": "$$$$",
+    "image": "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&q=80&w=800",
+    "website": "cenegenics.com",
+    "contact": "Paul Campion, MD"
+  },
+  {
+    "id": "clinic_6",
+    "name": "Choice Men's Health",
+    "location": "GA",
+    "rating": "4.5",
+    "matchScore": 85,
+    "tags": [
+      "TRT",
+      "Weight Management"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Low Libido"
+    ],
+    "waitlist": "1-2 days",
+    "price": "$$",
+    "image": "https://images.unsplash.com/photo-1504439468489-c8920d786a2b?auto=format&fit=crop&q=80&w=800",
+    "website": "choicemenshealth.com",
+    "contact": "Decision Maker"
+  },
+  {
+    "id": "clinic_7",
+    "name": "Dallas Men's Health",
+    "location": "Dallas, TX",
+    "rating": "4.7",
+    "matchScore": 90,
+    "tags": [
+      "TRT",
+      "Hormone Optimization"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Muscle Loss"
+    ],
+    "waitlist": "3-5 days",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&q=80&w=800",
+    "contact": "Founder"
+  },
+  {
+    "id": "clinic_9",
+    "name": "Elite TRT Scottsdale",
+    "location": "Scottsdale, AZ",
+    "rating": "4.9",
+    "matchScore": 96,
+    "tags": [
+      "TRT",
+      "Peptides"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Low Libido"
+    ],
+    "waitlist": "1 week",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=800",
+    "contact": "Medical Director"
+  },
+  {
+    "id": "clinic_12",
+    "name": "Florida Men's Health",
+    "location": "Orlando, FL",
+    "rating": "4.6",
+    "matchScore": 89,
+    "tags": [
+      "TRT",
+      "Weight Management"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Weight Gain"
+    ],
+    "waitlist": "1-2 days",
+    "price": "$$",
+    "image": "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&q=80&w=800",
+    "website": "floridamenshealth.com",
+    "contact": "Clinic Director"
+  },
+  {
+    "id": "clinic_13",
+    "name": "Fountain Life",
+    "location": "Nationwide",
+    "rating": "5.0",
+    "matchScore": 99,
+    "tags": [
+      "Longevity",
+      "Biohacking",
+      "Cognitive Health"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Brain Fog",
+      "Poor Sleep"
+    ],
+    "waitlist": "2 weeks",
+    "price": "$$$$",
+    "image": "https://images.unsplash.com/photo-1551076805-e18690c5e561?auto=format&fit=crop&q=80&w=800",
+    "website": "fountainlife.com",
+    "contact": "Clinic Director"
+  },
+  {
+    "id": "clinic_14",
+    "name": "Gameday Men's Health",
+    "location": "San Diego, CA",
+    "rating": "4.8",
+    "matchScore": 93,
+    "tags": [
+      "TRT",
+      "Sports Medicine"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Muscle Loss"
+    ],
+    "waitlist": "No wait",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1538108149393-fbbd81895907?auto=format&fit=crop&q=80&w=800",
+    "website": "gamedaymenshealth.com",
+    "contact": "Evan Miller"
+  },
+  {
+    "id": "clinic_15",
+    "name": "Gameday Men's Health Beverly Hills",
+    "location": "Beverly Hills, CA",
+    "rating": "4.9",
+    "matchScore": 95,
+    "tags": [
+      "TRT",
+      "Sports Medicine"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Muscle Loss"
+    ],
+    "waitlist": "1-2 days",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&q=80&w=800",
+    "contact": "Medical Director"
+  },
+  {
+    "id": "clinic_16",
+    "name": "Gameday Men's Health Manhattan",
+    "location": "New York, NY",
+    "rating": "4.7",
+    "matchScore": 91,
+    "tags": [
+      "TRT",
+      "Sports Medicine"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Muscle Loss"
+    ],
+    "waitlist": "3-5 days",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&q=80&w=800",
+    "contact": "Clinic Director"
+  },
+  {
+    "id": "clinic_17",
+    "name": "Gameday Men's Health Palm Beach",
+    "location": "Palm Beach, FL",
+    "rating": "4.8",
+    "matchScore": 94,
+    "tags": [
+      "TRT",
+      "Sports Medicine"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Muscle Loss"
+    ],
+    "waitlist": "1 week",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1504439468489-c8920d786a2b?auto=format&fit=crop&q=80&w=800",
+    "contact": "Medical Director"
+  },
+  {
+    "id": "clinic_18",
+    "name": "Gameday Men's Health West Palm",
+    "location": "West Palm Beach, FL",
+    "rating": "4.8",
+    "matchScore": 93,
+    "tags": [
+      "TRT",
+      "Sports Medicine"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Muscle Loss"
+    ],
+    "waitlist": "No wait",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&q=80&w=800",
+    "contact": "Medical Director"
+  },
+  {
+    "id": "clinic_19",
+    "name": "Genesis Health",
+    "location": "WA",
+    "rating": "4.5",
+    "matchScore": 86,
+    "tags": [
+      "Hormone Optimization",
+      "Weight Management"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Weight Gain"
+    ],
+    "waitlist": "1-2 days",
+    "price": "$$",
+    "image": "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=800",
+    "website": "genesishealthinstitute.com",
+    "contact": "Decision Maker"
+  },
+  {
+    "id": "clinic_20",
+    "name": "Genesis Lifestyle Medicine",
+    "location": "Nationwide",
+    "rating": "4.7",
+    "matchScore": 90,
+    "tags": [
+      "TRT",
+      "Weight Management",
+      "Peptides"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Weight Gain",
+      "Low Libido"
+    ],
+    "waitlist": "3-5 days",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&q=80&w=800",
+    "website": "genesislifestylemedicine.com",
+    "contact": "Medical Director"
+  },
+  {
+    "id": "clinic_21",
+    "name": "Gents Doctor",
+    "location": "Beverly Hills, CA",
+    "rating": "4.9",
+    "matchScore": 97,
+    "tags": [
+      "TRT",
+      "Hormone Optimization"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Low Libido"
+    ],
+    "waitlist": "1 week",
+    "price": "$$$$",
+    "image": "https://images.unsplash.com/photo-1551076805-e18690c5e561?auto=format&fit=crop&q=80&w=800",
+    "website": "gentsdoctor.com",
+    "contact": "Dr. Majid Sabour"
+  },
+  {
+    "id": "clinic_24",
+    "name": "Hormone Logics",
+    "location": "FL",
+    "rating": "4.6",
+    "matchScore": 88,
+    "tags": [
+      "Hormone Optimization",
+      "Peptides"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Low Libido"
+    ],
+    "waitlist": "1-2 days",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1538108149393-fbbd81895907?auto=format&fit=crop&q=80&w=800",
+    "website": "hormonelogics.com",
+    "contact": "Decision Maker"
+  },
+  {
+    "id": "clinic_25",
+    "name": "Humanaut Health",
+    "location": "Palm Beach, FL",
+    "rating": "4.8",
+    "matchScore": 95,
+    "tags": [
+      "Longevity",
+      "Biohacking"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Brain Fog"
+    ],
+    "waitlist": "No wait",
+    "price": "$$$$",
+    "image": "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&q=80&w=800",
+    "website": "humanauthealth.com",
+    "contact": "Clinic Director"
+  },
+  {
+    "id": "clinic_26",
+    "name": "IVY Men's Health & TRT",
+    "location": "Greenwich, CT",
+    "rating": "4.9",
+    "matchScore": 96,
+    "tags": [
+      "TRT",
+      "Hormone Optimization"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Low Libido"
+    ],
+    "waitlist": "1 week",
+    "price": "$$$$",
+    "image": "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&q=80&w=800",
+    "website": "https://ivymenshealth.com",
+    "contact": "Sasha Beatty"
+  },
+  {
+    "id": "clinic_27",
+    "name": "Lifestyle Men's Clinic Phoenix",
+    "location": "Phoenix, AZ",
+    "rating": "4.7",
+    "matchScore": 91,
+    "tags": [
+      "TRT",
+      "Weight Management"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Weight Gain"
+    ],
+    "waitlist": "3-5 days",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1504439468489-c8920d786a2b?auto=format&fit=crop&q=80&w=800",
+    "contact": "Clinic Director"
+  },
+  {
+    "id": "clinic_29",
+    "name": "Longevity Health Clinic",
+    "location": "Charlottesville, VA",
+    "rating": "4.8",
+    "matchScore": 94,
+    "tags": [
+      "Longevity",
+      "Biohacking"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Poor Sleep"
+    ],
+    "waitlist": "1-2 days",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&q=80&w=800",
+    "website": "longevityhealthclinic.com",
+    "contact": "Clinic Director"
+  },
+  {
+    "id": "clinic_30",
+    "name": "Low T Center",
+    "location": "TX",
+    "rating": "4.5",
+    "matchScore": 85,
+    "tags": [
+      "TRT",
+      "Hormone Optimization"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Low Libido"
+    ],
+    "waitlist": "No wait",
+    "price": "$$",
+    "image": "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=800",
+    "website": "mindbodyopt.com",
+    "contact": "Mike Sisk"
+  },
+  {
+    "id": "clinic_31",
+    "name": "Mantra Men's Health",
+    "location": "OH",
+    "rating": "4.6",
+    "matchScore": 87,
+    "tags": [
+      "TRT",
+      "Weight Management"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Weight Gain"
+    ],
+    "waitlist": "1-2 days",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&q=80&w=800",
+    "website": "mantramenshealth.com",
+    "contact": "Decision Maker"
+  },
+  {
+    "id": "clinic_32",
+    "name": "MD Longevity",
+    "location": "NYC",
+    "rating": "4.9",
+    "matchScore": 96,
+    "tags": [
+      "Longevity",
+      "Peptides"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Brain Fog"
+    ],
+    "waitlist": "1 week",
+    "price": "$$$$",
+    "image": "https://images.unsplash.com/photo-1551076805-e18690c5e561?auto=format&fit=crop&q=80&w=800",
+    "website": "mdlongevity.com",
+    "contact": "Clinic Director"
+  },
+  {
+    "id": "clinic_33",
+    "name": "Men's Health Georgia",
+    "location": "Atlanta, GA",
+    "rating": "4.7",
+    "matchScore": 90,
+    "tags": [
+      "TRT",
+      "Hormone Optimization"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Low Libido"
+    ],
+    "waitlist": "3-5 days",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1538108149393-fbbd81895907?auto=format&fit=crop&q=80&w=800",
+    "website": "menshealthgeorgia.com",
+    "contact": "Clinic Director"
+  },
+  {
+    "id": "clinic_34",
+    "name": "Men's Revival Arizona",
+    "location": "Scottsdale, AZ",
+    "rating": "4.8",
+    "matchScore": 93,
+    "tags": [
+      "TRT",
+      "Recovery"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Muscle Loss"
+    ],
+    "waitlist": "1-2 days",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&q=80&w=800",
+    "contact": "Founder"
+  },
+  {
+    "id": "clinic_35",
+    "name": "Men's T Clinic",
+    "location": "TX",
+    "rating": "4.6",
+    "matchScore": 89,
+    "tags": [
+      "TRT",
+      "Hormone Optimization"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Low Libido"
+    ],
+    "waitlist": "No wait",
+    "price": "$$",
+    "image": "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&q=80&w=800",
+    "website": "menstclinic.com",
+    "contact": "Dr. Kenneth Trimmer"
+  },
+  {
+    "id": "clinic_37",
+    "name": "Next Health",
+    "location": "LA / NYC",
+    "rating": "4.9",
+    "matchScore": 97,
+    "tags": [
+      "Longevity",
+      "Biohacking",
+      "Recovery"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Brain Fog",
+      "Poor Sleep"
+    ],
+    "waitlist": "1 week",
+    "price": "$$$$",
+    "image": "https://images.unsplash.com/photo-1504439468489-c8920d786a2b?auto=format&fit=crop&q=80&w=800",
+    "website": "next-health.com",
+    "contact": "Clinic Director"
+  },
+  {
+    "id": "clinic_38",
+    "name": "Next Level Health",
+    "location": "FL",
+    "rating": "4.5",
+    "matchScore": 86,
+    "tags": [
+      "TRT",
+      "Weight Management"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Weight Gain"
+    ],
+    "waitlist": "1-2 days",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&q=80&w=800",
+    "website": "nextlevelhealth.com",
+    "contact": "Medical Director"
+  },
+  {
+    "id": "clinic_39",
+    "name": "Next Level Primary Care",
+    "location": "Jacksonville, FL",
+    "rating": "4.7",
+    "matchScore": 91,
+    "tags": [
+      "Hormone Optimization",
+      "Weight Management"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Weight Gain"
+    ],
+    "waitlist": "3-5 days",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=800",
+    "website": "nextlevelprimarycare.com",
+    "contact": "Dr. Brent Beadling"
+  },
+  {
+    "id": "clinic_40",
+    "name": "NuMale Medical",
+    "location": "Nationwide",
+    "rating": "4.6",
+    "matchScore": 88,
+    "tags": [
+      "TRT",
+      "Hair Loss"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Hair Thinning"
+    ],
+    "waitlist": "No wait",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&q=80&w=800",
+    "website": "numalemedical.com",
+    "contact": "Clinic Director"
+  },
+  {
+    "id": "clinic_42",
+    "name": "Peak Performance",
+    "location": "UT",
+    "rating": "4.7",
+    "matchScore": 90,
+    "tags": [
+      "TRT",
+      "Sports Medicine"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Muscle Loss"
+    ],
+    "waitlist": "1-2 days",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1551076805-e18690c5e561?auto=format&fit=crop&q=80&w=800",
+    "website": "peakperformancemenshealth.com",
+    "contact": "Decision Maker"
+  },
+  {
+    "id": "clinic_43",
+    "name": "Peak Vitality",
+    "location": "Concierge",
+    "rating": "5.0",
+    "matchScore": 98,
+    "tags": [
+      "Longevity",
+      "Peptides"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Brain Fog"
+    ],
+    "waitlist": "2 weeks",
+    "price": "$$$$",
+    "image": "https://images.unsplash.com/photo-1538108149393-fbbd81895907?auto=format&fit=crop&q=80&w=800",
+    "website": "peakvitality.com",
+    "contact": "Clinic Director"
+  },
+  {
+    "id": "clinic_44",
+    "name": "Prime Health HRT",
+    "location": "Palm Beach, FL",
+    "rating": "4.8",
+    "matchScore": 94,
+    "tags": [
+      "TRT",
+      "Hormone Optimization"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Low Libido"
+    ],
+    "waitlist": "1 week",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&q=80&w=800",
+    "website": "https://primehealthhrt.com",
+    "contact": "Medical Director"
+  },
+  {
+    "id": "clinic_45",
+    "name": "Prime Health HRT Manhattan",
+    "location": "Manhattan, NY",
+    "rating": "4.7",
+    "matchScore": 92,
+    "tags": [
+      "TRT",
+      "Hormone Optimization"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Low Libido"
+    ],
+    "waitlist": "3-5 days",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&q=80&w=800",
+    "contact": "Clinical Lead"
+  },
+  {
+    "id": "clinic_46",
+    "name": "Pure BHRT Clinic",
+    "location": "Dallas, TX",
+    "rating": "4.8",
+    "matchScore": 93,
+    "tags": [
+      "Hormone Optimization",
+      "Peptides"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Brain Fog"
+    ],
+    "waitlist": "1-2 days",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1504439468489-c8920d786a2b?auto=format&fit=crop&q=80&w=800",
+    "website": "purebhrtclinic.com",
+    "contact": "Clinic Director"
+  },
+  {
+    "id": "clinic_47",
+    "name": "Raffaele Medical",
+    "location": "NYC",
+    "rating": "4.9",
+    "matchScore": 96,
+    "tags": [
+      "Longevity",
+      "Biohacking"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Poor Sleep"
+    ],
+    "waitlist": "1 week",
+    "price": "$$$$",
+    "image": "https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&q=80&w=800",
+    "website": "raffaelemedical.com",
+    "contact": "Clinic Director"
+  },
+  {
+    "id": "clinic_48",
+    "name": "Renew Vitality",
+    "location": "NY / CA",
+    "rating": "4.7",
+    "matchScore": 91,
+    "tags": [
+      "TRT",
+      "Hormone Optimization"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Low Libido"
+    ],
+    "waitlist": "3-5 days",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=800",
+    "website": "vitalityhrt.com",
+    "contact": "Medical Director"
+  },
+  {
+    "id": "clinic_49",
+    "name": "Renew Vitality Miami",
+    "location": "Miami, FL",
+    "rating": "4.6",
+    "matchScore": 89,
+    "tags": [
+      "TRT",
+      "Hormone Optimization"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Low Libido"
+    ],
+    "waitlist": "1-2 days",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&q=80&w=800",
+    "contact": "Medical Director"
+  },
+  {
+    "id": "clinic_50",
+    "name": "Revibe Men's Health",
+    "location": "Nationwide",
+    "rating": "4.5",
+    "matchScore": 86,
+    "tags": [
+      "TRT",
+      "Weight Management"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Weight Gain"
+    ],
+    "waitlist": "No wait",
+    "price": "$$",
+    "image": "https://images.unsplash.com/photo-1551076805-e18690c5e561?auto=format&fit=crop&q=80&w=800",
+    "website": "revibemenshealth.com",
+    "contact": "Benard Brozek"
+  },
+  {
+    "id": "clinic_52",
+    "name": "SynergenX Health",
+    "location": "TX / IL",
+    "rating": "4.6",
+    "matchScore": 88,
+    "tags": [
+      "TRT",
+      "Hormone Optimization"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Low Libido"
+    ],
+    "waitlist": "1-2 days",
+    "price": "$$",
+    "image": "https://images.unsplash.com/photo-1538108149393-fbbd81895907?auto=format&fit=crop&q=80&w=800",
+    "website": "synergenxhealth.com",
+    "contact": "Wayne Wilson"
+  },
+  {
+    "id": "clinic_54",
+    "name": "Total Men's Primary Care",
+    "location": "TX",
+    "rating": "4.5",
+    "matchScore": 85,
+    "tags": [
+      "TRT",
+      "Weight Management"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Weight Gain"
+    ],
+    "waitlist": "No wait",
+    "price": "$$",
+    "image": "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&q=80&w=800",
+    "website": "totalmens.com",
+    "contact": "Decision Maker"
+  },
+  {
+    "id": "clinic_55",
+    "name": "Urological Consultants of Florida",
+    "location": "Miami, FL",
+    "rating": "4.8",
+    "matchScore": 94,
+    "tags": [
+      "Hormone Optimization",
+      "Sports Medicine"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Low Libido"
+    ],
+    "waitlist": "1 week",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&q=80&w=800",
+    "contact": "Lead Urologist"
+  },
+  {
+    "id": "clinic_56",
+    "name": "Viking Alternative",
+    "location": "MO / Nationwide",
+    "rating": "4.7",
+    "matchScore": 91,
+    "tags": [
+      "TRT",
+      "Peptides"
+    ],
+    "symptoms": [
+      "Fatigue",
+      "Muscle Loss"
+    ],
+    "waitlist": "3-5 days",
+    "price": "$$$",
+    "image": "https://images.unsplash.com/photo-1504439468489-c8920d786a2b?auto=format&fit=crop&q=80&w=800",
+    "website": "vikingalternative.com",
+    "contact": "Sam Ridgeway"
+  }
+]
