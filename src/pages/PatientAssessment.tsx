@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { collection, addDoc, serverTimestamp, getDocs, query, where, limit } from 'firebase/firestore';
 import { db } from '@/src/firebase';
+import { AIService } from '@/src/services/ai';
 import { Button } from '@/src/components/ui/Button';
 import { Card } from '@/src/components/ui/Card';
 import { Shield, Activity, ArrowRight, CheckCircle2, ChevronLeft, Brain, Zap, AlertCircle, Calendar, Clock, Lock, MapPin, Star } from 'lucide-react';
@@ -36,11 +37,13 @@ const initialData: AssessmentData = {
 };
 
 const symptomsByGoal: Record<string, string[]> = {
-  'Hormone Optimization': ['Low Energy / Fatigue', 'Decreased Libido', 'Brain Fog', 'Loss of Muscle Mass', 'Stubborn Body Fat', 'Mood Swings'],
-  'Cognitive Performance': ['Brain Fog', 'Poor Focus', 'Memory Issues', 'Afternoon Crashes', 'Anxiety', 'Poor Sleep Quality'],
-  'Longevity & Aging': ['Joint Pain', 'Slow Recovery', 'Poor Sleep Quality', 'Decreased Stamina', 'Skin Aging', 'Metabolic Slowdown'],
-  'Weight Management': ['Stubborn Body Fat', 'Cravings', 'Slow Metabolism', 'Low Energy / Fatigue', 'Joint Pain', 'Poor Sleep Quality'],
-  'General Wellness': ['Low Energy / Fatigue', 'Poor Sleep Quality', 'Stress / Anxiety', 'Frequent Illness', 'Digestive Issues', 'Brain Fog']
+  'TRT & Hormone Optimization': ['Low Energy / Fatigue', 'Decreased Libido', 'Brain Fog', 'Loss of Muscle Mass', 'Stubborn Body Fat', 'Mood Swings'],
+  'Peptide Therapy & Repair': ['Slow Recovery', 'Joint Pain', 'Muscle Loss', 'Inflammation', 'Poor Sleep Quality', 'Cognitive Decline'],
+  'Metabolic & GLP-1 Weight Loss': ['Stubborn Visceral Fat', 'Cravings', 'Slow Metabolism', 'Low Energy / Fatigue', 'Joint Pain', 'Poor Sleep Quality'],
+  'Sexual Health & Performance': ['Erectile Dysfunction', 'Decreased Libido', 'Performance Anxiety', 'Low Stamina', 'Premature Ejaculation', 'Loss of Morning Erections'],
+  'Longevity & Biohacking': ['Joint Pain', 'Slow Recovery', 'Poor Sleep Quality', 'Decreased Stamina', 'Skin Aging', 'Metabolic Slowdown'],
+  'Physical Performance': ['Plateaued Strength', 'Slow Recovery', 'Muscle Loss', 'Low Stamina', 'Joint Pain', 'Decreased Power Output'],
+  'Cognitive Fortitude': ['Brain Fog', 'Poor Focus', 'Memory Issues', 'Afternoon Crashes', 'Anxiety', 'Poor Sleep Quality']
 };
 
 export function PatientAssessment() {
@@ -54,6 +57,7 @@ export function PatientAssessment() {
   const [matchedClinic, setMatchedClinic] = useState<any>(null);
   const [patientId, setPatientId] = useState<string | null>(null);
   const [assessmentId, setAssessmentId] = useState<string | null>(null);
+  const [aiInsights, setAiInsights] = useState<any>(null);
 
   const totalSteps = 7;
 
@@ -88,9 +92,23 @@ export function PatientAssessment() {
     setIsProcessing(true);
     
     try {
+      // Call AI Service for triage
+      const aiInsightsResponse = await AIService.generatePatientInsights({
+        id: 'temp',
+        demographics: { age: 35, gender: 'male', location: data.zip },
+        healthProfile: { primaryGoals: [data.goal], symptoms: data.symptoms, currentTreatments: [] },
+        symptoms: data.symptoms,
+        duration: 'Unknown',
+        severity: 'Unknown',
+        status: 'new',
+        createdAt: new Date().toISOString()
+      });
+      setAiInsights(aiInsightsResponse);
+
       const isDisqualified = 
         data.labWork === 'No, I am not willing to do lab work' || 
-        (data.paymentPreference === 'Insurance Only' && data.budget === 'Under $200/mo');
+        (data.paymentPreference === 'Insurance Only' && data.budget === 'Under $200/mo') ||
+        aiInsightsResponse.score < 50; // Use AI score for qualification
       
       const status = isDisqualified ? 'disqualified' : 'qualified';
 
@@ -104,6 +122,7 @@ export function PatientAssessment() {
         createdAt: serverTimestamp()
       });
       setPatientId(patientRef.id);
+      localStorage.setItem('novalyte_patient_id', patientRef.id);
 
       // Save assessment
       const assessmentRef = await addDoc(collection(db, 'assessments'), {
@@ -115,9 +134,16 @@ export function PatientAssessment() {
         paymentPreference: data.paymentPreference,
         labWork: data.labWork,
         status: status,
+        aiScore: aiInsightsResponse.score,
+        aiRiskLevel: aiInsightsResponse.riskFactors[0] || 'Unknown',
+        aiRationale: aiInsightsResponse.summary,
+        aiNextAction: aiInsightsResponse.recommendedProtocols[0] || 'Unknown',
         createdAt: serverTimestamp()
       });
       setAssessmentId(assessmentRef.id);
+      
+      const existingAssessments = JSON.parse(localStorage.getItem('novalyte_assessment_ids') || '[]');
+      localStorage.setItem('novalyte_assessment_ids', JSON.stringify([...existingAssessments, assessmentRef.id]));
 
       // Real Clinic Matching Logic
       if (!isDisqualified) {
@@ -164,8 +190,18 @@ export function PatientAssessment() {
           clinicId: bestMatch.id,
           assessmentId: assessmentRef.id,
           status: 'new',
+          score: aiInsightsResponse.score,
+          aiSummary: aiInsightsResponse.summary,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
+        });
+
+        await addDoc(collection(db, 'auditEvents'), {
+          clinicId: bestMatch.id,
+          action: 'New Lead Matched',
+          entityName: `${data.firstName} ${data.lastName}`,
+          type: 'info',
+          timestamp: serverTimestamp()
         });
       }
 
@@ -188,7 +224,7 @@ export function PatientAssessment() {
     if (!patientId || !matchedClinic) return;
 
     try {
-      await addDoc(collection(db, 'bookings'), {
+      const bookingRef = await addDoc(collection(db, 'bookings'), {
         patientId,
         clinicId: matchedClinic.id,
         assessmentId,
@@ -197,9 +233,20 @@ export function PatientAssessment() {
         createdAt: serverTimestamp()
       });
 
+      const existingBookings = JSON.parse(localStorage.getItem('novalyte_booking_ids') || '[]');
+      localStorage.setItem('novalyte_booking_ids', JSON.stringify([...existingBookings, bookingRef.id]));
+
+      await addDoc(collection(db, 'auditEvents'), {
+        clinicId: matchedClinic.id,
+        action: 'New Consultation Booked',
+        entityName: `${data.firstName} ${data.lastName}`,
+        type: 'success',
+        timestamp: serverTimestamp()
+      });
+
       setBookingStep(2);
       setTimeout(() => {
-        navigate('/mens-trivia', { state: { fromBooking: true } });
+        navigate('/patient/dashboard');
       }, 2500);
     } catch (error) {
       console.error("Error saving booking:", error);
@@ -256,8 +303,8 @@ export function PatientAssessment() {
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/10 text-secondary text-xs font-mono uppercase tracking-wider mb-2">
                           <Activity className="w-3 h-3" /> Step 1 of {totalSteps}
                         </div>
-                        <h2 className="text-3xl md:text-4xl font-display font-bold text-white">What is your primary health goal?</h2>
-                        <p className="text-text-secondary text-lg">Select the area you want to optimize first. This helps us tailor your assessment.</p>
+                        <h2 className="text-3xl md:text-4xl font-display font-bold text-white">What is your primary optimization goal?</h2>
+                        <p className="text-text-secondary text-lg">Select the area you want to optimize first. This helps us tailor your clinical assessment.</p>
                         <div className="grid grid-cols-1 gap-3 mt-8">
                           {Object.keys(symptomsByGoal).map((goal, i) => (
                             <button 
@@ -278,10 +325,10 @@ export function PatientAssessment() {
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/10 text-secondary text-xs font-mono uppercase tracking-wider mb-2">
                           <Activity className="w-3 h-3" /> Step 2 of {totalSteps}
                         </div>
-                        <h2 className="text-3xl md:text-4xl font-display font-bold text-white">What symptoms are you experiencing?</h2>
+                        <h2 className="text-3xl md:text-4xl font-display font-bold text-white">What performance limiters are you experiencing?</h2>
                         <p className="text-text-secondary text-lg">Select all that apply. This data is encrypted and used only for clinical matching.</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-8">
-                          {(symptomsByGoal[data.goal || 'General Wellness'] || []).map((symptom, i) => {
+                          {(symptomsByGoal[data.goal || 'TRT & Hormone Optimization'] || []).map((symptom, i) => {
                             const isSelected = data.symptoms.includes(symptom);
                             return (
                               <button 
@@ -313,8 +360,8 @@ export function PatientAssessment() {
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/10 text-secondary text-xs font-mono uppercase tracking-wider mb-2">
                           <Clock className="w-3 h-3" /> Step 3 of {totalSteps}
                         </div>
-                        <h2 className="text-3xl md:text-4xl font-display font-bold text-white">How quickly are you looking to start?</h2>
-                        <p className="text-text-secondary text-lg">This helps us prioritize your clinical routing and find clinics with immediate availability.</p>
+                        <h2 className="text-3xl md:text-4xl font-display font-bold text-white">When are you ready to initiate your protocol?</h2>
+                        <p className="text-text-secondary text-lg">This helps us prioritize your clinical routing and find specialists with immediate availability.</p>
                         <div className="grid grid-cols-1 gap-3 mt-8">
                           {['Immediately (Within 48 hours)', 'This week', 'Within a month', 'Just exploring options'].map((urgency, i) => (
                             <button 
@@ -335,8 +382,8 @@ export function PatientAssessment() {
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/10 text-secondary text-xs font-mono uppercase tracking-wider mb-2">
                           <Shield className="w-3 h-3" /> Step 4 of {totalSteps}
                         </div>
-                        <h2 className="text-3xl md:text-4xl font-display font-bold text-white">How do you plan to pay for treatment?</h2>
-                        <p className="text-text-secondary text-lg">Elite optimization clinics often operate outside standard insurance models to provide superior care.</p>
+                        <h2 className="text-3xl md:text-4xl font-display font-bold text-white">How do you plan to fund your optimization?</h2>
+                        <p className="text-text-secondary text-lg">Elite optimization clinics often operate outside standard insurance models to provide superior, uncompromised care.</p>
                         <div className="grid grid-cols-1 gap-3 mt-8">
                           {[
                             { label: 'Out of Pocket / Cash Pay', desc: 'I am willing to invest directly in my health.' },
@@ -361,8 +408,8 @@ export function PatientAssessment() {
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/10 text-secondary text-xs font-mono uppercase tracking-wider mb-2">
                           <Activity className="w-3 h-3" /> Step 5 of {totalSteps}
                         </div>
-                        <h2 className="text-3xl md:text-4xl font-display font-bold text-white">What is your monthly health investment budget?</h2>
-                        <p className="text-text-secondary text-lg">This ensures we match you with clinics whose protocols align with your financial readiness.</p>
+                        <h2 className="text-3xl md:text-4xl font-display font-bold text-white">What is your monthly investment capacity for health optimization?</h2>
+                        <p className="text-text-secondary text-lg">This ensures we match you with clinics whose clinical protocols align with your financial readiness.</p>
                         <div className="grid grid-cols-1 gap-3 mt-8">
                           {['Under $200/mo', '$200 - $500/mo', '$500 - $1,000/mo', '$1,000+/mo'].map((budget, i) => (
                             <button 
@@ -383,8 +430,8 @@ export function PatientAssessment() {
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/10 text-secondary text-xs font-mono uppercase tracking-wider mb-2">
                           <Activity className="w-3 h-3" /> Step 6 of {totalSteps}
                         </div>
-                        <h2 className="text-3xl md:text-4xl font-display font-bold text-white">Are you willing to complete lab work?</h2>
-                        <p className="text-text-secondary text-lg">Comprehensive blood work is required for safe, effective, and personalized advanced protocols.</p>
+                        <h2 className="text-3xl md:text-4xl font-display font-bold text-white">Are you prepared to complete comprehensive biomarker analysis?</h2>
+                        <p className="text-text-secondary text-lg">Comprehensive blood work is required for safe, effective, and personalized advanced clinical protocols.</p>
                         <div className="grid grid-cols-1 gap-3 mt-8">
                           {[
                             'Yes, I have recent labs (within 3 months)',
@@ -548,6 +595,30 @@ export function PatientAssessment() {
                         <Activity className="w-8 h-8 text-secondary" />
                       </div>
                     </div>
+
+                    {aiInsights && (
+                      <div className="mb-6 p-4 rounded-xl bg-secondary/5 border border-secondary/20">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Brain className="w-4 h-4 text-secondary" />
+                          <h4 className="text-sm font-bold text-white">AI Clinical Assessment</h4>
+                        </div>
+                        <p className="text-sm text-text-secondary mb-3">{aiInsights.summary}</p>
+                        <div className="flex items-center gap-4">
+                          <div className="flex-1">
+                            <div className="flex justify-between text-xs mb-1">
+                              <span className="text-text-secondary">Qualification Score</span>
+                              <span className="font-bold text-secondary">{aiInsights.score}/100</span>
+                            </div>
+                            <div className="w-full h-1.5 bg-surface-3 rounded-full overflow-hidden">
+                              <div className="h-full bg-secondary" style={{ width: `${aiInsights.score}%` }} />
+                            </div>
+                          </div>
+                          <div className="px-2 py-1 rounded bg-surface-2 border border-surface-3 text-xs font-medium text-text-secondary">
+                            Risk: <span className="text-white capitalize">{aiInsights.riskFactors[0] || 'Low'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     
                     <div className="grid grid-cols-2 gap-4 mb-8">
                       <div className="p-4 rounded-lg bg-surface-2/50 border border-surface-3">

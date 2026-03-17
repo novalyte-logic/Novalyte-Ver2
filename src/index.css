@@ -6,7 +6,7 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   --font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
 
-  --color-background: #05070A;
+  --color-background: #000000;
   --color-surface-1: #0B0F14;
   --color-surface-2: #101720;
   --color-surface-3: #15202B;
@@ -22,6 +22,14 @@
   
   --color-text-primary: #F8FAFC;
   --color-text-secondary: #94A3B8;
+
+  --animate-marquee: marquee 30s linear infinite;
+  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  
+  @keyframes marquee {
+    0% { transform: translateX(0%); }
+    100% { transform: translateX(-33.33%); }
+  }
 }
 
 body {

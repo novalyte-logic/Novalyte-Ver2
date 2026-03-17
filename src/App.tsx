@@ -9,6 +9,7 @@ import { ClinicLayout } from './components/layout/ClinicLayout';
 import { Home } from './pages/Home';
 import { PatientLanding } from './pages/PatientLanding';
 import { PatientAssessment } from './pages/PatientAssessment';
+import { PatientDashboard } from './pages/PatientDashboard';
 import { SymptomChecker } from './pages/SymptomChecker';
 import { AskAI } from './pages/AskAI';
 import { ClinicProfile } from './pages/ClinicProfile';
@@ -52,6 +53,8 @@ import { ClinicSettings } from './pages/ClinicSettings';
 import { ClinicHelp } from './pages/ClinicHelp';
 import { ClinicICP } from './pages/ClinicICP';
 import { VendorApply } from './pages/VendorApply';
+import { VendorProfile } from './pages/VendorProfile';
+import { Checkout } from './pages/Checkout';
 import { PartnerNetwork } from './pages/PartnerNetwork';
 import { NotFound } from './pages/NotFound';
 import { PatientSupport } from './pages/support/PatientSupport';
@@ -81,6 +84,8 @@ export default function App() {
 
             <Route path="marketplace/:category" element={<MarketplaceCategory />} />
             <Route path="marketplace/product/:id" element={<ProductDetail />} />
+            <Route path="vendor/:id" element={<VendorProfile />} />
+            <Route path="checkout" element={<Checkout />} />
             <Route path="network" element={<PartnerNetwork />} />
             <Route path="workforce" element={<Workforce />} />
             <Route path="workforce/jobs" element={<WorkforceJobs />} />
@@ -104,6 +109,7 @@ export default function App() {
 
           {/* Standalone Routes without global Navbar/Footer */}
           <Route path="/patient/assessment" element={<PatientAssessment />} />
+          <Route path="/patient/dashboard" element={<PatientDashboard />} />
           <Route path="/clinics/apply" element={<ClinicApply />} />
           <Route path="/clinics/icp" element={<ClinicICP />} />
           <Route path="/vendors/apply" element={<VendorApply />} />

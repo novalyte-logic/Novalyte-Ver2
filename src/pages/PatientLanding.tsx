@@ -10,23 +10,38 @@ import {
 
 const treatments = [
   {
-    title: 'Hormone Optimization',
-    description: 'Restore vitality, energy, and body composition with clinically managed TRT and hormone balancing.',
+    title: 'TRT & Hormone Optimization',
+    description: 'Restore vitality, energy, and body composition with clinically managed testosterone and hormone balancing.',
     icon: Activity
   },
   {
-    title: 'Peptide Therapy',
-    description: 'Accelerate recovery, enhance cognitive function, and promote cellular repair with targeted peptides.',
+    title: 'Peptide Therapy & Repair',
+    description: 'Accelerate recovery, heal injuries faster, and promote cellular repair with targeted peptide protocols.',
     icon: Zap
   },
   {
-    title: 'Longevity Protocols',
-    description: 'Extend healthspan through advanced diagnostics, metabolic interventions, and cellular health strategies.',
+    title: 'Metabolic & GLP-1 Weight Loss',
+    description: 'Shed stubborn visceral fat and optimize metabolic function with advanced GLP-1 therapies.',
+    icon: TrendingUp
+  },
+  {
+    title: 'Sexual Health & Performance',
+    description: 'Regain confidence and peak performance with specialized treatments including acoustic wave therapy and targeted medications.',
     icon: Heart
   },
   {
-    title: 'Cognitive Enhancement',
-    description: 'Sharpen focus, memory, and mental clarity with neuro-optimization and nootropic protocols.',
+    title: 'Longevity & Biohacking',
+    description: 'Extend your healthspan and reverse biological aging through advanced diagnostics and cellular interventions.',
+    icon: Shield
+  },
+  {
+    title: 'Physical Performance',
+    description: 'Break through plateaus and maximize strength, endurance, and muscle hypertrophy with sports medicine experts.',
+    icon: Activity
+  },
+  {
+    title: 'Cognitive Fortitude',
+    description: 'Sharpen focus, memory, and mental clarity with neuro-optimization and clinical-grade nootropic protocols.',
     icon: Brain
   }
 ];
@@ -75,7 +90,7 @@ export function PatientLanding() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   return (
-    <div className="min-h-screen bg-[#05070A] flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Hero Section */}
       <section className="relative pt-32 pb-24 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-secondary/20 via-background to-background" />
@@ -94,12 +109,12 @@ export function PatientLanding() {
             </div>
             
             <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tight mb-6 text-white leading-[1.1]">
-              Precision Healthcare, <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-secondary to-primary">Engineered for Men.</span>
+              Precision Care, <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-secondary to-primary">Engineered for Men's Health.</span>
             </h1>
             
             <p className="text-xl md:text-2xl text-text-secondary mb-10 font-light leading-relaxed">
-              Stop guessing with your health. Take our intelligent clinical assessment, discover optimized treatments, and connect with elite specialists instantly.
+              Stop guessing with your health. Take our intelligent clinical assessment, discover optimized treatments, and connect with elite specialists near you.
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -121,6 +136,72 @@ export function PatientLanding() {
               <span className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-success" /> Vetted Network</span>
               <span className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-success" /> Confidential</span>
             </div>
+
+            {/* Hero Visual - Dashboard Abstract */}
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="relative hidden lg:block mt-16"
+            >
+              <div className="absolute inset-0 bg-gradient-to-tr from-secondary/20 to-primary/20 rounded-2xl blur-3xl opacity-50" />
+              <div className="relative rounded-2xl border border-surface-3 bg-[#0B0F14]/90 backdrop-blur-xl shadow-2xl overflow-hidden max-w-4xl mx-auto text-left">
+                <div className="h-10 border-b border-surface-3 bg-[#101720] flex items-center px-4 gap-2">
+                  <div className="w-3 h-3 rounded-full bg-danger/80" />
+                  <div className="w-3 h-3 rounded-full bg-warning/80" />
+                  <div className="w-3 h-3 rounded-full bg-success/80" />
+                  <div className="ml-4 px-3 py-1 rounded bg-background text-xs font-mono text-text-secondary">novalyte.os / patient-dashboard</div>
+                </div>
+                <div className="p-6 grid grid-cols-3 gap-6">
+                  {/* Testosterone Chart */}
+                  <div className="col-span-2 bg-[#15202B] border border-surface-3 rounded-xl p-5">
+                    <div className="flex justify-between items-center mb-4">
+                      <div>
+                        <h4 className="text-white font-bold">Total Testosterone</h4>
+                        <p className="text-text-secondary text-xs">ng/dL • Last 6 Months</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-success font-mono font-bold text-xl">842</span>
+                        <span className="text-success text-xs flex items-center justify-end"><TrendingUp className="w-3 h-3 mr-1" /> +320</span>
+                      </div>
+                    </div>
+                    <div className="h-32 flex items-end gap-2">
+                      {[350, 410, 520, 680, 790, 842].map((val, i) => (
+                        <div key={i} className="flex-1 bg-secondary/20 rounded-t-sm relative group">
+                          <div 
+                            className="absolute bottom-0 left-0 w-full bg-secondary rounded-t-sm transition-all duration-500"
+                            style={{ height: `${(val / 1000) * 100}%` }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    {/* Visceral Fat */}
+                    <div className="bg-[#15202B] border border-surface-3 rounded-xl p-5">
+                      <h4 className="text-white font-bold text-sm mb-1">Visceral Fat Mass</h4>
+                      <p className="text-text-secondary text-xs mb-3">Trend Down</p>
+                      <div className="flex items-end justify-between">
+                        <span className="text-white font-mono text-2xl">2.1 <span className="text-sm text-text-secondary">lbs</span></span>
+                        <span className="text-success text-sm font-medium">-1.4 lbs</span>
+                      </div>
+                    </div>
+
+                    {/* Biological Age */}
+                    <div className="bg-[#15202B] border border-surface-3 rounded-xl p-5">
+                      <h4 className="text-white font-bold text-sm mb-1">Biological Age</h4>
+                      <p className="text-text-secondary text-xs mb-3">Score Improving</p>
+                      <div className="flex items-end justify-between">
+                        <span className="text-white font-mono text-2xl">38 <span className="text-sm text-text-secondary">yrs</span></span>
+                        <span className="text-success text-sm font-medium">-4 yrs</span>
+                      </div>
+                      <div className="mt-3 text-xs text-text-secondary">Chronological: 42 yrs</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         </div>
       </section>
@@ -152,9 +233,9 @@ export function PatientLanding() {
             <div className="hidden md:block absolute top-1/2 left-[10%] right-[10%] h-0.5 bg-gradient-to-r from-surface-3 via-secondary/50 to-surface-3 -translate-y-1/2 z-0" />
 
             {[
-              { step: '01', title: 'Clinical Assessment', desc: 'Complete a secure, 3-minute intake detailing your symptoms, goals, and health history.', icon: Activity },
-              { step: '02', title: 'Intelligent Match', desc: 'Our engine analyzes your profile to match you with the highest-rated specialists for your needs.', icon: Brain },
-              { step: '03', title: 'Start Protocol', desc: 'Connect with your matched clinic, complete lab work, and begin your personalized optimization protocol.', icon: TrendingUp }
+              { step: '01', title: 'Complete AI-driven biomarker analysis', desc: 'Complete a secure, 3-minute intake detailing your symptoms, goals, and health history.', icon: Activity },
+              { step: '02', title: 'Match with specialized men\'s health clinics', desc: 'Our engine analyzes your profile to match you with the highest-rated specialists for your needs.', icon: Brain },
+              { step: '03', title: 'Track your biological age and treatment progress', desc: 'Connect with your matched clinic, complete lab work, and begin your personalized optimization protocol.', icon: TrendingUp }
             ].map((item, i) => (
               <Card key={i} className="relative z-10 p-8 bg-surface-1/80 backdrop-blur-xl border-surface-3 text-center hover:border-secondary/50 transition-colors group">
                 <div className="w-16 h-16 mx-auto rounded-2xl bg-surface-2 border border-surface-3 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
@@ -188,7 +269,7 @@ export function PatientLanding() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {treatments.map((treatment, i) => (
               <Card key={i} className="p-6 bg-surface-1/80 backdrop-blur-sm border-surface-3 hover:border-primary/50 transition-all duration-300 group cursor-pointer">
                 <div className="w-12 h-12 rounded-xl bg-surface-2 flex items-center justify-center mb-6 group-hover:bg-primary/10 transition-colors">

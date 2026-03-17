@@ -61,7 +61,15 @@ router.post('/triage', async (req, res) => {
     }
 
     const response = await callGeminiWithRetry('gemini-3-flash-preview', 
-      `Analyze this patient data and provide triage scoring: ${JSON.stringify(patientData)}`,
+      `Analyze this patient assessment data and provide clinical triage scoring. 
+      Patient Data: ${JSON.stringify(patientData)}
+      
+      Consider the following:
+      - Symptoms: ${patientData.symptoms?.join(', ') || 'None reported'}
+      - Duration: ${patientData.duration || 'Unknown'}
+      - Severity: ${patientData.severity || 'Unknown'}
+      
+      Provide a clinical score (0-100), risk level (low, medium, high), rationale, confidence score (0.0-1.0), and the next best action.`,
       {
         responseMimeType: 'application/json',
         responseSchema: {

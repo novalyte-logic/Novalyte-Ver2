@@ -20,22 +20,21 @@ const db = getFirestore(app);
 
 const products = [
   {
-    id: 'inbody-770',
+    id: 'inbody-970',
     vendorId: 'inbody-usa',
     vendorName: 'InBody USA',
-    name: 'InBody 770',
-    slug: 'inbody-770',
+    name: 'InBody 970',
+    slug: 'inbody-970',
     category: 'equipment',
     subCategory: 'Body Composition',
-    price: 18500,
-    priceDisplay: '$18,500',
+    price: 22500,
+    priceDisplay: '$22,500',
     description: 'Advanced body composition analyzer providing detailed clinical insights into muscle mass, body fat, and water retention.',
-    detailedDescription: 'The InBody 770 goes beyond traditional body composition analysis. It offers a comprehensive look at extracellular water and phase angle, making it an essential tool for optimization clinics tracking patient protocol adherence and overall cellular health.',
-    imageUrl: 'https://picsum.photos/seed/inbody770/800/600',
+    detailedDescription: 'The InBody 970 goes beyond traditional body composition analysis. It offers a comprehensive look at extracellular water and phase angle, making it an essential tool for men\'s health optimization clinics tracking patient protocol adherence, muscle hypertrophy, and overall cellular health.',
+    imageUrl: 'https://images.unsplash.com/photo-1584362917165-526a968579e8?auto=format&fit=crop&q=80',
     gallery: [
-      'https://picsum.photos/seed/inbody770/800/600',
-      'https://picsum.photos/seed/inbody1/800/600',
-      'https://picsum.photos/seed/inbody2/800/600'
+      'https://images.unsplash.com/photo-1584362917165-526a968579e8?auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&q=80'
     ],
     features: [
       'Segmental Lean Analysis',
@@ -49,13 +48,13 @@ const products = [
       'Increases patient retention through objective progress tracking',
       'Enables premium pricing for optimization protocols',
       'Reduces consultation time with automated reporting',
-      'Provides clinical-grade accuracy for hormone therapy monitoring'
+      'Provides clinical-grade accuracy for TRT and peptide monitoring'
     ],
     specs: [
       { label: 'Dimensions', value: '20.7 x 33.6 x 46.3 in' },
       { label: 'Weight', value: '83.8 lbs' },
       { label: 'Testing Time', value: '60 Seconds' },
-      { label: 'Frequencies', value: '1, 5, 50, 250, 500, 1000 kHz' },
+      { label: 'Frequencies', value: '1, 5, 50, 250, 500, 1000, 2000 kHz' },
       { label: 'Database', value: '100,000 results' }
     ],
     requirements: [
@@ -66,15 +65,15 @@ const products = [
     ],
     useCases: [
       'Baseline Health Assessments',
-      'Weight Loss Program Tracking',
+      'Hypertrophy Program Tracking',
       'Hormone Optimization Monitoring',
       'Athletic Performance Evaluation'
     ],
     compliance: 'FDA Class II Medical Device',
     conversionType: 'inquiry',
-    targetSpecialties: ['Weight Loss', 'Hormone Therapy', 'Functional Medicine'],
+    targetSpecialties: ['Men\'s Health', 'Hormone Therapy', 'Sports Medicine'],
     isPopular: true,
-    isNew: false,
+    isNew: true,
     rating: 4.9,
     reviewCount: 128,
     inventory: 50,
@@ -82,157 +81,155 @@ const products = [
     updatedAt: new Date()
   },
   {
-    id: 'oura-ring-gen3',
-    vendorId: 'oura-health',
-    vendorName: 'Oura Health',
-    name: 'Oura Ring Gen3',
-    slug: 'oura-ring-gen3',
-    category: 'health-tech',
-    subCategory: 'Wearables',
-    price: 299,
-    priceDisplay: '$299',
-    description: 'Continuous health monitoring ring tracking sleep, readiness, and activity scores.',
-    detailedDescription: 'The Oura Ring Gen3 provides highly accurate sleep and activity tracking. For clinics, it offers a continuous stream of patient data to monitor the effectiveness of lifestyle interventions and recovery protocols.',
-    imageUrl: 'https://picsum.photos/seed/ouraring/800/600',
+    id: 'bpc-157-tb-500',
+    vendorId: 'precision-compounding',
+    vendorName: 'Precision Compounding Pharmacy',
+    name: 'BPC-157 / TB-500 Recovery Blend',
+    slug: 'bpc-157-tb-500',
+    category: 'peptides',
+    subCategory: 'Recovery Peptides',
+    price: 185,
+    priceDisplay: '$185 / vial',
+    description: 'Clinical-grade peptide blend for accelerated tissue repair and recovery.',
+    detailedDescription: 'A potent combination of BPC-157 (Body Protection Compound) and TB-500 (Thymosin Beta-4) designed to accelerate healing of tendons, ligaments, and muscle tissue. Ideal for sports medicine and men\'s health clinics focusing on performance recovery.',
+    imageUrl: 'https://images.unsplash.com/photo-1631549916768-4119b2e5f926?auto=format&fit=crop&q=80',
     gallery: [
-      'https://picsum.photos/seed/ouraring/800/600',
-      'https://picsum.photos/seed/ouraring1/800/600'
+      'https://images.unsplash.com/photo-1631549916768-4119b2e5f926?auto=format&fit=crop&q=80'
     ],
     features: [
-      'Advanced Sleep Staging',
-      'Continuous Heart Rate Monitoring',
-      'Temperature Trend Tracking',
-      'Blood Oxygen (SpO2) Sensing',
-      'API Access for Clinics'
+      'Lyophilized Powder for Reconstitution',
+      'High Purity (>99%)',
+      'Third-Party Tested',
+      'Cold-Chain Shipping'
     ],
     benefits: [
-      'Remote patient monitoring capabilities',
-      'Objective data on protocol adherence',
-      'Early detection of illness or overtraining'
+      'Accelerates healing of acute injuries',
+      'Reduces systemic inflammation',
+      'Improves joint mobility and recovery time'
     ],
     specs: [
-      { label: 'Material', value: 'Titanium' },
-      { label: 'Battery Life', value: 'Up to 7 days' },
-      { label: 'Water Resistance', value: 'Up to 100m' }
+      { label: 'Dosage', value: '5mg BPC-157 / 5mg TB-500 per vial' },
+      { label: 'Storage', value: 'Refrigerated after reconstitution' }
     ],
     requirements: [
-      'Smartphone for app syncing',
-      'Bluetooth connection'
+      'Physician Prescription Required',
+      'Clinic Account Approval'
     ],
     useCases: [
-      'Sleep Optimization',
-      'Recovery Tracking',
-      'Remote Patient Monitoring'
+      'Sports Injury Recovery',
+      'Post-Surgical Healing',
+      'Chronic Joint Pain Management'
     ],
-    compliance: 'Consumer Health Device',
-    conversionType: 'direct',
-    targetSpecialties: ['Longevity', 'Sports Medicine', 'Primary Care'],
+    compliance: '503A Compounding Pharmacy',
+    conversionType: 'approval',
+    targetSpecialties: ['Sports Medicine', 'Orthopedics', 'Men\'s Health'],
     isPopular: true,
     isNew: false,
     rating: 4.8,
-    reviewCount: 5430,
-    inventory: 1000,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
-    id: 'dutch-complete',
-    vendorId: 'precision-analytical',
-    vendorName: 'Precision Analytical',
-    name: 'DUTCH Complete',
-    slug: 'dutch-complete',
-    category: 'diagnostics',
-    subCategory: 'Hormone Testing',
-    price: 399,
-    priceDisplay: '$399',
-    description: 'Comprehensive dried urine test for comprehensive hormones.',
-    detailedDescription: 'The DUTCH Complete is the most advanced hormone test, offering an extensive profile of sex and adrenal hormones and melatonin, along with their metabolites, to identify symptoms of hormonal imbalances.',
-    imageUrl: 'https://picsum.photos/seed/dutchtest/800/600',
-    gallery: [
-      'https://picsum.photos/seed/dutchtest/800/600'
-    ],
-    features: [
-      'Extensive Hormone Profile',
-      'Metabolite Tracking',
-      'Cortisol Awakening Response (CAR)',
-      'Easy At-Home Collection'
-    ],
-    benefits: [
-      'Precise hormone replacement therapy (HRT) dosing',
-      'Identification of adrenal fatigue',
-      'Comprehensive view of hormone metabolism'
-    ],
-    specs: [
-      { label: 'Sample Type', value: 'Dried Urine' },
-      { label: 'Turnaround Time', value: '7-10 Business Days' }
-    ],
-    requirements: [
-      'Physician Authorization Required',
-      'Patient Assessment'
-    ],
-    useCases: [
-      'HRT Optimization',
-      'Adrenal Dysfunction Diagnosis',
-      'PCOS Evaluation'
-    ],
-    compliance: 'CLIA Certified Lab',
-    conversionType: 'assessment',
-    targetSpecialties: ['Endocrinology', 'Functional Medicine', "Women's Health"],
-    isPopular: true,
-    isNew: false,
-    rating: 4.9,
-    reviewCount: 320,
+    reviewCount: 342,
     inventory: 500,
     createdAt: new Date(),
     updatedAt: new Date()
   },
   {
-    id: 'nad-plus-iv',
-    vendorId: 'vitality-labs',
-    vendorName: 'Vitality Labs',
-    name: 'NAD+ IV Protocol Kit',
-    slug: 'nad-plus-iv',
-    category: 'supplements',
-    subCategory: 'IV Therapy',
-    price: 250,
-    priceDisplay: '$250 / kit',
-    description: 'Clinical-grade NAD+ IV therapy kits for cellular regeneration and anti-aging.',
-    detailedDescription: 'Complete protocol kits for administering NAD+ IV therapy. Includes high-purity NAD+, necessary diluents, and administration guidelines for optimal patient outcomes and safety.',
-    imageUrl: 'https://picsum.photos/seed/nadiv/800/600',
+    id: 'comprehensive-male-panel',
+    vendorId: 'novalyte-diagnostics',
+    vendorName: 'Novalyte Diagnostics',
+    name: 'Comprehensive Male Optimization Panel',
+    slug: 'comprehensive-male-panel',
+    category: 'diagnostics',
+    subCategory: 'Blood Panels',
+    price: 149,
+    priceDisplay: '$149 / panel',
+    description: 'Extensive blood panel covering 40+ biomarkers essential for men\'s health optimization.',
+    detailedDescription: 'The definitive diagnostic tool for men\'s health clinics. This panel covers total and free testosterone, estradiol, SHBG, comprehensive metabolic panel, lipid profile, thyroid function, and key micronutrients to establish a baseline for optimization protocols.',
+    imageUrl: 'https://images.unsplash.com/photo-1579154204601-01588f351e67?auto=format&fit=crop&q=80',
     gallery: [
-      'https://picsum.photos/seed/nadiv/800/600'
+      'https://images.unsplash.com/photo-1579154204601-01588f351e67?auto=format&fit=crop&q=80'
     ],
     features: [
-      'High-Purity NAD+',
-      'Complete Administration Kit',
-      'Protocol Guidelines Included'
+      '40+ Biomarkers Analyzed',
+      'Nationwide Draw Center Access',
+      'API Integration for EMRs',
+      'White-Label Reporting Available'
     ],
     benefits: [
-      'High-margin clinic service',
-      'Immediate patient energy boost',
-      'Cellular repair and anti-aging benefits'
+      'Establishes clear clinical baselines',
+      'Identifies hidden optimization opportunities',
+      'Streamlines patient onboarding process'
     ],
     specs: [
-      { label: 'Dosage', value: '500mg NAD+' },
-      { label: 'Storage', value: 'Refrigerated' }
+      { label: 'Sample Type', value: 'Venous Blood Draw' },
+      { label: 'Turnaround Time', value: '3-5 Business Days' }
+    ],
+    requirements: [
+      'Physician Authorization Required'
+    ],
+    useCases: [
+      'TRT Baseline Assessment',
+      'Annual Optimization Checkup',
+      'Performance Plateau Investigation'
+    ],
+    compliance: 'CLIA Certified Lab Network',
+    conversionType: 'assessment',
+    targetSpecialties: ['Men\'s Health', 'Endocrinology', 'Primary Care'],
+    isPopular: true,
+    isNew: false,
+    rating: 4.9,
+    reviewCount: 890,
+    inventory: 10000,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: 'shockwave-pro-x',
+    vendorId: 'pulse-medical',
+    vendorName: 'Pulse Medical Devices',
+    name: 'Shockwave Pro X',
+    slug: 'shockwave-pro-x',
+    category: 'equipment',
+    subCategory: 'Acoustic Wave Therapy',
+    price: 14500,
+    priceDisplay: '$14,500',
+    description: 'Clinical-grade focused shockwave therapy device for ED and musculoskeletal treatments.',
+    detailedDescription: 'The Shockwave Pro X delivers focused low-intensity extracorporeal shockwave therapy (Li-ESWT). It is a highly profitable addition to men\'s health clinics, offering non-invasive treatment for erectile dysfunction and chronic pain conditions by stimulating angiogenesis.',
+    imageUrl: 'https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&q=80'
+    ],
+    features: [
+      'Focused Acoustic Waves',
+      'Adjustable Penetration Depth',
+      'Pre-set Clinical Protocols',
+      'Ergonomic Applicator'
+    ],
+    benefits: [
+      'High-margin, cash-pay service',
+      'Non-invasive ED treatment alternative',
+      'High patient satisfaction rates'
+    ],
+    specs: [
+      { label: 'Energy Range', value: '0.01 - 0.55 mJ/mm²' },
+      { label: 'Frequency', value: '1 - 8 Hz' },
+      { label: 'Lifespan', value: '2 Million Shocks per Applicator' }
     ],
     requirements: [
       'Clinic Approval Required',
-      'Licensed Medical Professional for Administration'
+      'Medical Director Oversight'
     ],
     useCases: [
-      'Anti-Aging Protocols',
-      'Addiction Recovery Support',
-      'Chronic Fatigue Treatment'
+      'Erectile Dysfunction (ED)',
+      'Peyronie\'s Disease',
+      'Tendinopathies'
     ],
-    compliance: 'FDA Registered Pharmacy',
-    conversionType: 'approval',
-    targetSpecialties: ['IV Therapy', 'Longevity', 'Integrative Medicine'],
-    isPopular: true,
-    isNew: false,
+    compliance: 'FDA Cleared Device',
+    conversionType: 'inquiry',
+    targetSpecialties: ['Urology', 'Men\'s Health', 'Orthopedics'],
+    isPopular: false,
+    isNew: true,
     rating: 4.7,
-    reviewCount: 85,
-    inventory: 200,
+    reviewCount: 45,
+    inventory: 15,
     createdAt: new Date(),
     updatedAt: new Date()
   }

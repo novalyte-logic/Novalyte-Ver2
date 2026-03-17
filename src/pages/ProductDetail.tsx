@@ -8,25 +8,26 @@ import { Card } from '@/src/components/ui/Card';
 import { 
   ArrowLeft, CheckCircle2, Shield, Activity, FileText, Download, 
   BarChart2, Star, TrendingUp, ArrowRight, ShoppingCart, 
-  Info, ShieldCheck, Zap, Layers 
+  Info, ShieldCheck, Zap, Layers, Server, MessageSquare
 } from 'lucide-react';
 
 
 // Rich default data for the universal template
 const defaultProductData = {
   id: '1',
-  name: 'InBody 770',
-  category: 'Clinical Equipment',
-  price: '$18,500',
+  name: 'InBody 970',
+  category: 'Capital Equipment & Devices',
+  price: '$22,500',
   roi: '3 Months Average Payback',
-  description: 'Advanced body composition analyzer providing detailed clinical insights into muscle mass, body fat, and water retention. Essential for optimization clinics tracking patient protocol adherence.',
-  image: 'https://picsum.photos/seed/inbody770/800/600',
+  description: 'Advanced body composition analyzer providing detailed clinical insights into muscle mass, visceral fat, and cellular health. Essential for men\'s health clinics tracking TRT and peptide protocol adherence.',
+  image: 'https://picsum.photos/seed/inbody970/800/600',
   gallery: [
-    'https://picsum.photos/seed/inbody770/800/600',
+    'https://picsum.photos/seed/inbody970/800/600',
     'https://picsum.photos/seed/inbody1/800/600',
     'https://picsum.photos/seed/inbody2/800/600'
   ],
   vendor: 'InBody USA',
+  vendorId: 'inbody-usa',
   rating: 4.9,
   reviews: 128,
   features: [
@@ -62,7 +63,13 @@ const defaultProductData = {
     'Hormone Optimization Monitoring',
     'Athletic Performance Evaluation'
   ],
-  compliance: 'FDA Class II Medical Device'
+  compliance: 'FDA Class II Medical Device',
+  emrCompatibility: 'Native HL7/FHIR support. Pre-built integrations for Epic, Cerner, and AthenaHealth. Custom API webhooks available.',
+  userReviews: [
+    { id: 1, name: 'Dr. Marcus Thorne', rating: 5, text: 'The InBody 970 has completely transformed how we track patient progress on TRT. The segmental lean analysis is incredibly accurate.' },
+    { id: 2, name: 'Sarah Jenkins, Clinic Director', rating: 5, text: 'Worth every penny. The ROI was realized in just 2 months by offering premium body composition scans as an add-on service.' },
+    { id: 3, name: 'Dr. Alan Grant', rating: 4, text: 'Excellent machine, though the initial setup with our custom EMR took a bit of coordination with their support team.' }
+  ]
 };
 
 export function ProductDetail() {
@@ -86,14 +93,27 @@ export function ProductDetail() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
+          
+          // Map specifications if available
+          let specs = defaultProductData.specs;
+          if (data.specifications) {
+            specs = Object.entries(data.specifications).map(([label, value]) => ({ label, value: String(value) }));
+          }
+
           setProduct({
             ...defaultProductData,
             ...data,
             id: docSnap.id,
-            gallery: data.gallery || [data.image, `https://picsum.photos/seed/${docSnap.id}a/800/600`, `https://picsum.photos/seed/${docSnap.id}b/800/600`],
-            roi: data.price?.includes('/mo') ? 'Immediate ROI' : (data.category?.toLowerCase().includes('equipment') ? '3-6 Months' : null),
+            gallery: data.gallery || [data.imageUrl || data.image, `https://picsum.photos/seed/${docSnap.id}a/800/600`, `https://picsum.photos/seed/${docSnap.id}b/800/600`],
+            roi: data.priceDisplay?.includes('/mo') ? 'Immediate ROI' : (data.category?.toLowerCase().includes('equipment') ? '3-6 Months' : null),
             benefits: data.benefits || defaultProductData.benefits,
-            compliance: data.validation || data.compliance || 'Vetted Partner'
+            compliance: data.validation || data.compliance || 'Vetted Partner',
+            specs: specs,
+            features: data.features || defaultProductData.features,
+            useCases: data.useCases || defaultProductData.useCases,
+            requirements: data.requirements || defaultProductData.requirements,
+            emrCompatibility: data.emrCompatibility || defaultProductData.emrCompatibility,
+            userReviews: data.userReviews || defaultProductData.userReviews
           });
         }
       } catch (error) {
@@ -106,44 +126,82 @@ export function ProductDetail() {
   }, [id]);
 
   if (loading) {
-    return <div className="min-h-screen bg-[#05070A] flex items-center justify-center text-white">Loading...</div>;
+    return <div className="min-h-screen bg-background flex items-center justify-center text-white">Loading...</div>;
   }
 
   // Intelligent Routing Logic
   const getRoutingLogic = () => {
-    const reqs = product.requirements.join(' ').toLowerCase();
-    const cat = product.category.toLowerCase();
+    if (product.conversionType === 'approval') {
+      return {
+        label: 'Apply for Clinic Access',
+        path: '/clinics/apply',
+        icon: Shield,
+        color: 'bg-cyan-500 hover:bg-cyan-400 text-black',
+        description: 'Requires verified clinic credentials or physician NPI.'
+      };
+    }
+    if (product.conversionType === 'assessment') {
+      return {
+        label: 'Start Patient Assessment',
+        path: '/patient/assessment',
+        icon: Activity,
+        color: 'bg-blue-500 hover:bg-blue-400 text-white',
+        description: 'Clinical assessment required for protocol matching.'
+      };
+    }
+    if (product.conversionType === 'direct' || (product.price && product.conversionType !== 'approval')) {
+       return {
+        label: 'Add to Cart',
+        path: '/checkout', // Placeholder checkout route
+        icon: ShoppingCart,
+        color: 'bg-emerald-500 hover:bg-emerald-400 text-white',
+        description: 'Direct purchase available.'
+      };
+    }
+    if (product.conversionType === 'inquiry') {
+      return {
+        label: 'Request Quote',
+        path: '/checkout',
+        icon: ArrowRight,
+        color: 'bg-surface-3 hover:bg-surface-3/80 text-white',
+        description: 'Contact our procurement team for details.'
+      };
+    }
+
+    // Fallback logic
+    const reqs = (product.requirements || []).join(' ').toLowerCase();
+    const cat = (product.category || '').toLowerCase();
 
     if (reqs.includes('clinic approval') || reqs.includes('physician prescription') || cat.includes('equipment') || cat.includes('software') || cat.includes('clinical workflow')) {
       return {
         label: 'Apply for Clinic Access',
         path: '/clinics/apply',
         icon: Shield,
-        color: 'bg-primary hover:bg-primary-hover text-background',
+        color: 'bg-cyan-500 hover:bg-cyan-400 text-black',
         description: 'Requires verified clinic credentials or physician NPI.'
       };
     }
-    if (cat.includes('supplement') || cat.includes('diagnostic') || reqs.includes('assessment')) {
+    if (cat.includes('supplement') || cat.includes('diagnostic') || reqs.includes('assessment') || cat.includes('peptide') || cat.includes('protocol')) {
       return {
         label: 'Start Patient Assessment',
         path: '/patient/assessment',
         icon: Activity,
-        color: 'bg-secondary hover:bg-secondary-hover text-white',
+        color: 'bg-blue-500 hover:bg-blue-400 text-white',
         description: 'Clinical assessment required for protocol matching.'
       };
     }
-    if (reqs.includes('no prescription') || cat.includes('wearable') || cat.includes('recovery') || cat.includes('optimization hardware')) {
+    if (product.price) {
        return {
-        label: 'Purchase Now',
-        path: '/contact', // Mock checkout route
+        label: 'Add to Cart',
+        path: '/checkout', // Placeholder checkout route
         icon: ShoppingCart,
-        color: 'bg-[#F97316] hover:bg-[#EA580C] text-white',
-        description: 'Direct consumer purchase available.'
+        color: 'bg-emerald-500 hover:bg-emerald-400 text-white',
+        description: 'Direct purchase available.'
       };
     }
     return {
       label: 'Request Quote',
-      path: '/contact',
+      path: '/checkout',
       icon: ArrowRight,
       color: 'bg-surface-3 hover:bg-surface-3/80 text-white',
       description: 'Contact our procurement team for details.'
@@ -154,7 +212,7 @@ export function ProductDetail() {
   const RouteIcon = route.icon;
 
   return (
-    <div className="min-h-screen bg-[#05070A] flex flex-col pb-24">
+    <div className="min-h-screen bg-background flex flex-col pb-24">
       {/* Breadcrumb & Header */}
       <section className="pt-24 pb-6 border-b border-surface-3/50 bg-surface-1/50 backdrop-blur-md sticky top-16 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -178,19 +236,19 @@ export function ProductDetail() {
                   <span className="px-3 py-1 rounded-full text-xs font-mono font-medium bg-background/80 backdrop-blur-md text-white border border-surface-3 uppercase tracking-wider">
                     {product.category}
                   </span>
-                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-surface-2/80 backdrop-blur-md text-text-secondary border border-surface-3 flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3 text-success" /> {product.compliance}
+                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-surface-2/80 backdrop-blur-md text-slate-400 border border-surface-3 flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3 text-emerald-400" /> {product.compliance}
                   </span>
                 </div>
               </div>
               
               {/* Thumbnails */}
               <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-                {product.gallery.map((img, idx) => (
+                {product.gallery.map((img: string, idx: number) => (
                   <button 
                     key={idx} 
                     onClick={() => setActiveImage(idx)}
-                    className={`relative w-24 h-20 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${activeImage === idx ? 'border-primary' : 'border-surface-3 opacity-60 hover:opacity-100'}`}
+                    className={`relative w-24 h-20 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${activeImage === idx ? 'border-cyan-400' : 'border-surface-3 opacity-60 hover:opacity-100'}`}
                   >
                     <img src={img} alt={`Thumbnail ${idx}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   </button>
@@ -200,28 +258,28 @@ export function ProductDetail() {
 
             {/* Title & Vendor Info */}
             <div>
-              <div className="flex items-center gap-3 text-sm text-text-secondary mb-3">
-                <span className="font-mono text-white uppercase tracking-wider">{product.vendor}</span>
+              <div className="flex items-center gap-3 text-sm text-slate-400 mb-3">
+                <span className="font-mono text-white uppercase tracking-wider">{product.vendorName || product.vendor}</span>
                 <span>•</span>
-                <div className="flex items-center text-warning">
+                <div className="flex items-center text-amber-400">
                   <Star className="w-4 h-4 fill-current" />
                   <span className="ml-1 font-medium text-white">{product.rating}</span>
-                  <span className="ml-1 text-text-secondary">({product.reviews.toLocaleString()} reviews)</span>
+                  <span className="ml-1 text-slate-400">({(product.reviewCount || product.reviews || 0).toLocaleString()} reviews)</span>
                 </div>
               </div>
               <h1 className="text-4xl md:text-5xl font-display font-bold text-white mb-6 leading-tight">{product.name}</h1>
-              <p className="text-xl text-text-secondary leading-relaxed font-light">{product.description}</p>
+              <p className="text-xl text-slate-400 leading-relaxed font-light">{product.description}</p>
             </div>
 
             {/* Tabs */}
             <div className="border-b border-surface-3">
               <div className="flex gap-8">
-                {['overview', 'specifications', 'resources'].map((tab) => (
+                {['overview', 'specifications', 'reviews', 'resources'].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
                     className={`pb-4 text-sm font-medium transition-colors border-b-2 capitalize ${
-                      activeTab === tab ? 'border-white text-white' : 'border-transparent text-text-secondary hover:text-white'
+                      activeTab === tab ? 'border-white text-white' : 'border-transparent text-slate-400 hover:text-white'
                     }`}
                   >
                     {tab}
@@ -238,13 +296,13 @@ export function ProductDetail() {
                   {/* Features Grid */}
                   <div>
                     <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-                      <Layers className="w-6 h-6 text-primary" /> Core Capabilities
+                      <Layers className="w-6 h-6 text-cyan-400" /> Core Capabilities
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {product.features.map((feature, i) => (
+                      {product.features.map((feature: string, i: number) => (
                         <div key={i} className="flex items-start gap-3 p-4 rounded-xl bg-surface-1/50 border border-surface-3 hover:border-surface-3/80 transition-colors">
-                          <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
-                          <span className="text-text-secondary">{feature}</span>
+                          <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                          <span className="text-slate-400">{feature}</span>
                         </div>
                       ))}
                     </div>
@@ -254,12 +312,12 @@ export function ProductDetail() {
                   {product.benefits && product.benefits.length > 0 && (
                     <div>
                       <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-                        <TrendingUp className="w-6 h-6 text-secondary" /> Clinical & Operational Benefits
+                        <TrendingUp className="w-6 h-6 text-blue-400" /> Clinical & Operational Benefits
                       </h3>
                       <div className="space-y-3">
-                        {product.benefits.map((benefit, i) => (
-                          <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-surface-1 to-transparent border-l-2 border-secondary">
-                            <Zap className="w-5 h-5 text-secondary flex-shrink-0" />
+                        {product.benefits.map((benefit: string, i: number) => (
+                          <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-surface-1 to-transparent border-l-2 border-blue-500">
+                            <Zap className="w-5 h-5 text-blue-400 flex-shrink-0" />
                             <span className="text-white">{benefit}</span>
                           </div>
                         ))}
@@ -267,14 +325,26 @@ export function ProductDetail() {
                     </div>
                   )}
 
+                  {/* EMR Compatibility */}
+                  {product.emrCompatibility && (
+                    <div>
+                      <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                        <Server className="w-6 h-6 text-purple-400" /> EMR & Systems Compatibility
+                      </h3>
+                      <div className="p-6 rounded-xl bg-surface-1/50 border border-surface-3">
+                        <p className="text-slate-400 leading-relaxed">{product.emrCompatibility}</p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Use Cases */}
                   <div>
                     <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-                      <BarChart2 className="w-6 h-6 text-[#F97316]" /> Primary Use Cases
+                      <BarChart2 className="w-6 h-6 text-emerald-400" /> Primary Use Cases
                     </h3>
                     <div className="flex flex-wrap gap-3">
-                      {product.useCases.map((useCase, i) => (
-                        <span key={i} className="px-4 py-2 rounded-full bg-surface-2 border border-surface-3 text-sm text-text-secondary">
+                      {product.useCases.map((useCase: string, i: number) => (
+                        <span key={i} className="px-4 py-2 rounded-full bg-surface-2 border border-surface-3 text-sm text-slate-400">
                           {useCase}
                         </span>
                       ))}
@@ -290,14 +360,48 @@ export function ProductDetail() {
                   <div className="rounded-xl border border-surface-3 overflow-hidden bg-surface-1/50">
                     <table className="w-full text-left border-collapse">
                       <tbody className="text-sm">
-                        {product.specs.map((spec, i) => (
+                        {product.specs.map((spec: any, i: number) => (
                           <tr key={i} className="border-b border-surface-3 last:border-0 hover:bg-surface-2/50 transition-colors">
-                            <td className="py-4 px-6 font-mono text-text-secondary w-1/3 border-r border-surface-3/50">{spec.label}</td>
+                            <td className="py-4 px-6 font-mono text-slate-400 w-1/3 border-r border-surface-3/50">{spec.label}</td>
                             <td className="py-4 px-6 text-white">{spec.value}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                </motion.div>
+              )}
+
+              {activeTab === 'reviews' && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-2xl font-bold text-white flex items-center gap-3">
+                      <MessageSquare className="w-6 h-6 text-cyan-400" /> User Reviews
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <Star className="w-6 h-6 text-amber-400 fill-current" />
+                      <span className="text-2xl font-bold text-white">{product.rating}</span>
+                      <span className="text-slate-400">({product.reviews} reviews)</span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {product.userReviews?.map((review: any) => (
+                      <Card key={review.id} className="p-6 bg-surface-1/50 border-surface-3">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="font-bold text-white">{review.name}</h4>
+                          <div className="flex items-center gap-1">
+                            {[...Array(5)].map((_, i) => (
+                              <Star 
+                                key={i} 
+                                className={`w-4 h-4 ${i < review.rating ? 'text-amber-400 fill-current' : 'text-surface-3'}`} 
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-slate-400 leading-relaxed">"{review.text}"</p>
+                      </Card>
+                    ))}
                   </div>
                 </motion.div>
               )}
@@ -311,17 +415,17 @@ export function ProductDetail() {
                       { title: 'Implementation & Operator Manual', type: 'PDF', size: '5.1 MB' },
                       { title: 'API & EMR Integration Guide', type: 'PDF', size: '1.2 MB' },
                     ].map((doc, i) => (
-                      <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-surface-1/50 border border-surface-3 hover:border-primary/50 transition-colors cursor-pointer group">
+                      <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-surface-1/50 border border-surface-3 hover:border-cyan-500/50 transition-colors cursor-pointer group">
                         <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-lg bg-surface-2 flex items-center justify-center text-text-secondary group-hover:text-primary transition-colors">
+                          <div className="w-12 h-12 rounded-lg bg-surface-2 flex items-center justify-center text-slate-400 group-hover:text-cyan-400 transition-colors">
                             <FileText className="w-6 h-6" />
                           </div>
                           <div>
-                            <p className="font-medium text-white group-hover:text-primary transition-colors">{doc.title}</p>
-                            <p className="text-xs text-text-secondary font-mono mt-1">{doc.type} • {doc.size}</p>
+                            <p className="font-medium text-white group-hover:text-cyan-400 transition-colors">{doc.title}</p>
+                            <p className="text-xs text-slate-400 font-mono mt-1">{doc.type} • {doc.size}</p>
                           </div>
                         </div>
-                        <Download className="w-5 h-5 text-text-secondary group-hover:text-primary transition-colors" />
+                        <Download className="w-5 h-5 text-slate-400 group-hover:text-cyan-400 transition-colors" />
                       </div>
                     ))}
                   </div>
@@ -336,20 +440,20 @@ export function ProductDetail() {
               
               {/* Action Panel */}
               <Card className="p-6 bg-surface-1/80 backdrop-blur-xl border-surface-3 shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-[32px]" />
+                <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-[32px]" />
                 <div className="relative z-10">
                   <div className="mb-6">
-                    <p className="text-xs font-mono text-text-secondary uppercase tracking-wider mb-2">Procurement Pricing</p>
+                    <p className="text-xs font-mono text-slate-400 uppercase tracking-wider mb-2">Procurement Pricing</p>
                     <div className="flex items-end gap-2">
-                      <span className="text-4xl font-display font-bold text-white">{product.price}</span>
+                      <span className="text-4xl font-display font-bold text-white">{product.priceDisplay || product.price}</span>
                     </div>
                   </div>
 
                   {product.roi && (
-                    <div className="mb-6 p-4 rounded-xl bg-success/10 border border-success/20">
+                    <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
                       <div className="flex items-center gap-2 mb-1">
-                        <TrendingUp className="w-4 h-4 text-success" />
-                        <span className="text-xs font-bold text-success uppercase tracking-wider">Estimated ROI</span>
+                        <TrendingUp className="w-4 h-4 text-emerald-400" />
+                        <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Estimated ROI</span>
                       </div>
                       <p className="text-lg font-medium text-white">{product.roi}</p>
                     </div>
@@ -357,10 +461,10 @@ export function ProductDetail() {
 
                   <div className="space-y-4 mb-6">
                     <div className="flex items-start gap-3 p-3 rounded-lg bg-surface-2/50 border border-surface-3">
-                      <Info className="w-5 h-5 text-text-secondary flex-shrink-0 mt-0.5" />
+                      <Info className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" />
                       <div>
                         <p className="text-sm font-medium text-white">Eligibility & Routing</p>
-                        <p className="text-xs text-text-secondary mt-1 leading-relaxed">{route.description}</p>
+                        <p className="text-xs text-slate-400 mt-1 leading-relaxed">{route.description}</p>
                       </div>
                     </div>
                   </div>
@@ -368,7 +472,7 @@ export function ProductDetail() {
                   <Button 
                     size="lg" 
                     className={`w-full group ${route.color} border-none shadow-lg`} 
-                    onClick={() => navigate(route.path)}
+                    onClick={() => navigate(route.path, { state: { product } })}
                   >
                     <RouteIcon className="w-5 h-5 mr-2" />
                     {route.label}
@@ -380,11 +484,11 @@ export function ProductDetail() {
               {/* Requirements Card */}
               <Card className="p-6 bg-surface-1/50 border-surface-3">
                 <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-text-secondary" /> Deployment Requirements
+                  <Shield className="w-4 h-4 text-slate-400" /> Deployment Requirements
                 </h3>
                 <ul className="space-y-3">
-                  {product.requirements.map((req, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm text-text-secondary">
+                  {product.requirements.map((req: string, i: number) => (
+                    <li key={i} className="flex items-start gap-3 text-sm text-slate-400">
                       <div className="w-1.5 h-1.5 rounded-full bg-surface-3 flex-shrink-0 mt-1.5" />
                       {req}
                     </li>
@@ -397,16 +501,20 @@ export function ProductDetail() {
                 <h3 className="font-bold text-white mb-4">Vendor Intelligence</h3>
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-12 h-12 rounded-xl bg-surface-2 border border-surface-3 flex items-center justify-center">
-                    <span className="font-display font-bold text-white text-lg">{product.vendor.charAt(0)}</span>
+                    <span className="font-display font-bold text-white text-lg">{(product.vendorName || product.vendor || 'V').charAt(0)}</span>
                   </div>
                   <div>
-                    <p className="font-medium text-white">{product.vendor}</p>
-                    <p className="text-xs text-text-secondary flex items-center gap-1 mt-1">
-                      <CheckCircle2 className="w-3 h-3 text-success" /> Verified Platform Partner
+                    <p className="font-medium text-white">{product.vendorName || product.vendor}</p>
+                    <p className="text-xs text-slate-400 flex items-center gap-1 mt-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Verified Platform Partner
                     </p>
                   </div>
                 </div>
-                <Button variant="outline" className="w-full text-sm border-surface-3 hover:bg-surface-2 text-white">
+                <Button 
+                  variant="outline" 
+                  className="w-full text-sm border-surface-3 hover:bg-surface-2 text-white"
+                  onClick={() => navigate(`/vendor/${product.vendorId || 'inbody-usa'}`)}
+                >
                   View Vendor Profile
                 </Button>
               </Card>
@@ -419,3 +527,4 @@ export function ProductDetail() {
     </div>
   );
 }
+
